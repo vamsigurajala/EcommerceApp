@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Add Product</title>
+</head>
+
+<body>
+    <h1>Add Product to Inventory</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="product">Product:</label>
+        <input type="text" id="product" name="product_name" required><br><br>
+        <label for="count">Count:</label>
+        <input type="number" id="count" name="count" required><br><br>
+        <label for="last_stocked">Last Stocked:</label>
+        <input type="date" id="last_stocked" name="last_stocked" required><br><br>
+        <label for="discount">Discount:</label>
+        <input type="number" id="discount" name="discount" required><br><br>
+        <input type="submit" value="Add Product">
+    </form>
+</body>
+
+</html>

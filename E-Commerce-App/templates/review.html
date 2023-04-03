@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Product Review</title>
+</head>
+
+<body>
+    <h1>Product Review</h1>
+    <div>
+        <img src="{product_image_url}" alt="Product Image">
+        <h2>{product_name}</h2>
+        <p>{product_description}</p>
+    </div>
+    <form method="POST" action="/review/">
+        <input type="hidden" name="product_id" value="{product_id}">
+        <label for="rating">Rating:</label>
+        <input type="number" name="rating" min="1" max="5" required><br><br>
+        <label for="content">Review:</label><br>
+        <textarea name="content" rows="4" cols="50" required></textarea><br><br>
+        <input type="submit" value="Submit Review">
+    </form>
+    <h2>Reviews</h2>
+    <ul>
+        {% for review in reviews %}
+        <li>
+            <p>User: {{ review.user_id }}</p>
+            <p>Rating: {{ review.rating }}</p>
+            <p>{{ review.content }}</p>
+            <p>Posted on: {{ review.posted_on }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+
+</html>

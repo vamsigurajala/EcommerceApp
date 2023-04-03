@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>vieworders</title>
+    <style>
+        /* Reset default styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Set body background and font */
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        /* Add a container for the page content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Add some spacing to the table cells */
+        h1 {
+            text-align: center;
+            font-size: 36px;
+            margin-top: 0;
+            font-weight: bold;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 2rem 0;
+        }
+
+        /* Style the table headers */
+        table th {
+            text-align: left;
+            font-weight: bold;
+            background-color: #333;
+            color: #fff;
+            padding: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Style the table rows */
+        table tr {
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+        }
+
+        /* Style the product image */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Add some spacing between the rows */
+        tr {
+            margin-bottom: 0.5em;
+        }
+
+        /* Style the "Get Back" button */
+        .btn-back {
+            border: none;
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 30px;
+        }
+
+        .btn-back:hover {
+            background-color: #555;
+        }
+
+        .btn-review {
+            border: none;
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .btn-review:hover {
+            background-color: #555;
+        }
+
+        /* Style the page header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        /* Style the "No orders found" message */
+        .no-orders {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <button class="btn-back" onclick="location.href='/api/checkout/'">Get Back</button>
+    </div>
+    <div id="vieworders-container">
+        <h1>Placed Orders</h1>
+        {% if order_data %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>User ID</th>
+                    <th>Image</th>
+                    <th>Product Name</th>
+                    <th>Placed Time</th>
+                    <!-- <th>Address ID</th> -->
+                    <th>Order Status</th>
+                    <!-- <th>Discount</th> -->
+                    <th>Total Amount</th>
+                    <th> Add Reviews</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in order_data %}
+                {% for item in order.order_items %}
+                <tr>
+                    {% if forloop.first %}
+                    <td rowspan="{{ order.order_items|length }}">{{ order.order_id }}</td>
+                    <td rowspan="{{ order.order_items|length }}">{{ order.user_id }}</td>
+                    <td rowspan="{{ order.order_items|length }}"><img src="{{ item.image }}"
+                            alt="{{ item.product_name }}" width="50" height="50"></td>
+                    {% endif %}
+                    <td>{{ item.product_name }}</td>
+                    {% if forloop.first %}
+
+                    <td rowspan="{{ order.order_items|length }}">{{ order.placed_time }}</td>
+                    <!-- <td rowspan="{{ order.order_items|length }}">{{ order.address_id }}</td> -->
+                    <td rowspan="{{ order.order_items|length }}">{{ order.order_status }}</td>
+                    <!-- <td rowspan="{{ order.order_items|length }}">{{ order.discount }}</td> -->
+                    <td rowspan="{{ order.order_items|length }}">{{ order.total_amount }}</td>
+                    <td><a href="/review/{{item.product_id}}/"> add review</a></td>
+
+
+
+                    {% endif %}
+
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% else %}
+        <p>No orders found.</p>
+        {% endif %}
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Registration or Signup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        .button-container {
+            margin-top: 10px;
+            display: inline-flex;
+            justify-content: space-between;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0062cc;
+        }
+
+        .button-container button:nth-child(2) {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <h2>Welcome To E-Commerce Application</h2>
+
+        <div class="button-container">
+            <button onclick="location.href='/api/login/'">Login</button>
+            <button onclick="location.href='/api/usersignup/'">Signup</button>
+        </div>
+</body>
+
+</html>

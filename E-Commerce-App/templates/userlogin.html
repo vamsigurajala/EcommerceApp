@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>User Login</title>
+    <style>
+        /* General styles */
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+
+        /* Container styles */
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Form styles */
+        .forms {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 50px;
+            width: 400px;
+        }
+
+        .forms .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .forms .input-field {
+            margin-bottom: 20px;
+        }
+
+        .forms input[type="text"],
+        .forms input[type="password"] {
+            background-color: #f2f2f2;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            padding: 10px;
+            width: 100%;
+        }
+
+        .forms .checkbox-text {
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .forms .checkbox-text input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .forms .checkbox-text a {
+            color: #0077cc;
+            text-decoration: none;
+        }
+
+        .forms .button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .forms input[type="submit"] {
+            background-color: #0077cc;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 10px 20px;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        .forms input[type="submit"]:hover {
+            background-color: #005fa3;
+        }
+
+        /* Login and Signup styles */
+        .login-signup {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .login-signup .text {
+            font-size: 16px;
+        }
+
+        .login-signup a {
+            color: #0077cc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .login-signup a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive styles */
+        @media only screen and (max-width: 768px) {
+            .forms {
+                padding: 30px;
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="forms login">
+            <span class="title">Login</span>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="input-field">
+                    <input type="text" name="email" placeholder="Enter your email" required>
+                </div>
+                <div class="input-field">
+                    <input type="password" name="password" placeholder="Enter your password" required>
+                </div>
+
+                <div class="checkbox-text">
+                    <div class="checkbox-content">
+                        <input type="checkbox" id="logcheck">
+                        <label for="logcheck" class="text">Remember me</label>
+                    </div>
+                    <a href="#" class="text">Forgot Password?</a>
+                </div>
+
+                <div class="input-field button">
+                    <input type="submit" value="Login Now">
+                </div>
+            </form>
+
+            <div class="login-signup">
+                <span class="text">Not a member?
+                    <a href="{% url 'usersignup' %}" class="signed-text">Signup now</a>
+                </span>
+            </div>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

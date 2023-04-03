@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Login</title>
+    <link rel="stylesheet" href="../static/loginstyle.css">
+
+<body>
+    <div class="container">
+        <div class="forms">
+            <div class="forms login">
+                <span class="title">Login</span>
+
+                <form method="POST" action="{% url 'home' %}">
+                    {% csrf_token %}
+                    <div class="input-field">
+                        <input type="text" name="email" placeholder="Enter your email" name="email" required>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" name="password" placeholder="Enter your password" name="password"
+                            required>
+                    </div>
+
+                    <div class="checkbox-text">
+                        <div class="checkbox-content">
+                            <input type="checkbox" id="logcheck">
+                            <label for="logcheck" class="text">Remember me</label>
+                        </div>
+                        <a href="#" class="text">Forgot Password?</a>
+                    </div>
+
+                    <div class="input-field button">
+                        <input type="submit" value="Login Now">
+                    </div>
+                </form>
+
+                <div class="login-signup">
+                    <span class="text">Not a member?
+                        <a href="{% url 'sellersignup' %}" class="signed-text">Signup now</a>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

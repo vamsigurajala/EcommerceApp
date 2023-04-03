@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Shopping Cart</title>
+
+</head>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f2f2f2;
+    }
+
+    .cart-container {
+        width: 80%;
+        margin: 0 auto;
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        margin-top: 50px;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 36px;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    th {
+        background-color: #333;
+        color: white;
+        font-weight: normal;
+        text-align: left;
+        padding: 10px;
+    }
+
+    td {
+        padding: 10px;
+        vertical-align: middle;
+    }
+
+    img {
+        width: 80px;
+        height: 80px;
+        border-radius: 5px;
+        object-fit: cover;
+    }
+
+    img {
+        border: 1px solid black;
+    }
+
+    .cart-container table img {
+        border: 1px solid black;
+    }
+
+
+    .quantity {
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-quantity {
+        border: none;
+        background-color: #333;
+        color: white;
+        font-weight: bold;
+        font-size: 20px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 0 5px;
+    }
+
+    .btn-delete {
+        border: none;
+        background-color: red;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .btn-clear {
+        border: none;
+        background-color: orange;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+
+    .btn-checkout {
+        border: none;
+        background-color: green;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        padding: 7px 15px;
+        border-radius: 7px;
+        cursor: pointer;
+        float: right;
+        margin-bottom: 45px;
+    }
+
+    .btn-back {
+        border: none;
+        background-color: #333;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .btn-back:hover,
+    .btn-quantity:hover,
+    .btn-delete:hover,
+    .btn-clear:hover,
+    .btn-checkout:hover {
+        opacity: 0.8;
+    }
+
+    tfoot td {
+        text-align: right;
+        font-weight: bold;
+        padding-top: 10px;
+    }
+
+    p {
+        text-align: center;
+        font-size: 18px;
+        color: #333;
+    }
+</style>
+
+
+<body>
+    <div>
+        <button class="btn-back" onclick="location.href='/api/paginate/'">Get Back</button>
+    </div>
+
+    <div class="cart-container">
+        <h1>Shopping Cart</h1>
+
+        {%if cartitems%}
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Clear Item</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cartitems %}
+                <tr>
+                    <td>
+                        <div>
+                            <img src="{{item.product.image}}" alt="{{item.product.product_name}}"
+                                style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                        <div>
+                    <td>
+                        <h4>{{ item.product.product_name }}</h4>
+                    </td>
+    </div>
+    </td>
+    <td>
+        <div class="quantity">
+            <button class="btn-quantity"
+                onclick="location.href='/api/reducequantity?product_id={{ item.product_id }}';">-</button>
+            <span></span>{{item.quantity}}</span>
+            <button class="btn-quantity"
+                onclick="location.href='/api/addquantity?product_id={{ item.product_id }}';">+</button>
+        </div>
+    </td>
+    <td>{{item.product.price}}</td>
+    <td>{{item.total_price}}</td>
+    <td><button class="btn-delete"
+            onclick="location.href='/api/deleteproduct?product_id={{ item.product_id }}';">Delete</button></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3">Total:</td>
+            <td colspan="2">Rs.{{cart_total}}</td>
+        </tr>
+    </tfoot>
+    </table>
+    <div>
+        <button class="btn-clear" onclick="location.href='/api/clearcart?product_id={{ item.product_id }}';">Clear
+            Cart</button>
+        <button class="btn-checkout" onclick="location.href='/api/orders/'">Checkout</button>
+
+    </div>
+
+    {% else %}
+    <h2>
+        <p>Your cart is empty</p>
+        <p>Please shop to add some products</p>
+
+    </h2>
+    {% endif %}
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <title>Registration or Signup</title>
+    <style>
+        body {
+            background-color: #121312;
+            font-family: Arial, sans-serif;
+        }
+
+        .wrapper {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .input-box {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .input-box input,
+        .input-box select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #f2f2f2;
+            font-size: 16px;
+            color: #555;
+        }
+
+        .policy input[type="checkbox"] {
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
+        .policy h3 {
+            display: inline-block;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .button {
+            text-align: center;
+        }
+
+        .button input,
+        .button button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .button input:hover,
+        .button button:hover {
+            background-color: #0077cc;
+        }
+
+        .text {
+            width: 100%;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .text a {
+            color: #0077cc;
+            text-decoration: none;
+        }
+
+        .policy {
+            margin-bottom: 10px;
+        }
+
+        .policy input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <h2>User Registration</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="input-box">
+                <input type="text" name="name" placeholder="Enter your Name" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="email" placeholder="Enter your Email" required>
+            </div>
+            <div class="input-box">
+                <input type="password" name="password" placeholder="Create password" required>
+            </div>
+            <div class="input-box">
+                <input type="password" name="confirm_password" placeholder="Confirm password" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="age" placeholder="Age" required>
+            </div>
+            <div class="input-box">
+                <select name="gender" id="gender" required>
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            <div class="input-box">
+                <select name="user_role" id="user_role" required>
+                    <option value="">Select Role</option>
+                    <option value="buyer">Buyer</option>
+                    <option value="seller">Seller</option>
+                </select>
+            </div>
+            <div class="policy">
+                <input type="checkbox" name="terms" required>
+                <h3> I accept all terms and conditions</h3>
+            </div>
+            <div class="input-box button">
+                <input type="submit" value="Register Now">
+            </div>
+
+            <div class="input-box button">
+                <button onclick="location.href='/api/address'">Add Adress</button>
+            </div>
+
+            <div class="text">
+                <h3> Already have an account ? <a href="{% url 'loginuser'%}">Login Now</a></h3>
+            </div>
+        </form>
+    </div>
+
+
+    <script>
+        const form = document.querySelector('form');
+        const submitButton = document.querySelector('input[type="submit"]');
+
+        submitButton.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const checkbox = document.querySelector('input[type="checkbox"]');
+
+            if (!checkbox.checked) {
+                alert('Please accept the terms and conditions before submitting the form.');
+            } else {
+                form.submit();
+            }
+        });
+    </script>
+
+</body>
+
+</html>
