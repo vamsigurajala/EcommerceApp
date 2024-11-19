@@ -143,9 +143,13 @@
 <body>
 
     <header>
+
+        <p>Hi {{ user.username }}, Welcome to</p>
+
         <h1>Ecommerce Site</h1>
         <nav>
             <form action="#" method="GET">
+
                 {% csrf_token %}
                 <a href="/api/paginate/?page=1">Home</a>
                 <a href="/api/cart/">Cart</a>

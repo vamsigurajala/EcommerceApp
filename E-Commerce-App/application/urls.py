@@ -42,7 +42,7 @@ urlpatterns = [
     path('getuseraddress/', views.get_user_address, name='useraddress'),
     path('checkout/', views.checkout, name='checkout'),
     path("vieworders/", views.vieworders, name='vieworder'),
-    path('review/<int:product_id>/',views.write_review,name='writereview'),
-    path('seereviews/', views.product_reviews, name='seereviews'),
+    # path('review/<int:product_id>/',views.write_review,name='writereview'),
+    # path('seereviews/', views.product_reviews, name='seereviews'),
 
 ]

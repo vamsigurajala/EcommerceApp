@@ -163,5 +163,5 @@ class SingleProductAPIView(APIView):
     def get(self, request, product_id, **kwargs):
         product = Product.objects.get(product_id=product_id)
         serializer = ProductSerializer(product, context={'request':request})
-        print(serializer)
+        #print(serializer)
         return Response(serializer.data)

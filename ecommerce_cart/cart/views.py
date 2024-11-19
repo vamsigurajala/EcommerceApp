@@ -9,10 +9,6 @@ import requests
 from cartproject.settings import user_url, product_url, cart_url, order_url, review_url
 
 
-# Create your views here.
-def cartfun(request):
-    return HttpResponse("This is ntg but cart")
-
 
 
 # CartAPIView handles GET and POST requests for a user's cart.

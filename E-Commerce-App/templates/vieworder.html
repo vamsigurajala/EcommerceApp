@@ -118,7 +118,7 @@
 
 <body>
     <div>
-        <button class="btn-back" onclick="location.href='/api/checkout/'">Get Back</button>
+        <button class="btn-back" onclick="location.href='/api/paginate/'">Get Back</button>
     </div>
     <div id="vieworders-container">
         <h1>Placed Orders</h1>
@@ -131,11 +131,11 @@
                     <th>Image</th>
                     <th>Product Name</th>
                     <th>Placed Time</th>
-                    <!-- <th>Address ID</th> -->
+                    <!-- <th>Address Deatils</th> -->
                     <th>Order Status</th>
                     <!-- <th>Discount</th> -->
                     <th>Total Amount</th>
-                    <th> Add Reviews</th>
+                    <!-- <th> Add Reviews</th> -->
                 </tr>
             </thead>
             <tbody>
@@ -145,9 +145,8 @@
                     {% if forloop.first %}
                     <td rowspan="{{ order.order_items|length }}">{{ order.order_id }}</td>
                     <td rowspan="{{ order.order_items|length }}">{{ order.user_id }}</td>
-                    <td rowspan="{{ order.order_items|length }}"><img src="{{ item.image }}"
-                            alt="{{ item.product_name }}" width="50" height="50"></td>
                     {% endif %}
+                    <td><img src="{{ item.image }}" alt="{{ item.product_name }}" width="50" height="50"></td>
                     <td>{{ item.product_name }}</td>
                     {% if forloop.first %}
 
@@ -156,7 +155,7 @@
                     <td rowspan="{{ order.order_items|length }}">{{ order.order_status }}</td>
                     <!-- <td rowspan="{{ order.order_items|length }}">{{ order.discount }}</td> -->
                     <td rowspan="{{ order.order_items|length }}">{{ order.total_amount }}</td>
-                    <td><a href="/review/{{item.product_id}}/"> add review</a></td>
+                    <!-- <td><a href="/review/{{item.product_id}}/"> add review</a></td> -->
 
 
 

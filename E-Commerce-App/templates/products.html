@@ -2,6 +2,7 @@
 
 {% block title %}Products{% endblock %}
 {% block content %}
+
 <div class="search-container">
     <form action="/api/paginate/" method="GET">
         {% csrf_token %}
@@ -13,7 +14,7 @@
 <h2>Search Results for "{{ query }}": </h2>
 {% else %}
 
-<h1>All Products</h1>
+<h1>Explore Products</h1>
 {% endif %}
 
 <style>

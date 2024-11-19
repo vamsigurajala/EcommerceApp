@@ -53,6 +53,7 @@ class UserLoginAPIView(APIView):
             'jwt': token,
             'user': UserSerializer(user).data,
         }
+        print(response)
 
         return response
 
@@ -77,7 +78,7 @@ class UserDetailsView(APIView):
         user = User.objects.filter(user_id=payload['user_id']).first()
         serializer = UserSerializer(user)
         user_id=serializer.data.get('user_id')
-        return Response({'user_id':user_id})
+        return Response(serializer.data)
     
 
 
@@ -162,6 +163,7 @@ class AddressView(APIView):
             return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 def useraddress(request):
     # Get the user id from the response of the 'UserDetailsView' API
     user_id = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES).json()['user_id']
@@ -176,7 +178,7 @@ def useraddress(request):
                                  state=request.POST['state'],
                                  pincode=request.POST['pincode'],
                                  country=request.POST['country'])
-        address_object.save() # Save the object to the database
+        address_object.save() # Save the object to the database 
         return redirect('/api/login/')
     
     else:
@@ -263,7 +265,11 @@ def homepage(request, page = None,searchproduct=None):
 
 # View function for paginating products
 def paginate(request, page = None,search=None):
-    user_id = request.session.get('user_id')
+    if 'jwt' in request.COOKIES.keys():
+        # Get user_id from the authenticated user's information
+        user = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()
+    else:
+        return redirect(f'{user_url}/api/login/')
     page_number = request.GET.get('page',1)  # Default to page 1 if no page number is specified
 
     if 'search' in request.GET.keys():
@@ -287,12 +293,17 @@ def paginate(request, page = None,search=None):
     prev_url = data['previous']
     page = data['page']
 
+        
+
     context = {
         'products': products,
         'next_url': next_url,
         'next_page': int(page)+1,
         'prev_url': prev_url,
         'prev_page': int(page)-1,
+        'user': user,
+
+
     }
     return render(request, 'products.html', context)
 
@@ -494,7 +505,6 @@ def checkout(request):
 
 
 
-
 def vieworders(request):
     order_data = requests.get(f'{order_url}/api/placeorder/', cookies= request.COOKIES).json()
     # print(type(json.loads(order_data)))
@@ -515,37 +525,37 @@ def vieworders(request):
 
 
 
-def write_review(request, product_id):
-    if request.method == 'GET':
-        if 'jwt' in request.COOKIES.keys():
+# def write_review(request, product_id):
+#     if request.method == 'GET':
+#         if 'jwt' in request.COOKIES.keys():
 
-            user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-        else:
-            return redirect(f'{user_url}/api/login/')
-        for item in products:
-            product_id=item["product_id"]
-            product_data = requests.get(f'{product_url}/api/singleproduct/{product_id}/', cookies=request.COOKIES).json()
+#             user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
+#         else:
+#             return redirect(f'{user_url}/api/login/')
+#         for item in products:
+#             product_id=item["product_id"]
+#             product_data = requests.get(f'{product_url}/api/singleproduct/{product_id}/', cookies=request.COOKIES).json()
 
-        return render(request, 'review.html', {'product': product_data})
+#         return render(request, 'review.html', {'product': product_data})
 
-    elif request.method == 'POST':
-        user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-        product_data = requests.get(f'{product_url}/api/singleproduct/{product_id}/', cookies=request.COOKIES).json()
+#     elif request.method == 'POST':
+#         user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
+#         product_data = requests.get(f'{product_url}/api/singleproduct/{product_id}/', cookies=request.COOKIES).json()
 
-        review_data = {
-            'user_id': request.user.id,
-            'product_id': product_id,
-            'rating': request.POST.get('rating'),
-            'comment': request.POST.get('comment'),
-            'posted_on':request.POST.get('posted_on'),
-        }
-        response = requests.post(f'{review_url}/review/', json=review_data, cookies=request.COOKIES)
-        return redirect('/api/seereviews/')
+#         review_data = {
+#             'user_id': request.user.id,
+#             'product_id': product_id,
+#             'rating': request.POST.get('rating'),
+#             'comment': request.POST.get('comment'),
+#             'posted_on':request.POST.get('posted_on'),
+#         }
+#         response = requests.post(f'{review_url}/review/', json=review_data, cookies=request.COOKIES)
+#         return redirect('/api/seereviews/')
 
 
-def product_reviews(request, product_id):
-    review_data = requests.get(f'{review_url}/review/', cookies=request.COOKIES).json()
-    reviews = review_data['reviews']
-    product_data = requests.get(f'{product_url}/api/productview/{product_id}/', cookies=request.COOKIES).json()
-    return render(request, 'product_reviews.html', {'reviews': reviews, 'product': product_data})
+# def product_reviews(request, product_id):
+#     review_data = requests.get(f'{review_url}/review/', cookies=request.COOKIES).json()
+#     reviews = review_data['reviews']
+#     product_data = requests.get(f'{product_url}/api/productview/{product_id}/', cookies=request.COOKIES).json()
+#     return render(request, 'product_reviews.html', {'reviews': reviews, 'product': product_data})
 

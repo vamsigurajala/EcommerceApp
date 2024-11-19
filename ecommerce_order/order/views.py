@@ -14,11 +14,6 @@ from orderservice.settings import user_url, product_url, cart_url, order_url, re
 
 # Create your views here.
 
-def order(request):
-    return HttpResponse( " hello this is order service")
-
-
-
 class OrderAPIVew(views.APIView):
 
     def get(self, request):
@@ -142,11 +137,3 @@ class PlaceOrderView(APIView):
         return Response(data)
     
 
-class ClearOrderAPIView(views.APIView):
-    def post(self, request):
-        order_id = requests.get(f'{order_url}/api/orderitems/', cookies=request.COOKIES).json()['order_id']
-        if order_id:
-            OrderItems.objects.filter(order_id= order_id).delete()
-            return Response({'message': 'Successfully cleared the orders'})        
-        else:
-            return Response({'message': 'No orders found to clear'})

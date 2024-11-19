@@ -180,28 +180,29 @@
                 </tbody>
             </table>
 
-        </form>
-        <div id="address-container">
 
-            {% if addresses %}
-            <p>Choose an address:</p>
-            {% for address in addresses %}
-            <label>
-                <div class="address-details">
-                    <input type="radio" name="address_id" value="{{ address.address_id }}">
-                    {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }},
-                    {{address.state}},{{address.pincode }}, {{ address.country }}
+            <div id="address-container">
+
+                {% if addresses %}
+                <p>Choose an address:</p>
+                {% for address in addresses %}
+                <label>
+                    <div class="address-details">
+                        <input type="radio" name="address_id" value="{{ address.address_id }}">
+                        {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }},
+                        {{address.state}},{{address.pincode }}, {{ address.country }}
+                    </div>
+                </label><br>
+                {% endfor %}
+                {% endif %}
+                <!-- <div>
+                    <button class="btn-addaddress" onclick="location.href='/api/orderaddress/' ">Add Address</button>
+                </div> -->
+                <div>
+                    <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place
+                        Order</button>
                 </div>
-            </label><br>
-            {% endfor %}
-            {% endif %}
-            <div>
-                <button class="btn-addaddress" onclick="location.href='/api/orderaddress/' ">Add Address</button>
-            </div>
-            <div>
-                <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/vieworders/'>Place
-                    Order</button>
-            </div>
+        </form>
 </body>
 
 </html>
