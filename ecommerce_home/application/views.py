@@ -294,9 +294,6 @@ def paginate(request, page = None,search=None):
     next_url = data['next']
     prev_url = data['previous']
     page = data['page']
-
-        
-
     context = {
         'products': products,
         'next_url': next_url,
@@ -304,8 +301,6 @@ def paginate(request, page = None,search=None):
         'prev_url': prev_url,
         'prev_page': int(page)-1,
         'user': user,
-
-
     }
     return render(request, 'products.html', context)
 
