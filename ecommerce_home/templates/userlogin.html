@@ -1,149 +1,171 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <title>User Login</title>
+{% extends 'changemode.html' %}
+{% block extra_style %}
+    <!-- Google Fonts: Inter (Professional, Modern) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* General styles */
-        body {
-            background-color: #f2f2f2;
-            font-family: Arial, sans-serif;
-            font-size: 16px;
+        body, .forms, .forms .title, .login-signup, input, label, a {
+            font-family: 'Inter', Arial, sans-serif !important;
         }
-
-        /* Container styles */
         .container {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
         }
-
-        /* Form styles */
         .forms {
             background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            padding: 50px;
+            border-radius: 12px;
+            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08);
+            padding: 48px 38px 38px 38px;
             width: 400px;
+            transition: background 0.3s, color 0.3s;
         }
-
+        body.dark-mode .forms {
+            background-color: #202225;
+            color: #fff;
+            box-shadow: 0 4px 32px rgba(255,255,255,0.04);
+        }
         .forms .title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 28px;
+            letter-spacing: -0.5px;
         }
-
         .forms .input-field {
-            margin-bottom: 20px;
+            margin-bottom: 22px;
         }
-
         .forms input[type="text"],
         .forms input[type="password"] {
-            background-color: #f2f2f2;
-            border: none;
-            border-radius: 5px;
+            background-color: #f5f6fa;
+            border: 1px solid #e3e3e3;
+            border-radius: 7px;
             font-size: 16px;
-            padding: 10px;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            padding: 12px;
             width: 100%;
+            transition: background 0.2s, color 0.2s, border 0.2s;
         }
-
+        .forms input[type="text"]:focus,
+        .forms input[type="password"]:focus {
+            outline: none;
+            border: 1.5px solid #0077cc;
+            background: #eaf4fd;
+        }
+        body.dark-mode .forms input[type="text"],
+        body.dark-mode .forms input[type="password"] {
+            background-color: #292c31;
+            color: #fff;
+            border: 1px solid #383b41;
+        }
+        body.dark-mode .forms input[type="text"]:focus,
+        body.dark-mode .forms input[type="password"]:focus {
+            background: #23282f;
+            border: 1.5px solid #00aaff;
+        }
         .forms .checkbox-text {
             align-items: center;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
-
+        .forms .checkbox-content {
+            display: flex;
+            align-items: center;
+        }
         .forms .checkbox-text input[type="checkbox"] {
-            margin-right: 10px;
+            accent-color: #0077cc;
+            margin-right: 8px;
+            width: 16px;
+            height: 16px;
         }
-
+        .forms .checkbox-text label {
+            font-size: 15px;
+            font-weight: 400;
+        }
         .forms .checkbox-text a {
             color: #0077cc;
             text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: color 0.2s;
         }
-
+        .forms .checkbox-text a:hover {
+            color: #005fa3;
+            text-decoration: underline;
+        }
         .forms .button {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            margin-top: 18px;
         }
-
         .forms input[type="submit"] {
             background-color: #0077cc;
             border: none;
-            border-radius: 5px;
+            border-radius: 7px;
             color: #fff;
             cursor: pointer;
             font-size: 16px;
-            padding: 10px 20px;
-            transition: background-color 0.3s ease-in-out;
+            font-weight: 600;
+            padding: 12px 32px;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
         }
-
         .forms input[type="submit"]:hover {
             background-color: #005fa3;
         }
-
-        /* Login and Signup styles */
         .login-signup {
-            margin-top: 20px;
+            margin-top: 28px;
             text-align: center;
         }
-
         .login-signup .text {
             font-size: 16px;
+            font-weight: 400;
         }
-
         .login-signup a {
             color: #0077cc;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
+            margin-left: 5px;
+            transition: color 0.2s;
         }
-
         .login-signup a:hover {
+            color: #005fa3;
             text-decoration: underline;
         }
-
-        /* Responsive styles */
         @media only screen and (max-width: 768px) {
             .forms {
-                padding: 30px;
-                width: 90%;
+                padding: 30px 12px 24px 12px;
+                width: 95%;
             }
         }
     </style>
-</head>
+{% endblock %}
 
-<body>
+{% block content %}
     <div class="container">
         <div class="forms login">
-            <span class="title">Login</span>
-
+            <span class="title" style="margin-top: -1px; display: block;">User Login</span>
             <form method="POST">
                 {% csrf_token %}
-
                 <div class="input-field">
                     <input type="text" name="email" placeholder="Enter your email" required>
                 </div>
                 <div class="input-field">
                     <input type="password" name="password" placeholder="Enter your password" required>
                 </div>
-
                 <div class="checkbox-text">
                     <div class="checkbox-content">
                         <input type="checkbox" id="logcheck">
                         <label for="logcheck" class="text">Remember me</label>
                     </div>
-                    <a href="#" class="text">Forgot Password?</a>
+                    <a href="{% url 'forgot_password' %}" class="text">Forgot Password?</a>
                 </div>
-
                 <div class="input-field button">
                     <input type="submit" value="Login Now">
                 </div>
             </form>
-
             <div class="login-signup">
                 <span class="text">Not a member?
                     <a href="{% url 'usersignup' %}" class="signed-text">Signup now</a>
@@ -151,7 +173,4 @@
             </div>
         </div>
     </div>
-    </div>
-</body>
-
-</html>
+{% endblock %}

@@ -107,10 +107,10 @@ WSGI_APPLICATION = "register.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "userprofile",
+        "NAME": "alluserprofiles",
         "USER": "postgres",
         "PASSWORD": "2523",
-        "HOST": "152.14.0.17",
+        "HOST": "localhost",
         "PORT": "5432",
 
     }
@@ -171,8 +171,8 @@ CORS_ALLOW_CREDIANTIALS = True
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
-user_url = 'http://152.14.0.13:8000'
-product_url = 'http://152.14.0.14:8001'
-cart_url = 'http://152.14.0.15:8002'
-order_url ='http://152.14.0.16:8003'
-review_url = 'http://152.14.0.17:8004'
+user_url = 'http://127.0.0.1:8000'
+product_url = 'http://127.0.0.1:8001'
+cart_url = 'http://127.0.0.1:8002'
+order_url ='http://127.0.0.1:8003'
+review_url = 'http://127.0.0.1:8004'

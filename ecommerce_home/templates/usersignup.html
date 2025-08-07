@@ -1,110 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <title>Registration or Signup</title>
+{% extends 'changemode.html' %}
+{% block extra_style %}
+    <!-- Use Inter font just like login form -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            background-color: #121312;
-            font-family: Arial, sans-serif;
+        body, .wrapper, input, select, button, h2, h3, label, a {
+            font-family: 'Inter', Arial, sans-serif !important;
         }
-
         .wrapper {
             max-width: 500px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 8px 18px 18px 18px;
             background-color: #fff;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
         }
-
+        body.dark-mode .wrapper {
+            background-color: #222;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.08);
+        }
         h2 {
             margin-top: 0;
             text-align: center;
         }
-
         form {
             display: flex;
             flex-wrap: wrap;
         }
-
         .input-box {
             width: 100%;
             margin-bottom: 10px;
         }
-
         .input-box input,
         .input-box select {
             width: 100%;
             padding: 10px;
-            border: none;
+            box-sizing: border-box;
+            border: 1px solid #e3e3e3;
             border-radius: 5px;
             background-color: #f2f2f2;
             font-size: 16px;
-            color: #555;
+            color: #222;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+            transition: background 0.2s, color 0.2s, border 0.2s;
         }
-
+        .input-box input:focus,
+        .input-box select:focus {
+            outline: none;
+            border: 1.5px solid #0077cc;
+            background: #eaf4fd;
+        }
+        body.dark-mode .input-box input,
+        body.dark-mode .input-box select {
+            background-color: #444;
+            color: #fff;
+            border: 1px solid #383b41;
+        }
+        body.dark-mode .input-box input:focus,
+        body.dark-mode .input-box select:focus {
+            background: #23282f;
+            border: 1.5px solid #00aaff;
+        }
         .policy input[type="checkbox"] {
             display: inline-block;
             vertical-align: middle;
             margin-right: 5px;
+            accent-color: #0077cc;
         }
-
         .policy h3 {
             display: inline-block;
             font-size: 16px;
             margin: 0;
         }
-
         .button {
             text-align: center;
         }
-
-        .button input,
-        .button button {
-            background-color: #4CAF50;
+        .button input {
+            background-color: #0077cc;
             color: white;
             padding: 10px 20px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            transition: all 0.3s ease-in-out;
+            font-weight: 600;
+            transition: background-color 0.3s;
         }
-
-        .button input:hover,
-        .button button:hover {
-            background-color: #0077cc;
+        .button input:hover {
+            background-color: #005fa3;
         }
-
         .text {
             width: 100%;
             text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
+            margin-top: 18px;
+            font-size: 15px;
         }
-
         .text a {
             color: #0077cc;
             text-decoration: none;
+            font-weight: 600;
         }
-
+        .text a:hover {
+            text-decoration: underline;
+        }
         .policy {
             margin-bottom: 10px;
         }
-
         .policy input {
             margin-right: 10px;
         }
-    </style>
-</head>
+        .form-error {
+            color: red;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        body.dark-mode .button input[type="submit"] {
+        background-color: #0077cc !important;
+        color: #fff !important;
+        }
+        body.dark-mode .button input[type="submit"]:hover {
+        background-color: #005fa3 !important;
+        }
+        .button {
+        text-align: center;   
+        }
 
-<body>
+        .button input[type="submit"] {
+        display: inline-block;   
+        padding: 12px 36px;      
+        width: auto;             
+        min-width: 120px;        
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
     <div class="wrapper">
         <h2>User Registration</h2>
-        <form method="POST">
+        <form method="POST" id="signupForm" autocomplete="off">
             {% csrf_token %}
+            <div id="form-error" class="form-error"></div>
             <div class="input-box">
                 <input type="text" name="name" placeholder="Enter your Name" required>
             </div>
@@ -135,41 +172,40 @@
                 </select>
             </div>
             <div class="policy">
-                <input type="checkbox" name="terms" required>
-                <h3> I accept all terms and conditions</h3>
+                <input type="checkbox" name="terms" id="terms" required>
+                <h3>I accept all terms and conditions</h3>
             </div>
             <div class="input-box button">
                 <input type="submit" value="Register Now">
             </div>
-
-            <div class="input-box button">
-                <button onclick="location.href='/api/address'">Add Adress</button>
-            </div>
-
             <div class="text">
-                <h3> Already have an account ? <a href="{% url 'loginuser'%}">Login Now</a></h3>
+                Already have an account?
+                <a href="{% url 'loginuser'%}">Login Now</a>
             </div>
         </form>
     </div>
 
-
     <script>
-        const form = document.querySelector('form');
-        const submitButton = document.querySelector('input[type="submit"]');
+        document.getElementById('signupForm').onsubmit = function(event) {
+            const fields = Array.from(this.querySelectorAll('input, select'));
+            const errorDiv = document.getElementById('form-error');
+            errorDiv.textContent = '';
 
-        submitButton.addEventListener('click', function (event) {
-            event.preventDefault();
+            // Exclude csrf token field
+            const requiredFields = fields.filter(f => f.hasAttribute('required') && f.type !== 'hidden');
+            let allFilled = requiredFields.every(field => {
+                if (field.type === 'checkbox') {
+                    return field.checked;
+                }
+                return field.value && field.value.trim() !== '';
+            });
 
-            const checkbox = document.querySelector('input[type="checkbox"]');
-
-            if (!checkbox.checked) {
-                alert('Please accept the terms and conditions before submitting the form.');
-            } else {
-                form.submit();
+            if (!allFilled) {
+                errorDiv.textContent = "Please fill all details and accept terms before registering.";
+                event.preventDefault();
+                return false;
             }
-        });
+            return true;
+        };
     </script>
-
-</body>
-
-</html>
+{% endblock %}

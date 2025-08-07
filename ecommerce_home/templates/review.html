@@ -1,19 +1,14 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Product Review</title>
-</head>
-
-<body>
+{% extends 'changemode.html' %}
+{% block content %}
     <h1>Product Review</h1>
     <div>
-        <img src="{product_image_url}" alt="Product Image">
-        <h2>{product_name}</h2>
-        <p>{product_description}</p>
+        <img src="{{ product_image_url }}" alt="Product Image">
+        <h2>{{ product_name }}</h2>
+        <p>{{ product_description }}</p>
     </div>
     <form method="POST" action="/review/">
-        <input type="hidden" name="product_id" value="{product_id}">
+        {% csrf_token %}
+        <input type="hidden" name="product_id" value="{{ product_id }}">
         <label for="rating">Rating:</label>
         <input type="number" name="rating" min="1" max="5" required><br><br>
         <label for="content">Review:</label><br>
@@ -31,6 +26,4 @@
         </li>
         {% endfor %}
     </ul>
-</body>
-
-</html>
+{% endblock %}

@@ -81,6 +81,8 @@ class UserDetailsView(APIView):
         return Response(serializer.data)
     
 
+def forgot_password(request):
+    return render(request, 'forgot_password.html')
 
 def usersignup(request):
     if request.method=="GET":

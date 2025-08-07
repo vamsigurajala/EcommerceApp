@@ -1,20 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <title>Address Page</title>
+{% extends 'changemode.html' %}
+{% block extra_style %}
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f8f8;
-        }
-
         .wrapper {
             max-width: 500px;
             margin: 0 auto;
@@ -23,23 +9,24 @@
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
-
+        body.dark-mode .wrapper {
+            background-color: #222;
+            color: #fff;
+            box-shadow: 0 2px 4px rgba(255,255,255,0.08);
+        }
         h2 {
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 20px;
         }
-
         form {
             display: flex;
             flex-wrap: wrap;
         }
-
         .input-box {
             width: 100%;
             margin-bottom: 20px;
         }
-
         .input-box input {
             width: 100%;
             padding: 10px;
@@ -47,7 +34,11 @@
             border-radius: 5px;
             font-size: 16px;
         }
-
+        body.dark-mode .input-box input {
+            background: #222;
+            color: #fff;
+            border: 1px solid #666;
+        }
         .input-box button {
             padding: 10px 20px;
             background-color: #007bff;
@@ -58,19 +49,28 @@
             cursor: pointer;
             transition: background-color 0.2s ease-in-out;
         }
-
         .input-box button:hover {
             background-color: #0069d9;
         }
+        .fixed-back-btn {
+            position: fixed;
+            left: 30px;
+            top: 40px;
+            z-index: 1000;
+        }
+        @media (max-width: 800px) {
+            .fixed-back-btn {
+                left: 10px;
+                top: 16px;
+            }
+        }
     </style>
-</head>
-
-<body>
+{% endblock %}
+{% block content %}
     <div class="wrapper">
         <h2>Add Your Address</h2>
         <form method="POST" action="/api/orders/">
             {% csrf_token %}
-
             <div class="input-box">
                 <input type="text" name="door_no" placeholder="Door no" required>
             </div>
@@ -93,10 +93,8 @@
                 <input type="text" name="country" placeholder="Country" required>
             </div>
             <div class="input-box button">
-                <button onclick="location.href='/api/orders/'">Add Address</button>
+                <button type="submit">Add Address</button>
             </div>
         </form>
     </div>
-</body>
-
-</html>
+{% endblock %}

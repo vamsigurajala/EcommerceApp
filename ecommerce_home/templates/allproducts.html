@@ -1,20 +1,160 @@
-<!DOCTYPE html>
-<html>
+{% extends 'base.html' %}
+{% block extra_style %}
+    <style>
+        /* Navbar styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+        }
 
-<head>
-    <title>{% block title %}Ecommerce Site Homepage{% endblock %}</title>
-    <header>
-        <h1>Ecommerce Site</h1>
-        <nav>
-            <form action="#" method="GET">
-                {% csrf_token %}
-                <a href="{% url 'loginuser' %}">Login</a>
-                <a href="{% url 'usersignup' %}">Register</a>
-                <a href="{% url 'loginuser' %}">Cart</a>
+        header h1 {
+            font-size: 3rem;
+            font-family: "Helvetica Neue", sans-serif;
+            margin: 0;
+        }
 
-        </nav>
-        </form>
-    </header>
+        nav {
+            display: flex;
+        }
+
+        nav a {
+            font-family: "Open Sans", sans-serif;
+            font-size: 1.2rem;
+            color: white;
+            text-decoration: none;
+            margin-left: 1rem;
+            transition: all 0.2s ease-in-out;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+            transform: scale(1.1);
+        }
+
+        /* Search bar styles */
+        .search-container {
+            margin: 1rem;
+        }
+
+        .search-container input[type=text] {
+            font-family: "Open Sans", sans-serif;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 5px;
+            border: none;
+            width: 50%;
+        }
+
+        .search-container button[type=submit] {
+            font-family: "Open Sans", sans-serif;
+            font-size: 1.2rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .search-container button[type=submit]:hover {
+            background-color: #3e8e41;
+            transform: scale(1.1);
+        }
+
+        .search-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 1rem;
+        }
+
+        /* Product card styles */
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .card {
+            margin: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+            padding: 1rem;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .card h3 {
+            font-size: 1.6rem;
+            font-family: "Helvetica Neue", sans-serif;
+            margin: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            font-family: "Open Sans", sans-serif;
+            font-size: 1.2rem;
+            margin: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .card button {
+            font-family: "Open Sans", sans-serif;
+            font-size: 1.2rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #3e8e41;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #3e8e41;
+        }
+
+        .previous-btn {
+            float: right;
+        }
+
+        .next-btn {
+            float: right;
+            margin-right: 10px;
+        }
+    </style>
+{% endblock %}
+{% block content %}
     <div class="search-container">
         <form action="/api/homepage/" method="GET">
             {% csrf_token %}
@@ -23,204 +163,34 @@
         </form>
     </div>
     {% if query %}
-    <h2>Search Results for "{{ query }}": </h2>
+        <h2>Search Results for "{{ query }}": </h2>
     {% else %}
-
-    <h1>All Products</h1>
+        <h1>All Products</h1>
     {% endif %}
 
-</head>
-<style>
-    /* Navbar styles */
-    header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #333;
-        color: white;
-        padding: 1rem;
-    }
-
-    header h1 {
-        font-size: 3rem;
-        font-family: "Helvetica Neue", sans-serif;
-        margin: 0;
-    }
-
-    nav {
-        display: flex;
-    }
-
-    nav a {
-        font-family: "Open Sans", sans-serif;
-        font-size: 1.2rem;
-        color: white;
-        text-decoration: none;
-        margin-left: 1rem;
-        transition: all 0.2s ease-in-out;
-    }
-
-    nav a:hover {
-        text-decoration: underline;
-        transform: scale(1.1);
-    }
-
-    /* Search bar styles */
-    .search-container {
-        margin: 1rem;
-    }
-
-    .search-container input[type=text] {
-        font-family: "Open Sans", sans-serif;
-        font-size: 1.2rem;
-        padding: 0.5rem;
-        border-radius: 5px;
-        border: none;
-        width: 50%;
-    }
-
-    .search-container button[type=submit] {
-        font-family: "Open Sans", sans-serif;
-        font-size: 1.2rem;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 0.5rem;
-        margin-left: 0.5rem;
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-    }
-
-    .search-container button[type=submit]:hover {
-        background-color: #3e8e41;
-        transform: scale(1.1);
-    }
-
-    .search-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 1rem;
-    }
-
-
-    /* Product card styles */
-    .card-container {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-
-    .card {
-        margin: 1rem;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        width: 300px;
-        padding: 1rem;
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s ease-in-out;
-    }
-
-    .card:hover {
-        transform: translateY(-5px);
-    }
-
-    .card img {
-        max-width: 100%;
-        height: auto;
-        margin-bottom: 1rem;
-    }
-
-    .card h3 {
-        font-size: 1.6rem;
-        font-family: "Helvetica Neue", sans-serif;
-        margin: 0;
-        margin-bottom: 0.5rem;
-    }
-
-    .card p {
-        font-family: "Open Sans", sans-serif;
-        font-size: 1.2rem;
-        margin: 0;
-        margin-bottom: 0.5rem;
-    }
-
-    .card button {
-        font-family: "Open Sans", sans-serif;
-        font-size: 1.2rem;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 0.5rem;
-        margin-top: 0.5rem;
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-    }
-
-    button {
-        padding: 10px 20px;
-        background-color: #3e8e41;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    button:hover {
-        background-color: #3e8e41;
-    }
-
-    .previous-btn {
-        float: right;
-    }
-
-    .next-btn {
-        float: right;
-        margin-right: 10px;
-    }
-</style>
-
-<body>
-
-    <main>
-        {% if prev_url %}
+    {% if prev_url %}
         <button onclick="location.href='/api/homepage/?page={{prev_page}}'">Previous</button>
-        {% endif %}
-
-
-        {% if next_url %}
+    {% endif %}
+    {% if next_url %}
         <button class="next-button" onclick="location.href='/api/homepage/?page={{next_page}}'">Next</button>
-        {% endif %}
+    {% endif %}
 
-
-        <ul>
-            <div class="card-container">
-                {% for i in products %}
-                <div class="card">
-                    <li>
-                        <p> <img src="{{i.image}}"></p>
-                        <h3><b>Product Name:</b>{{i.product_name}}</h3>
-                        <p><b>Description:</b>{{ i.product_description }}</p>
-                        <p><b>Price : </b>{{ i.price }}</p>
-                        <p><b>Category : </b>{{i.category}}</p>
-                    </li>
-                    <!-- <a href="/api/addtocart/?product_id={{i.product_id}}">Add To Cart</a> -->
-                    <button onclick="location.href='/api/login/' ">Add To Cart</button>
-
-                    <!-- <button>See Reviews</button> -->
-                </div>
-                {% empty %}
-                <p> No Products Available</p>
-                {% endfor %}
+    <ul>
+        <div class="card-container">
+            {% for i in products %}
+            <div class="card">
+                <li>
+                    <p> <img src="{{i.image}}"></p>
+                    <h3><b>Product Name:</b> {{i.product_name}}</h3>
+                    <p><b>Description:</b> {{ i.product_description }}</p>
+                    <p><b>Price : </b>{{ i.price }}</p>
+                    <p><b>Category : </b>{{i.category}}</p>
+                </li>
+                <button onclick="location.href='/api/login/' ">Add To Cart</button>
             </div>
-        </ul>
-
-    </main>
-</body>
-
-</html>
+            {% empty %}
+            <p>No Products Available</p>
+            {% endfor %}
+        </div>
+    </ul>
+{% endblock %}

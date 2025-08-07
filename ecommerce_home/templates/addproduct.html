@@ -1,11 +1,6 @@
-<!DOCTYPE html>
-<html>
+{% extends 'changemode.html' %}
 
-<head>
-    <title>Add Product</title>
-</head>
-
-<body>
+{% block content %}
     <h1>Add Product to Inventory</h1>
     <form method="post">
         {% csrf_token %}
@@ -19,6 +14,4 @@
         <input type="number" id="discount" name="discount" required><br><br>
         <input type="submit" value="Add Product">
     </form>
-</body>
-
-</html>
+{% endblock %}

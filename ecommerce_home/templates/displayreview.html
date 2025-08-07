@@ -1,12 +1,5 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <meta charset="UTF-8">
-    <title>Reviews</title>
-</head>
-
-<body>
+{% extends 'changemode.html' %}
+{% block content %}
     <h1>Reviews</h1>
     <ul>
         {% for review in reviews %}
@@ -17,6 +10,4 @@
         </li>
         {% endfor %}
     </ul>
-</body>
-
-</html>
+{% endblock %}

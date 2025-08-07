@@ -1,208 +1,270 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <title>Orders</title>
-</head>
+{% extends 'changemode.html' %}
+{% block extra_style %}
+<link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
 <style>
     body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f5f5;
-        color: #333;
-        font-weight: bold;
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 16px;
+        background: #f5f5f5;
     }
-
-    #orders-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: #fff;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-        border-radius: 5px;
-        font-weight: bold;
-    }
-
-    h1 {
-        text-align: center;
-        font-size: 36px;
-        margin-top: 0;
-        font-weight: bold;
-    }
-
-    table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-
-    th,
-    td {
-        text-align: left;
-        padding: 10px;
-    }
-
-    th {
-        background-color: #333;
+    body.dark-mode {
+        background: #181818;
         color: #fff;
-        font-weight: bold;
     }
-
-    tr:nth-child(even) {
-        background-color: #f2f2f2;
-    }
-
-    tfoot td {
-        font-weight: bold;
-        text-align: right;
-        font-weight: bold;
-    }
-
-    .btn-addaddress {
-        border: none;
-        background-color: orange;
+    .fixed-back-btn {
+        position: fixed;
+        left: 30px;
+        top: 40px;
+        z-index: 1000;
+        background-color: #333;
         color: white;
         font-weight: bold;
         font-size: 16px;
-        padding: 5px 10px;
-        border-radius: 5px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
         cursor: pointer;
-        margin-right: 10px;
     }
+    .fixed-back-btn:hover { background: #555; }
 
+    .checkout-container {
+        max-width: 1000px;
+        margin: 12px auto 0 auto;
+        padding: 28px 28px 28px 28px;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 0 22px rgba(0, 0, 0, 0.13);
+        position: relative;
+    }
+    body.dark-mode .checkout-container {
+        background: #232323;
+        color: #fff;
+    }
+    h1 {
+        text-align: center;
+        font-size: 2.4rem;
+        margin-bottom: 18px;
+        font-weight: 700;
+        color: #24262b;
+    }
+    body.dark-mode h1 {
+        color: #fff;
+    }
+    .checkout-table-scroll {
+        max-height: 270px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        border-radius: 7px;
+        box-shadow: 0 0 3px #eaeaea;
+        scrollbar-width: none;
+    }
+    .checkout-table-scroll::-webkit-scrollbar {
+        display: none;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: none;
+    }
+    th, td {
+        text-align: left;
+        padding: 16px 10px;
+    }
+    th {
+        background: #24262b;
+        color: #fff;
+        font-weight: 600;
+        font-size: 17px;
+    }
+    body.dark-mode th {
+        background: #232323;
+        color: #fff;
+    }
+    tr:nth-child(even) {
+        background: #f8f8fa;
+    }
+    body.dark-mode tr:nth-child(even) {
+        background: #2b2b2b;
+    }
+    td {
+        font-size: 16px;
+        font-weight: 500;
+        vertical-align: middle;
+        color: #24262b;
+    }
+    body.dark-mode td {
+        color: #fff;
+    }
+    img {
+        width: 70px;
+        height: 70px;
+        border-radius: 6px;
+        object-fit: contain;
+        background: #f6f6f9;
+        display: block;
+        margin: auto;
+        border: 1px solid #eaeaea;
+    }
+    .order-datetime {
+        text-align: center;
+    }
+    .total-row td {
+        border: none;
+        background: none;
+        padding: 18px 0 0 0;
+    }
+    .total-label-box {
+        display: inline-block;
+        background: #eef3fb;
+        color: #273755;
+        padding: 8px 23px 8px 23px;
+        border-radius: 7px;
+        font-weight: 700;
+        font-size: 20px;
+        margin-right: 8px;
+        min-width: 110px;
+        text-align: center;
+    }
+    .total-value-box {
+        display: inline-block;
+        background: #eef3fb;
+        color: #3556b7;
+        padding: 8px 23px 8px 23px;
+        border-radius: 7px;
+        font-weight: 700;
+        font-size: 20px;
+        min-width: 110px;
+        text-align: center;
+    }
+    body.dark-mode .total-label-box,
+    body.dark-mode .total-value-box {
+        background: #181e22;
+        color: #9bbcff;
+    }
     .btn-placeorder {
         border: none;
         background-color: green;
         color: white;
         font-weight: bold;
         font-size: 16px;
-        padding: 5px 12px;
-        border-radius: 5px;
+        padding: 7px 28px;
+        border-radius: 7px;
         cursor: pointer;
-        margin-right: 10px;
         margin-top: 20px;
     }
-
-    .btn-back {
-        border: none;
-        background-color: #333;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    .btn-back:hover,
-    .btn-addaddress:hover,
     .btn-placeorder:hover {
-        background-color: #555;
+        background-color: #175c1e;
     }
-
     #address-container {
-        margin-top: 20px;
+        margin-top: 26px;
         font-weight: bold;
     }
-
     label {
         display: block;
         margin: 10px 0;
         font-weight: bold;
     }
-
     .address-details {
         font-size: 14px;
         margin-left: 20px;
         font-weight: bold;
     }
-
     .address-details span {
         display: block;
     }
-
-    tfoot {
-        font-weight: bold;
-    }
-
-    tfoot tr div {
-        text-align: right;
-        font-weight: bold;
+    @media (max-width: 900px) {
+        .checkout-container { max-width: 97vw; padding: 11px 2vw 18px 2vw; }
+        .fixed-back-btn { left: 10px; top: 16px; }
+        table, th, td { font-size: 13px; }
+        h1 { font-size: 24px; }
+        .total-label-box, .total-value-box { font-size: 16px;}
     }
 </style>
+{% endblock %}
 
-<body>
-    <div>
-        <button class="btn-back" onclick="location.href='/api/cart/'">Get Back</button>
-    </div>
-    <div id="orders-container">
-        <h1>Orders</h1>
-
-
-        <form action="/api/vieworders/" method="post">
-            {% csrf_token %}
-            <table>
-
-                <thead>
-                    <tr>
-
-                        <th>Image</th>
-                        <th>Product Name</th>
-                        <th>Created At</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    {% for order in orders_data %}
-                    <tr>
-                        <td><img src="{{ order.image }}" alt="{{ order.product_name }}"
-                                style="max-width: 50%; max-height: 50%; object-fit: contain;"> </td>
-                        <td>{{ order.product_name }}</td>
-                        <td>{{ order.created_at }}</td>
-                        <td>{{ order.quantity }}</td>
-                        <td>{{ order.price }}</td>
-                    </tr>
-                    {% endfor %}
-                <tfoot>
-                    <tr>
-                        <div>
-                            <td colspan="3">Total Price:</td>
-                            <td colspan="2">Rs.{{cart_total}}</td>
-                        </div>
-                    </tr>
-                </tfoot>
-
-                {% if not orders_data %}
+{% block content %}
+<button class="btn-back fixed-back-btn" onclick="location.href='/api/cart/'">Get Back</button>
+<div class="checkout-container">
+    <h1>Orders</h1>
+    <form action="/api/vieworders/" method="post">
+        {% csrf_token %}
+        <div class="checkout-table-scroll">
+        <table>
+            <thead>
                 <tr>
-                    <td colspan="8">No orders found.</td>
+                    <th>Image</th>
+                    <th>Product Name</th>
+                    <th>Created At</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
                 </tr>
-                {% endif %}
-                </tbody>
-            </table>
-
-
-            <div id="address-container">
-
-                {% if addresses %}
-                <p>Choose an address:</p>
-                {% for address in addresses %}
-                <label>
-                    <div class="address-details">
-                        <input type="radio" name="address_id" value="{{ address.address_id }}">
-                        {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }},
-                        {{address.state}},{{address.pincode }}, {{ address.country }}
-                    </div>
-                </label><br>
+            </thead>
+            <tbody>
+                {% for order in orders_data %}
+                <tr>
+                    <td><img src="{{ order.image }}" alt="{{ order.product_name }}"></td>
+                    <td>{{ order.product_name }}</td>
+                    <td><div class="order-datetime" data-datetime="{{ order.created_at|escape }}"></div></td>
+                    <td>{{ order.quantity }}</td>
+                    <td>{{ order.price }}</td>
+                </tr>
                 {% endfor %}
-                {% endif %}
-                <!-- <div>
-                    <button class="btn-addaddress" onclick="location.href='/api/orderaddress/' ">Add Address</button>
-                </div> -->
-                <div>
-                    <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place
-                        Order</button>
-                </div>
-        </form>
-</body>
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="3"></td>
+                    <td>
+                        <span class="total-label-box">Total:</span>
+                    </td>
+                    <td>
+                        <span class="total-value-box">Rs.{{ cart_total }}</span>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
 
-</html>
+        <div id="address-container">
+            {% if addresses %}
+            <p>Choose an address:</p>
+            {% for address in addresses %}
+            <label>
+                <div class="address-details">
+                    <input type="radio" name="address_id" value="{{ address.address_id }}">
+                    {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }}, {{address.state}},{{address.pincode }}, {{ address.country }}
+                </div>
+            </label><br>
+            {% endfor %}
+            {% endif %}
+            <div id="address-error" style="color: red; font-size: 16px; margin-bottom: 10px; display:none;"></div>
+            <div>
+                <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place Order</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script>
+document.querySelectorAll('.order-datetime').forEach(function(el) {
+    // Just show CURRENT time
+    let now = new Date();
+    var opts = { month: 'long', day: 'numeric', year: 'numeric' };
+    var dateStr = now.toLocaleDateString('en-US', opts);
+    var timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    el.innerHTML = dateStr + "<br><span style='display:block;text-align:center;font-size:14px;'>" + timeStr + "</span>";
+});
+
+document.querySelector('form').onsubmit = function(e) {
+    var checked = document.querySelector('input[name="address_id"]:checked');
+    var errorDiv = document.getElementById('address-error');
+    if (!checked) {
+        errorDiv.textContent = "Please select an address before placing your order.";
+        errorDiv.style.display = "block";
+        e.preventDefault();
+        return false;
+    } else {
+        errorDiv.textContent = "";
+        errorDiv.style.display = "none";
+    }
+};
+</script>
+{% endblock %}
