@@ -1,362 +1,225 @@
 <!DOCTYPE html>
 <html>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% load static %}
 <head>
-    <title>{% block title %}Ecommerce Site{% endblock %}</title>
-    <style>
-        body.light-mode {
-            background: #fff;
-            color: #222;
-        }
-        body.dark-mode {
-            background: #222;
-            color: #fff;
-        }
-        header, nav, .card, .pagination a {
-            transition: background 0.2s, color 0.2s;
-        }
-        body.dark-mode header, body.dark-mode nav {
-            background: #1a1a1a !important;
-            color: #fff !important;
-        }
-        body.light-mode header, body.light-mode nav {
-            background: #333 !important;
-            color: #fff !important;
-        }
-        body.dark-mode .card {
-            background: #1a1a1a;
-            color: #fff;
-            box-shadow: 0 0 10px rgba(255,255,255,0.1);
-        }
-        body.light-mode .card {
-            background: #fff;
-            color: #222;
-        }
-        body.dark-mode .pagination a {
-            background: #444;
-            color: #fff;
-        }
-        body.light-mode .pagination a {
-            background: #333;
-            color: #fff;
-        }
-        .search-container input[type="text"] {
-            padding: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px 0 0 5px;
-            background-color: #f2f2f2;
-            width: 70%;
-            margin-right: 0;
-        }
+  <meta charset="utf-8" />
+  <title>{% block title %}Ecommerce Site{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        .search-container button[type="submit"] {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 0 5px 5px 0;
-            background-color: #333;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-left: 0;
-        }
+  <style>
+    /* --- your existing styles unchanged --- */
+    body.light-mode { background:#fff; color:#222; }
+    body.dark-mode  { background:#222; color:#fff; }
+    header, nav, .card, .pagination a { transition: background .2s, color .2s; }
+    body.dark-mode header, body.dark-mode nav { background:#1a1a1a !important; color:#fff !important; }
+    body.light-mode header, body.light-mode nav { background:#333 !important; color:#fff !important; }
+    body.dark-mode .card { background:#1a1a1a; color:#fff; box-shadow:0 0 10px rgba(255,255,255,0.1); }
+    body.light-mode .card { background:#fff; color:#222; }
+    body.dark-mode .pagination a { background:#444; color:#fff; }
+    body.light-mode .pagination a { background:#333; color:#fff; }
 
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
+    .search-container input[type="text"]{ padding:10px; font-size:16px; border:none; border-radius:5px 0 0 5px; background:#f2f2f2; width:70%; }
+    .search-container button[type="submit"]{ padding:10px 20px; font-size:16px; border:none; border-radius:0 5px 5px 0; background:#333; color:#fff; cursor:pointer; transition:background-color .2s; }
 
-        header {
-            background-color: #333;
-            color: white;
-            padding: 20px;
-        }
+    body{ margin:0; font-family:Arial, sans-serif; }
+    header{ background:#333; color:#fff; padding:20px; }
+    nav ul{ list-style:none; margin:0; padding:0; }
+    nav li{ display:inline-block; }
+    nav li a, nav a{ color:#fff; text-decoration:none; padding:10px; }
+    nav{ text-align:right; }
 
-        nav ul {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-        }
+    main{ max-width:800px; margin:auto; padding:20px; }
 
-        nav li {
-            display: inline-block;
-        }
+    .card-container{ display:flex; flex-wrap:wrap; justify-content:space-between; }
+    .card{ width:300px; margin:20px; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.2); transition: transform .2s, background .2s, color .2s; }
+    .card:hover{ transform:scale(1.05); }
+    .card img{ max-width:100%; height:auto; margin-bottom:20px; }
+    .card h2{ font-size:24px; margin-bottom:10px; }
+    .card p{ font-size:18px; margin-bottom:10px; }
+    .card button{ background:#333; color:#fff; border:none; padding:10px 20px; border-radius:5px; font-size:18px; cursor:pointer; transition:background-color .2s; }
+    .card button:hover{ background:#555; }
 
-        nav li a {
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-        }
+    .pagination{ display:flex; justify-content:space-between; align-items:center; margin-top:20px; }
+    .pagination a{ padding:10px; background:#333; color:#fff; text-decoration:none; border-radius:5px; }
+    .pagination a:hover{ background:#fff; color:#333; }
 
-        nav {
-            text-align: right;
-        }
+    #theme-toggle{ float:right; margin-left:15px; margin-top:-8px; font-size:20px; border:none; background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
+    .theme-tooltip{ display:none; position:absolute; left:10%; top:110%; transform:translateX(-50%); background:#232323; color:#fff; padding:7px 16px; border-radius:6px; font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,0.18); white-space:nowrap; margin-top:7px; z-index:99; pointer-events:none; opacity:0; transition:opacity .15s; }
+    #theme-toggle:hover .theme-tooltip{ display:block; opacity:1; }
+    .theme-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
 
-        nav a {
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-        }
+    .icon-navbar{ display:flex; justify-content:flex-end; align-items:center; gap:24px; }
+    .nav-icon-link{ position:relative; display:inline-flex; align-items:center; justify-content:center; color:inherit; font-size:1.5rem; padding:8px; border-radius:50%; transition:background .18s; text-decoration:none; background:none; border:none; }
+    .nav-icon-link:hover, .nav-icon-link:focus{ background:rgba(60,60,60,.14); }
+    .icon-tooltip{ display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:#232323; color:#fff; padding:6px 12px; border-radius:6px; font-size:14px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.14); z-index:20; opacity:0; transition:opacity .13s; pointer-events:none; }
+    .nav-icon-link:hover .icon-tooltip, .nav-icon-link:focus .icon-tooltip{ display:block; opacity:1; }
+    .icon-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
 
-        main {
-            max-width: 800px;
-            margin: auto;
-            padding: 20px;
-        }
+    .cart-badge{ position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; padding:0 6px; border-radius:9999px; background:#ff3b30; color:#fff; font-size:12px; font-weight:700; line-height:18px; text-align:center; box-shadow:0 0 0 2px #fff; }
+    body.dark-mode .cart-badge{ box-shadow:0 0 0 2px #222; }
 
-        .card-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-        }
+    /* dialog backdrop + page scroll lock (used by gallery) */
+    #rvDlg::backdrop{ background:rgba(0,0,0,.55); }
+  </style>
 
-        .card {
-            width: 300px;
-            margin: 20px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s, background 0.2s, color 0.2s;
-        }
-
-        .card:hover {
-            transform: scale(1.05);
-        }
-
-        .card img {
-            max-width: 100%;
-            height: auto;
-            margin-bottom: 20px;
-        }
-
-        .card h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .card p {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .card button {
-            background-color: #333;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .card button:hover {
-            background-color: #555;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        .pagination a {
-            padding: 10px;
-            background-color: #333;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-        }
-
-        .pagination a:hover {
-            background-color: #fff;
-            color: #333;
-        }
-        #theme-toggle {
-            float: right;
-            margin-left: 15px;
-            margin-top: -8px;
-            font-size: 20px;
-            border: none;
-            background: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .theme-tooltip {
-            display: none;
-            position: absolute;
-            left: 10%;
-            top: 110%;
-            transform: translateX(-50%);
-            background: #232323;
-            color: #fff;
-            padding: 7px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-            white-space: nowrap;
-            margin-top: 7px;
-            z-index: 99;
-            font-family: inherit;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.15s;
-        }
-        #theme-toggle:hover .theme-tooltip {
-            display: block;
-            opacity: 1;
-        }
-        .theme-tooltip::before {
-            content: "";
-            position: absolute;
-            top: -7px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 0 7px 7px 7px;
-            border-style: solid;
-            border-color: transparent transparent #232323 transparent;
-        }
-        .icon-navbar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 24px;
-}
-
-.nav-icon-link {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: inherit;
-    font-size: 1.5rem;
-    padding: 8px;
-    border-radius: 50%;
-    transition: background 0.18s;
-    text-decoration: none;
-    background: none;
-    border: none;
-}
-.nav-icon-link:hover, .nav-icon-link:focus {
-    background: rgba(60,60,60,0.14);
-}
-
-.icon-tooltip {
-    display: none;
-    position: absolute;
-    top: 120%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #232323;
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.14);
-    z-index: 20;
-    opacity: 0;
-    transition: opacity 0.13s;
-    pointer-events: none;
-}
-.nav-icon-link:hover .icon-tooltip,
-.nav-icon-link:focus .icon-tooltip {
-    display: block;
-    opacity: 1;
-}
-.icon-tooltip::before {
-    content: "";
-    position: absolute;
-    top: -7px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 0 7px 7px 7px;
-    border-style: solid;
-    border-color: transparent transparent #232323 transparent;
-}
-
-    </style>
-    {% block extra_style %}{% endblock %}
+  {% block extra_style %}{% endblock %}
+  {% block gallery_assets %}
+    <link rel="stylesheet" href="{% static 'gallery/route-lightbox.css' %}">
+    <script defer src="{% static 'gallery/route-lightbox.js' %}"></script>
+  {% endblock %}
 </head>
-<body>
-    <header>
-        <button id="theme-toggle">
-            <!-- Moon Icon (light mode) -->
-            <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M21 15.3A9 9 0 1 1 12.7 3a7 7 0 1 0 8.3 12.3z"/>
-            </svg>
-            <!-- Sun Icon (dark mode) -->
-            <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" style="display:none;" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
-                <g stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                </g>
-            </svg>
-            <span class="theme-tooltip" id="theme-tooltip">Switch to dark mode</span>
-        </button>
-        <p>Hi {{ user.username }}, Welcome to</p>
-        <h1>Ecommerce Site</h1>
-        <nav class="icon-navbar">
-    <a href="/api/paginate/?page=1" class="nav-icon-link">
-        <i class="fa fa-home"></i>
-        <span class="icon-tooltip">Home</span>
-    </a>
-    <a href="/api/cart/" class="nav-icon-link">
-        <i class="fa fa-shopping-cart"></i>
-        <span class="icon-tooltip">Cart</span>
-    </a>
-    <a href="/api/vieworders/" class="nav-icon-link">
-        <i class="fa fa-box"></i>
-        <span class="icon-tooltip">Orders</span>
-    </a>
-    <a href="{% url 'loginuser' %}" class="nav-icon-link">
-        <i class="fa fa-sign-out-alt"></i>
-        <span class="icon-tooltip">Logout</span>
-    </a>
-</nav>
 
-    </header>
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
-    <script>
-       function setTheme(mode) {
-            const moonIcon = document.getElementById('moon-icon');
-            const sunIcon = document.getElementById('sun-icon');
-            const tooltip = document.getElementById('theme-tooltip');
-            if (mode === 'dark') {
-                document.body.classList.add('dark-mode');
-                document.body.classList.remove('light-mode');
-                sunIcon.style.display = '';
-                moonIcon.style.display = 'none';
-                if (tooltip) tooltip.textContent = 'Switch to Light Mode';
-            } else {
-                document.body.classList.add('light-mode');
-                document.body.classList.remove('dark-mode');
-                moonIcon.style.display = '';
-                sunIcon.style.display = 'none';
-                if (tooltip) tooltip.textContent = 'Switch to Dark Mode';
-            }
+<body>
+  <header>
+    <button id="theme-toggle">
+      <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M21 15.3A9 9 0 1 1 12.7 3a7 7 0 1 0 8.3 12.3z"/></svg>
+      <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" style="display:none;" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
+        <g stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </g>
+      </svg>
+      <span class="theme-tooltip" id="theme-tooltip">Switch to dark mode</span>
+    </button>
+
+    <p>Hi {{ user.username }}, Welcome to</p>
+    <h1>Ecommerce Site</h1>
+
+    <nav class="icon-navbar">
+      <a href="/api/paginate/?page=1" class="nav-icon-link"><i class="fa fa-home"></i><span class="icon-tooltip">Home</span></a>
+      <a href="/api/cart/" class="nav-icon-link">
+        <i class="fa fa-shopping-cart"></i>
+        {% if cart_count and cart_count > 0 %}<span class="cart-badge">{{ cart_count }}</span>{% endif %}
+        <span class="icon-tooltip">Cart</span>
+      </a>
+      <a href="/api/vieworders/" class="nav-icon-link"><i class="fa fa-box"></i><span class="icon-tooltip">Orders</span></a>
+      <a href="{% url 'loginuser' %}" class="nav-icon-link"><i class="fa fa-sign-out-alt"></i><span class="icon-tooltip">Logout</span></a>
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- reusable dialog for gallery -->
+  <dialog id="rvDlg" style="padding:0;border:0;width:min(1100px,96vw);max-height:90vh;">
+    <div id="rvDlgBody" style="background:#fff;color:#111;max-height:90vh;overflow:auto"></div>
+  </dialog>
+
+  <!-- replace your existing floating close button -->
+<button id="rvDlgCloseFloat" aria-label="Close gallery" type="button"
+  style="display:none;position:fixed;width:42px;height:42px;border-radius:9999px;
+         background:#fff;border:1px solid rgba(0,0,0,.15);box-shadow:0 6px 18px rgba(0,0,0,.22);
+         color:#111;font-size:22px;line-height:1;align-items:center;justify-content:center;
+         z-index:2147483647;cursor:pointer; top:12px; right:12px;">×</button>
+
+
+  <script>
+    (function(){
+      function setTheme(mode){
+        const moon=document.getElementById('moon-icon');
+        const sun=document.getElementById('sun-icon');
+        const tip=document.getElementById('theme-tooltip');
+        if(mode==='dark'){
+          document.body.classList.add('dark-mode'); document.body.classList.remove('light-mode');
+          sun.style.display=''; moon.style.display='none'; if(tip) tip.textContent='Switch to Light Mode';
+        }else{
+          document.body.classList.add('light-mode'); document.body.classList.remove('dark-mode');
+          moon.style.display=''; sun.style.display='none'; if(tip) tip.textContent='Switch to Dark Mode';
         }
-        let savedTheme = localStorage.getItem('theme');
-        setTheme(savedTheme === 'dark' ? 'dark' : 'light');
-        document.getElementById('theme-toggle').onclick = function() {
-            let newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
-            setTheme(newTheme);
-            localStorage.setItem('theme', newTheme);
-        };
-    </script>
+      }
+      const saved=localStorage.getItem('theme'); setTheme(saved==='dark'?'dark':'light');
+      document.getElementById('theme-toggle').onclick=function(){
+        const next = document.body.classList.contains('dark-mode') ? 'light':'dark';
+        setTheme(next); localStorage.setItem('theme', next);
+      };
+    })();
+
+    (function () {
+  const dlg  = document.getElementById('rvDlg');
+  const body = document.getElementById('rvDlgBody');
+  const closeFloat = document.getElementById('rvDlgCloseFloat');
+  if (!dlg || !body || !closeFloat) return;
+
+  function lock(){ document.body.style.overflow = 'hidden'; }
+  function unlock(){ document.body.style.overflow = ''; }
+
+  // NEW: robust positioning
+  function placeCloseButton(){
+    if (!dlg.open) return;
+    const r = dlg.getBoundingClientRect();
+    const btnW = closeFloat.offsetWidth || 42;
+    const btnH = closeFloat.offsetHeight || 42;
+
+    // try just outside, fall back just inside if no room
+    let left = r.right + 12;
+    let top  = r.top + 12;
+    if (left + btnW > window.innerWidth - 6) left = r.right - btnW - 12;
+    if (top < 12) top = 12;
+
+    closeFloat.style.right = '';           // ensure we’re using 'left' placement
+    closeFloat.style.left  = left + 'px';
+    closeFloat.style.top   = top  + 'px';
+    closeFloat.style.display = 'flex';
+  }
+  function hideCloseButton(){
+    closeFloat.style.display = 'none';
+    window.removeEventListener('resize', placeCloseButton);
+  }
+  closeFloat.onclick = ()=> dlg.close();
+
+  // … your delegated click that opens the gallery …
+  document.addEventListener('click', async (e) => {
+    const GALLERY_URL = "{% url 'review_gallery' %}";
+    const img = e.target.closest('.rv-images img');
+    if (!img) return;
+
+    const card  = img.closest('.rv');
+    const ridEl = card && (card.querySelector('.react[data-id]') || card.querySelector('.js-edit[data-id]'));
+    const reviewId = ridEl && ridEl.dataset.id;
+    if (!reviewId) return;
+
+    const allImgs = [...img.parentElement.querySelectorAll('img')];
+    const idx = Math.max(0, allImgs.indexOf(img));
+    const url = `${GALLERY_URL}?review_id=${encodeURIComponent(reviewId)}&idx=${idx}`;
+
+    try{
+      const res = await fetch(url, { credentials: 'include' });
+      const html = await res.text();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      body.innerHTML = html;
+      // re-run any real scripts in the fragment
+      body.querySelectorAll('script').forEach(old => {
+        const type = (old.getAttribute('type') || '').toLowerCase();
+        const isJs = !type || type === 'text/javascript' || type === 'application/javascript' || type === 'module';
+        if (!isJs) return;
+        const s = document.createElement('script');
+        for (const a of old.attributes) s.setAttribute(a.name, a.value);
+        s.textContent = old.src ? '' : (old.textContent || '');
+        if (old.src) s.src = old.src;
+        old.replaceWith(s);
+      });
+
+      if (!dlg.open) dlg.showModal();
+      lock();
+
+      // IMPORTANT: position after paint so it doesn’t stay at (0,0)
+      requestAnimationFrame(placeCloseButton);
+      setTimeout(placeCloseButton, 0);
+      window.addEventListener('resize', placeCloseButton);
+
+      const onClose = () => { unlock(); hideCloseButton(); dlg.removeEventListener('close', onClose); };
+      dlg.addEventListener('close', onClose);
+    }catch(err){
+      console.error('gallery open failed', err);
+      alert('Could not open gallery');
+    }
+  });
+})();
+  </script>
 </body>
 </html>

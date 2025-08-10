@@ -22,10 +22,16 @@
         float: right;
         margin-right: 10px;
     }
+    .cart-badge{
+        position:absolute; top:-6px; right:-10px; min-width:18px; height:18px; padding:0 6px;
+        border-radius:9999px; background:#ff3b30; color:#fff; font-size:12px; font-weight:700;
+        line-height:18px; text-align:center; box-shadow:0 0 0 2px #fff;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="search-container">
     <form action="/api/paginate/" method="GET">
         {% csrf_token %}
@@ -57,12 +63,79 @@
                 <p><b>Price : </b>{{ i.price }}</p>
                 <p><b>Category : </b>{{i.category}}</p>
             </li>
-            <button onclick="location.href='/api/addquantity/?product_id={{i.product_id}}'">Add To Cart</button>
-            <button>See Reviews</button>
+            <button type="button" class="add-to-cart" data-product-id="{{ i.product_id }}">Add To Cart</button>
+            <a href="{% url 'reviews_page' i.product_id %}">
+                <button type="button">See Reviews</button></a>
         </div>
         {% empty %}
         <p>No Products Available</p>
         {% endfor %}
     </div>
 </ul>
+<script>
+function getCookie(name){
+  const v = `; ${document.cookie}`.split(`; ${name}=`);
+  if (v.length === 2) return v.pop().split(';').shift();
+}
+const csrftoken = getCookie('csrftoken');
+
+document.querySelectorAll('.add-to-cart').forEach(btn=>{
+  btn.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+
+    const id = btn.dataset.productId;
+    if(!id) return;
+
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Adding...';
+
+    try{
+      const resp = await fetch('/api/addtocart-ajax/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: new URLSearchParams({ product_id: id }),
+        credentials: 'same-origin'
+      });
+
+      const text = await resp.text(); // read raw
+      let data = {};
+      try { data = JSON.parse(text); } catch (_) {}
+
+      if (!resp.ok || !data.ok){
+        console.error('Add to cart failed', {status: resp.status, body: text});
+        btn.textContent = 'Try again';
+        setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 1000);
+        return;
+      }
+
+      // Update cart badge in nav (if present on this page)
+      const cartLink = document.querySelector('nav a.nav-icon-link[href="/api/cart/"]') || document.querySelector('nav a[href="/api/cart/"]');
+      if (cartLink){
+        let badge = cartLink.querySelector('.cart-badge');
+        if (!badge){
+          badge = document.createElement('span');
+          badge.className = 'cart-badge';
+          cartLink.style.position = 'relative';
+          cartLink.appendChild(badge);
+        }
+        const count = parseInt(data.cart_count || 0, 10);
+        badge.textContent = count;
+        badge.style.display = count > 0 ? '' : 'none';
+      }
+
+      btn.textContent = 'Added ✓';
+      setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 600);
+    } catch (err){
+      console.error('Network error', err);
+      btn.textContent = 'Try again';
+      setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 700);
+    }
+  });
+});
+</script>
+
 {% endblock %}

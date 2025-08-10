@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import UserDetailsView, GetUserIdAPIView, UserLoginAPIView, LogoutView, AddressView
+from .views import UserDetailsView, GetUserIdAPIView, UserLoginAPIView, LogoutView, AddressView, review_stats
 
 
 from drf_yasg.views import get_schema_view 
@@ -43,7 +43,12 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path("vieworders/", views.vieworders, name='vieworder'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
-    # path('review/<int:product_id>/',views.write_review,name='writereview'),
-    # path('seereviews/', views.product_reviews, name='seereviews'),
-
+    path('addtocart-ajax/', views.add_to_cart_ajax, name='add_to_cart_ajax'),
+    path('reviews/<int:product_id>/', views.reviews_page, name='reviews_page'),
+    path('reviews/<int:product_id>/submit/', views.submit_review, name='submit_review'),
+    path('reviews/<int:review_id>/edit/', views.edit_review, name='edit_review'),
+    path('reviews/<int:review_id>/vote/', views.review_vote, name='review_vote'),
+    path('reviews/<int:product_id>/stats/', views.review_stats, name='review_stats'), 
+    path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),
+    path("api/reviews/gallery/", views.review_gallery, name="review_gallery"),
 ]

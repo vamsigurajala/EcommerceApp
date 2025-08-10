@@ -7,7 +7,6 @@ from .serializers import UserSerializer, AddressSerializer
 from .models import User, Address
 from django.conf import settings 
 from django.http import JsonResponse
-from django.db import IntegrityError
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 import requests
@@ -16,9 +15,11 @@ from rest_framework import views, status, generics
 import json
 import jwt, datetime
 from register.settings import user_url, product_url, cart_url, order_url, review_url
-
-
-
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt 
+from django.views.decorators.http import require_POST, require_GET, require_http_methods 
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponseNotFound
+from urllib.parse import urljoin
 
 def landing_page(request):
    return redirect("homepage")
@@ -266,41 +267,53 @@ def homepage(request, page = None,searchproduct=None):
 
 
 # View function for paginating products
-def paginate(request, page = None,search=None):
+@ensure_csrf_cookie
+def paginate(request, page=None, search=None):
     if 'jwt' in request.COOKIES.keys():
         # Get user_id from the authenticated user's information
-        user = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()
+        user = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES).json()
     else:
         return redirect(f'{user_url}/api/login/')
-    page_number = request.GET.get('page',1)  # Default to page 1 if no page number is specified
+
+    page_number = request.GET.get('page', 1)  # Default to page 1 if no page number is specified
 
     if 'search' in request.GET.keys():
         search = request.GET['search']
 
     if search:
         url = f'{product_url}/api/productsearch/?search={search}&page={page_number}'
-
     else:
         url = f'{product_url}/api/getproducts/?page={page_number}'
-    query_params = {'page' : page_number}
 
+    query_params = {'page': page_number}
     response = requests.get(url)
-
     data = response.json()
+
     products = data['results']
     for product in products:
-        product['image']=product['image'].replace('http://152.14.0.14','http://127.0.0.1')
+        product['image'] = product['image'].replace('http://152.14.0.14', 'http://127.0.0.1')
 
     next_url = data['next']
     prev_url = data['previous']
     page = data['page']
+
+    #Get cart count
+    cart_count = 0
+    try:
+        cart_resp = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
+        if isinstance(cart_resp, list):
+            cart_count = sum(int(item.get('quantity', 0)) for item in cart_resp)
+    except Exception:
+        cart_count = 0
+
     context = {
         'products': products,
         'next_url': next_url,
-        'next_page': int(page)+1,
+        'next_page': int(page) + 1,
         'prev_url': prev_url,
-        'prev_page': int(page)-1,
+        'prev_page': int(page) - 1,
         'user': user,
+        'cart_count': cart_count,   
     }
     return render(request, 'products.html', context)
 
@@ -314,6 +327,34 @@ class GetUserIdAPIView(views.APIView): #Get the UserId
         return Response( UserSerializer(user).data)
 
 
+
+@require_POST
+def add_to_cart_ajax(request):
+    if 'jwt' not in request.COOKIES:
+        return JsonResponse({'ok': False, 'auth': False, 'error': 'Not authenticated'}, status=401)
+
+    product_id = request.POST.get('product_id')
+    if not product_id:
+        return JsonResponse({'ok': False, 'error': 'missing product_id'}, status=400)
+
+    try:
+        # forward to your cart microservice (no redirect)
+        r = requests.post(f'{cart_url}/api/addtocart/', data={'product_id': product_id}, cookies=request.COOKIES)
+        if r.status_code >= 400:
+            return JsonResponse({'ok': False, 'error': 'cart service error', 'status': r.status_code, 'body': r.text}, status=502)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': 'cart service unreachable'}, status=502)
+
+    # compute updated count
+    cart_count = 0
+    try:
+        cart_resp = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
+        if isinstance(cart_resp, list):
+            cart_count = sum(int(item.get('quantity', 0)) for item in cart_resp)
+    except Exception:
+        pass
+
+    return JsonResponse({'ok': True, 'cart_count': cart_count})
 
 
 def cart(request):
@@ -338,6 +379,7 @@ def cart(request):
     # If cart is not empty, process the cart items
     cartitems=cart_response.json()
     cart_total=0
+    #cart_count = 0 
     for item in cartitems:
         # Retrieve product details from the product service
         product_id = item["product_id"]
@@ -347,6 +389,7 @@ def cart(request):
         # Calculate total price for each item
         item['total_price'] = item['quantity'] * float(product['price'])
         cart_total+=item['total_price']
+        #cart_count += int(item['quantity']) 
     return render(request, 'cart.html',{'user_id':user_id, 'cartitems':cartitems, 'cart_total':cart_total, 'message':None})    
         
 
@@ -492,67 +535,389 @@ def checkout(request):
         reposne = requests.post(f'{cart_url}/api/clearcart/',data=request.GET, cookies=request.COOKIES).json()
 
         orders_data = json.dumps(orders_data)
+        messages.success(request, "Order placed successfully!")
+        return redirect('/api/vieworders/?placed=1')
 
-        # context = {
-        #     'addresses': address_response['addresses'],
-        #     'orders_data': cart_items,
-        #     'cart_total':cart_total,
-        # }
-        return redirect('/api/vieworders/')
 
+def _get_current_user_id(request):
+    try:
+        data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
+        return data.get('user_id')
+    except Exception:
+        return None
+    
+
+def _get_my_review_id(product_id, request):
+    try:
+        r = requests.get(
+            f'{review_url}/api/reviews/mine/',
+            params={'product_id': product_id},
+            cookies=request.COOKIES, timeout=6
+        )
+        if r.ok:
+            data = r.json() or {}
+            rv = data.get('review')
+            return rv.get('review_id') if rv else None
+    except Exception:
+        pass
+    return None
 
 
 def vieworders(request):
-    order_data = requests.get(f'{order_url}/api/placeorder/', cookies= request.COOKIES).json()
-    # print(type(json.loads(order_data)))
-    order_data=json.loads(order_data)
-    # print(order_data)
+    r = requests.get(f'{order_url}/api/placeorder/', cookies=request.COOKIES, timeout=10)
+    if not r.ok:
+        return render(request, "vieworder.html", {"order_data": []})
 
-    for order in order_data['orderlist']:
-        for item in order['order_items']:
-            product_data = requests.get(f'{product_url}/api/productview/{item["product_id"]}/', cookies=request.COOKIES).json()
-            item['product_name'] = product_data['product_name']
-            item['image'] = product_data['image']
-            item['image'] = item['image'].replace('http://152.14.0.14','http://127.0.0.1')
-            # print(item['product_name'] )
+    order_data = r.json()
+    # If the service sent a JSON *string*, decode it
+    if isinstance(order_data, str):
+        try:
+            order_data = json.loads(order_data)
+        except json.JSONDecodeError:
+            order_data = {}
 
-            # print(item['image'] )
-       
-    return render(request, "vieworder.html", {"order_data": order_data['orderlist']})
-
-
-
-# def write_review(request, product_id):
-#     if request.method == 'GET':
-#         if 'jwt' in request.COOKIES.keys():
-
-#             user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-#         else:
-#             return redirect(f'{user_url}/api/login/')
-#         for item in products:
-#             product_id=item["product_id"]
-#             product_data = requests.get(f'{product_url}/api/singleproduct/{product_id}/', cookies=request.COOKIES).json()
-
-#         return render(request, 'review.html', {'product': product_data})
-
-#     elif request.method == 'POST':
-#         user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-#         product_data = requests.get(f'{product_url}/api/singleproduct/{product_id}/', cookies=request.COOKIES).json()
-
-#         review_data = {
-#             'user_id': request.user.id,
-#             'product_id': product_id,
-#             'rating': request.POST.get('rating'),
-#             'comment': request.POST.get('comment'),
-#             'posted_on':request.POST.get('posted_on'),
-#         }
-#         response = requests.post(f'{review_url}/review/', json=review_data, cookies=request.COOKIES)
-#         return redirect('/api/seereviews/')
+    for order in order_data.get('orderlist', []):     # for each item, attach product details and "my_review_id"
+        for item in order.get('order_items', []):
+            product_id = item.get("product_id")
+            if product_id is None:
+                continue
+            try:             # product name + image (as you already did)
+                product_data = requests.get(
+                    f'{product_url}/api/productview/{product_id}/',
+                    cookies=request.COOKIES, timeout=8
+                ).json()
+                item['product_name'] = product_data.get('product_name')
+                img = product_data.get('image') or ''
+                item['image'] = img.replace('http://152.14.0.14','http://127.0.0.1')
+            except Exception:
+                item.setdefault('product_name', 'Unknown product')
+                item.setdefault('image', '')
+            item['my_review_id'] = _get_my_review_id(product_id, request)
+    return render(request, "vieworder.html", {"order_data": order_data.get('orderlist', [])})
 
 
-# def product_reviews(request, product_id):
-#     review_data = requests.get(f'{review_url}/review/', cookies=request.COOKIES).json()
-#     reviews = review_data['reviews']
-#     product_data = requests.get(f'{product_url}/api/productview/{product_id}/', cookies=request.COOKIES).json()
-#     return render(request, 'product_reviews.html', {'reviews': reviews, 'product': product_data})
 
+from django.urls import reverse
+
+def reviews_page(request, product_id):
+    product = requests.get(f'{product_url}/api/singleproduct/{product_id}/').json()
+
+    # who is logged in?
+    current_user_id = _get_current_user_id(request)
+
+    # can this user review? (verified purchase check)
+    can_review = False
+    if current_user_id:
+        can_review = _has_purchased(request, product_id)   
+
+    try:
+        u = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES).json()
+        current_user_id = u.get('user_id')
+    except Exception:
+        pass
+
+    # page param
+    try:
+        page = int(request.GET.get('page', '1'))
+        if page < 1: page = 1
+    except Exception:
+        page = 1
+# Fetch stats
+    stats = {}
+    try:
+        rs = requests.get(
+            f'{review_url}/api/reviews/stats/',
+            params={'product_id': product_id},
+            cookies=request.COOKIES, timeout=10
+        )
+        if rs.ok:
+            stats = rs.json()
+    except Exception:
+        stats = {}
+    # fetch this page of reviews
+    r = requests.get(f'{review_url}/api/reviews/', params={'product_id': product_id, 'page': page},
+                     cookies=request.COOKIES, timeout=10)
+    data = r.json() if r.ok else {}
+    reviews = data.get('results', []) if isinstance(data, dict) else []
+    cur_page = int(data.get('page', page) or 1)
+    total_pages = int(data.get('pages', 1) or 1)
+    total_count = data.get('count', len(reviews))
+
+    # Optional: move my review to top if it's in THIS page
+    if current_user_id:
+        mine = [rv for rv in reviews if int(rv.get('user_id', 0)) == int(current_user_id)]
+        others = [rv for rv in reviews if not (int(rv.get('user_id', 0)) == int(current_user_id))]
+        reviews = mine + others
+
+    # NEW: fetch the user's review (regardless of page) so we can pin it at top
+    pinned_review = None
+    if current_user_id:
+        try:
+            mr = requests.get(
+                f'{review_url}/api/reviews/mine/',
+                params={'product_id': product_id},
+                cookies=request.COOKIES, timeout=10
+            ).json()
+            pinned_review = mr.get('review')
+        except Exception:
+            pinned_review = None
+
+# 🔧 DEDUPE: if pinned exists and is also in this page, remove it from the page list
+    if pinned_review:
+        pr_id = int(pinned_review.get('review_id'))
+        reviews = [rv for rv in reviews if int(rv.get('review_id')) != pr_id]
+
+
+    # build prev/next urls
+    base = reverse('reviews_page', args=[product_id])
+    prev_url = f"{base}?page={cur_page-1}" if cur_page > 1 else None
+    next_url = f"{base}?page={cur_page+1}" if cur_page < total_pages else None
+
+    return render(request, 'reviews.html', {
+        'product': product,
+        'reviews': reviews,
+        'pinned_review': pinned_review,           
+        'current_user_id': current_user_id,
+        'cur_page': cur_page,
+        'total_pages': total_pages,
+        'prev_url': prev_url,
+        'next_url': next_url,
+        'stats': stats,
+        'total_count': total_count,
+        'can_review': can_review,        
+
+    })
+
+
+@require_GET
+def review_stats(request, product_id):
+    try:
+        rr = requests.get(f'{review_url}/api/reviews/stats/', params={'product_id': product_id}, timeout=8)
+        data = rr.json() if rr.headers.get('content-type','').startswith('application/json') else {}
+        return JsonResponse(data, status=rr.status_code, safe=True)
+    except Exception:
+        return JsonResponse({'error': 'review service unreachable'}, status=502)
+
+
+@require_POST
+def submit_review(request, product_id):
+    if 'jwt' not in request.COOKIES:
+        return JsonResponse({'ok': False, 'auth': False, 'error': 'Not authenticated'}, status=401)
+
+    # Validate rating
+    try:
+        rating = int(request.POST.get('rating', 0))
+        assert 1 <= rating <= 5
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Rating must be 1..5'}, status=400)
+
+    # Optional UX pre-check (server enforcement still happens in Review Service)
+    if not _has_purchased(request, product_id):
+        return JsonResponse({'ok': False, 'error': 'You must purchase this product before leaving a review.'}, status=403)
+
+    data = {
+        'product_id': product_id,
+        'rating': rating,
+        'title': request.POST.get('title', ''),
+        'body': request.POST.get('body', ''),
+    }
+
+    # -------- key change: forward ALL images[] + legacy image --------
+    files = []
+    for f in request.FILES.getlist('images'):
+        files.append(('images', (f.name, f.read(), f.content_type or 'application/octet-stream')))
+    if 'image' in request.FILES:  # keep old single file support
+        f = request.FILES['image']
+        files.append(('image', (f.name, f.read(), f.content_type or 'application/octet-stream')))
+
+    try:
+        r = requests.post(
+            f'{review_url}/api/reviews/',
+            data=data,
+            files=files or None,
+            cookies=request.COOKIES,
+            timeout=15
+        )
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'review service unreachable'}, status=502)
+
+    ctype = r.headers.get('content-type', '')
+    try:
+        body = r.json() if 'application/json' in ctype else {'raw': r.text}
+    except Exception:
+        body = {'raw': r.text}
+
+    return JsonResponse(body, status=r.status_code, safe=isinstance(body, dict))
+
+
+@require_http_methods(["POST"])
+def edit_review(request, review_id):
+    if 'jwt' not in request.COOKIES:
+        return JsonResponse({'ok': False, 'auth': False, 'error': 'Not authenticated'}, status=401)
+
+    data = {}
+    if 'rating' in request.POST:
+        try:
+            data['rating'] = int(request.POST['rating'])
+            if not (1 <= data['rating'] <= 5):
+                return JsonResponse({'ok': False, 'error': 'Rating must be 1..5'}, status=400)
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'Bad rating'}, status=400)
+    if 'title' in request.POST:
+        data['title'] = request.POST['title']
+    if 'body' in request.POST:
+        data['body'] = request.POST['body']
+
+    # -------- key change: forward ALL images[] + legacy image --------
+    files = []
+    for f in request.FILES.getlist('images'):
+        files.append(('images', (f.name, f.read(), f.content_type or 'application/octet-stream')))
+    if 'image' in request.FILES:  # keep old single file support
+        f = request.FILES['image']
+        files.append(('image', (f.name, f.read(), f.content_type or 'application/octet-stream')))
+
+    try:
+        r = requests.patch(
+            f'{review_url}/api/reviews/{review_id}/',
+            data=data,
+            files=files or None,
+            cookies=request.COOKIES,
+            timeout=15
+        )
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'review service unreachable'}, status=502)
+
+    ctype = r.headers.get('content-type', '')
+    try:
+        body = r.json() if 'application/json' in ctype else {'raw': r.text}
+    except Exception:
+        body = {'raw': r.text}
+
+    return JsonResponse(body, status=r.status_code, safe=isinstance(body, dict))
+
+
+@require_POST
+def review_vote(request, review_id):
+    print("\n[review_vote] HIT review_id:", review_id)
+    if 'jwt' not in request.COOKIES:
+        print("[review_vote] 401 no jwt")
+        return JsonResponse({'ok': False, 'auth': False}, status=401)
+
+    val = request.POST.get('value')
+    print("[review_vote] value:", val)
+    if val not in ('1', '-1'):
+        print("[review_vote] 400 bad value")
+        return JsonResponse({'ok': False, 'error': 'bad value'}, status=400)
+
+    try:
+        url = f'{review_url}/api/reviews/{review_id}/vote/'
+        print("[review_vote] POST ->", url)
+        r = requests.post(url, data={'value': val}, cookies=request.COOKIES, timeout=10)
+        print("[review_vote] status:", r.status_code, "body:", r.text[:200])
+        return JsonResponse(r.json(), status=r.status_code)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        print("[review_vote] 502 review service unreachable")
+        return JsonResponse({'ok': False, 'error': 'review service unreachable'}, status=502)
+
+
+def _get_current_user_id(request):
+    try:
+        data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
+        return data.get('user_id')
+    except Exception:
+        return None
+
+def _has_purchased(request, product_id) -> bool:
+    """
+    Calls Order Service internal endpoint to check if the logged-in user bought the product.
+    """
+    user_id = _get_current_user_id(request)
+    if not user_id:
+        return False
+    try:
+        r = requests.get(
+            f'{order_url}/api/internal/has-purchased/',
+            params={'user_id': str(user_id), 'product_id': str(product_id)},
+            timeout=6
+        )
+        if r.ok:
+            data = r.json()
+            return bool(data.get('has_purchased'))
+        return False
+    except Exception:
+        return False
+    
+@require_POST
+def delete_review(request, review_id):
+    if 'jwt' not in request.COOKIES:
+        return JsonResponse({'ok': False, 'auth': False}, status=401)
+    try:
+        # forward to Review Service DELETE /api/reviews/<id>/
+        r = requests.delete(
+            f'{review_url}/api/reviews/{review_id}/',
+            cookies=request.COOKIES, timeout=10
+        )
+        # pass through JSON if present
+        if r.headers.get('content-type','').startswith('application/json'):
+            return JsonResponse(r.json(), status=r.status_code)
+        return JsonResponse({'ok': r.ok}, status=r.status_code)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'review service unreachable'}, status=502)
+    
+
+
+@require_GET
+def review_gallery(request):
+    rid = request.GET.get("review_id")
+    if not rid:
+        return HttpResponseNotFound("Missing review_id")
+
+    try:
+        start = int(request.GET.get("idx", 0))
+    except Exception:
+        start = 0
+
+    # call review service
+    try:
+        r = requests.get(
+            f"{review_url}/api/reviews/{rid}/",
+            cookies=request.COOKIES,
+            timeout=10
+        )
+    except requests.RequestException:
+        return HttpResponseNotFound("Review service unreachable")
+
+    if not r.ok or "application/json" not in (r.headers.get("content-type") or ""):
+        return HttpResponseNotFound("Review not found")
+
+    data = r.json()
+
+    # collect images (multi first; fall back to legacy single)
+    imgs = data.get("image_urls") or []
+    if not imgs and data.get("image_url"):
+        imgs = [data["image_url"]]
+
+    # make any relative URLs absolute (e.g. "/media/…")
+    base = review_url if review_url.endswith("/") else review_url + "/"
+    def _abs(u: str) -> str:
+        if not u:
+            return u
+        return u if u.startswith("http://") or u.startswith("https://") else urljoin(base, u.lstrip("/"))
+    imgs = [_abs((u or "").strip()) for u in imgs]
+
+    context = {
+        "images": imgs,
+        "start_index": max(0, min(start, max(len(imgs) - 1, 0))),
+        "title": data.get("title") or "",
+        "body": data.get("body") or "",
+        "rating": data.get("rating") or 0,
+        "user_name": data.get("user_name") or "Anonymous",
+        "is_verified": bool(data.get("is_verified_purchase")),
+        "created_at": data.get("display_date") or "",
+        "review_id": data.get("review_id") or rid,
+        "like_count": data.get("like_count", 0),
+        "dislike_count": data.get("dislike_count", 0),
+    }
+    # ensure text/html so your JS content-type check passes
+    return render(request, "review_gallery.html", context, content_type="text/html; charset=utf-8")

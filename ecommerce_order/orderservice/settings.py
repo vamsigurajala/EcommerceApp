@@ -79,10 +79,10 @@ WSGI_APPLICATION = "orderservice.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "orders",
+        "NAME": "ordersdata",
         "USER": "postgres",
         "PASSWORD": "2523",
-        "HOST": "152.14.0.20",
+        "HOST": "localhost",
         "PORT": "5432",
     }
 }
@@ -129,8 +129,8 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-user_url = 'http://152.14.0.13:8000'
-product_url = 'http://152.14.0.14:8001'
-cart_url = 'http://152.14.0.15:8002'
-order_url ='http://152.14.0.16:8003'
-review_url = 'http://152.14.0.17:8004'
+user_url = 'http://127.0.0.1:8000'
+product_url = 'http://127.0.0.1:8001'
+cart_url = 'http://127.0.0.1:8002'
+order_url ='http://127.0.0.1:8003'
+review_url = 'http://127.0.0.1:8004'

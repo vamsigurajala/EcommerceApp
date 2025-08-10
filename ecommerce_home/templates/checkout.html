@@ -28,13 +28,15 @@
     .fixed-back-btn:hover { background: #555; }
 
     .checkout-container {
-        max-width: 1000px;
+        max-width: 700px;
+        max-height: calc(120vh - 60px);
         margin: 12px auto 0 auto;
-        padding: 28px 28px 28px 28px;
+        padding: 38px 28px 38px 28px;
         background: #fff;
         border-radius: 14px;
         box-shadow: 0 0 22px rgba(0, 0, 0, 0.13);
         position: relative;
+        overflow: hidden;
     }
     body.dark-mode .checkout-container {
         background: #232323;
@@ -51,6 +53,7 @@
         color: #fff;
     }
     .checkout-table-scroll {
+        flex: 1;
         max-height: 270px;
         overflow-y: auto;
         margin-bottom: 20px;
@@ -58,9 +61,7 @@
         box-shadow: 0 0 3px #eaeaea;
         scrollbar-width: none;
     }
-    .checkout-table-scroll::-webkit-scrollbar {
-        display: none;
-    }
+    
     table {
         width: 100%;
         border-collapse: collapse;
@@ -141,6 +142,18 @@
         background: #181e22;
         color: #9bbcff;
     }
+    .checkout-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #24262b; /* same as your th background */
+  color: #fff;
+}
+/* Dark mode header color match */
+body.dark-mode .checkout-table-scroll thead th {
+  background: #232323;
+  color: #fff;
+}
     .btn-placeorder {
         border: none;
         background-color: green;
@@ -156,12 +169,15 @@
         background-color: #175c1e;
     }
     #address-container {
-        margin-top: 26px;
-        font-weight: bold;
+        margin-top: 2px;
+    max-height: calc(100vh - 400px); 
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
     }
     label {
         display: block;
-        margin: 10px 0;
+        margin: 8px 0;
         font-weight: bold;
     }
     .address-details {
@@ -172,13 +188,92 @@
     .address-details span {
         display: block;
     }
-    @media (max-width: 900px) {
-        .checkout-container { max-width: 97vw; padding: 11px 2vw 18px 2vw; }
-        .fixed-back-btn { left: 10px; top: 16px; }
-        table, th, td { font-size: 13px; }
-        h1 { font-size: 24px; }
-        .total-label-box, .total-value-box { font-size: 16px;}
+
+.addresses-scroll {
+  max-height: 90px; /* reduced height so button stays visible */
+    overflow: auto;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    background: inherit;
+
+    /* Hide scrollbar until hover */
+    scrollbar-width: none; /* Firefox */
+}
+.addresses-scroll:hover { scrollbar-width: thin; }
+.addresses-scroll::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+.addresses-scroll:hover::-webkit-scrollbar {
+    width: 6px;
+}
+.addresses-scroll:hover::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
+.action-row {
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    padding-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+    .checkout-container { 
+        max-width: 97vw; 
+        padding: 1px 2vw 1px 2vw; 
     }
+    .fixed-back-btn { left: 10px; top: 16px; }
+    table, th, td { font-size: 13px; }
+    h1 { font-size: 24px; }
+    .total-label-box, .total-value-box { font-size: 16px;}
+}
+/* Toast (bottom-right) */
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: #232323;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+  z-index: 2000;
+  font-weight: 600;
+}
+.toast.show { display: inline-flex; }
+
+/* Spinner next to text */
+.toast .spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Optional: backdrop to dim page while waiting */
+.wait-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.12);
+  backdrop-filter: blur(0.5px);
+  z-index: 1500;
+  display: none;
+}
+.wait-backdrop.show { display: block; }
+
+/* Success variant (if you ever switch to AJAX later) */
+.toast.success { background: #0a7b34; }
+
 </style>
 {% endblock %}
 
@@ -225,27 +320,43 @@
         </div>
 
         <div id="address-container">
-            {% if addresses %}
-            <p>Choose an address:</p>
+    {% if addresses %}
+        <p>Choose an address:</p>
+
+        <!-- Inner scrollable container -->
+        <div class="addresses-scroll">
             {% for address in addresses %}
             <label>
                 <div class="address-details">
                     <input type="radio" name="address_id" value="{{ address.address_id }}">
-                    {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }}, {{address.state}},{{address.pincode }}, {{ address.country }}
+                    {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }}, {{address.state}}, {{address.pincode}}, {{ address.country }}
                 </div>
-            </label><br>
+            </label>
             {% endfor %}
-            {% endif %}
-            <div id="address-error" style="color: red; font-size: 16px; margin-bottom: 10px; display:none;"></div>
-            <div>
-                <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place Order</button>
-            </div>
         </div>
-    </form>
+    {% endif %}
+
+    <div id="address-error" style="color: red; font-size: 16px; margin-bottom: 10px; display:none;"></div>
+
+    <div>
+        <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place Order</button>
+    </div>
+</div>
+<!-- lightweight backdrop + toast -->
+<div id="wait-backdrop" class="wait-backdrop"></div>
+<div id="placing-toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+  <!-- SVG status icon -->
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 3a9 9 0 100 18 9 9 0 000-18Z" stroke="currentColor" stroke-width="2"/>
+    <path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+  </svg>
+  <span>Placing your order…</span>
+  <span class="spinner" aria-hidden="true"></span>
+</div>
+</form>
 </div>
 <script>
 document.querySelectorAll('.order-datetime').forEach(function(el) {
-    // Just show CURRENT time
     let now = new Date();
     var opts = { month: 'long', day: 'numeric', year: 'numeric' };
     var dateStr = now.toLocaleDateString('en-US', opts);
@@ -266,5 +377,50 @@ document.querySelector('form').onsubmit = function(e) {
         errorDiv.style.display = "none";
     }
 };
+(function(){
+  const form = document.querySelector('form');
+  const btn  = document.querySelector('.btn-placeorder');
+  const toast = document.getElementById('placing-toast');
+  const backdrop = document.getElementById('wait-backdrop');
+
+  if (!form || !btn) return;
+
+  form.addEventListener('submit', function(e){
+    // Require address selection (your existing logic)
+    const checked = document.querySelector('input[name="address_id"]:checked');
+    const errorDiv = document.getElementById('address-error');
+    if (!checked) {
+      errorDiv.textContent = "Please select an address before placing your order.";
+      errorDiv.style.display = "block";
+      e.preventDefault();
+      return;
+    } else {
+      errorDiv.textContent = "";
+      errorDiv.style.display = "none";
+    }
+
+    // UX feedback while waiting for the POST navigation
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Placing…';
+
+    // Show toast + backdrop (use a tiny delay so instant responses don’t flash)
+    const showDelay = setTimeout(()=>{
+      toast.classList.add('show');
+      backdrop.classList.add('show');
+    }, 250);
+
+    // Safety: if the form is prevented elsewhere, revert UI
+    setTimeout(()=>{
+      if (!document.hidden) { // still on this page
+        clearTimeout(showDelay);
+        btn.disabled = false;
+        btn.textContent = original;
+        toast.classList.remove('show');
+        backdrop.classList.remove('show');
+      }
+    }, 20000); // auto-recover after 20s if something blocks navigation
+  }, { capture: true });
+})();
 </script>
 {% endblock %}

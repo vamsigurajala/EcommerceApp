@@ -117,23 +117,49 @@ class PlaceOrderView(APIView):
 
         return HttpResponse({'message': 'Order placed successfully'})
     
-    def get(self,request):
-        user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-        orders = Order.objects.filter(user_id=user_id,order_status='Placed')
-        orderlist=[]
+    def get(self, request):
+        user_id = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES).json()['user_id']
+        orders = Order.objects.filter(user_id=user_id, order_status='Placed')
+        orderlist = []
         for order in orders:
             order_data = order.to_dict()
-            print(OrderItems.objects.filter(order_id_id = order.order_id)[0].to_dict())
-            order_items = [order_item.to_dict() for order_item in OrderItems.objects.filter(order_id_id=order.order_id)]
-            order_data['order_items'] = order_items
+            items = [oi.to_dict() for oi in OrderItems.objects.filter(order_id_id=order.order_id)]
+            order_data['order_items'] = items
             orderlist.append(order_data)
 
-        data= {
-            "orderlist":orderlist
-        }
-        data=json.dumps(data)
+        data = {"orderlist": orderlist}
+        return Response(data, status=200)
 
         # print(data)
         return Response(data)
     
+# orders/views.py
+class HasPurchasedInternalView(APIView):
+    def get(self, request):
+        try:
+            user_id = int(request.GET.get("user_id"))
+            product_id = str(request.GET.get("product_id"))
+        except (TypeError, ValueError):
+            return Response({"error": "user_id and product_id required"}, status=400)
 
+        has = Order.objects.filter(
+            user_id=user_id,
+            order_status="Placed",              # expand later: Paid/Delivered
+            orderitems__product_id=product_id   # NOTE: OrderItems.product_id is CharField
+        ).exists()
+
+        return Response({"has_purchased": bool(has)}, status=200)
+
+# orders/views.py
+class PurchasedProductsView(APIView):
+    def get(self, request):
+        try:
+            user_id = int(request.GET.get("user_id"))
+        except (TypeError, ValueError):
+            return Response({"error": "user_id required"}, status=400)
+
+        qs = (OrderItems.objects
+                .filter(order_id__user_id=user_id, order_id__order_status="Placed")
+                .values_list('product_id', flat=True)
+                .distinct())
+        return Response({"product_ids": list(qs)}, status=200)
