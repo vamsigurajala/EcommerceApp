@@ -10,25 +10,27 @@ This project is container-ready with Docker support and follows a service-based 
 
 ---
 
-## 📦 Project Structure
-EcommerceApp/
-── db/ # Database-related files or scripts
-── ecommerce_cart/ # Cart management app
-── ecommerce_home/ # Home/landing page app
-── ecommerce_order/ # Order processing app
-── ecommerce_product/ # Product listing & details app
-── ecommerce_review/ # Product review & ratings app
-── .gitignore # Ignored files & folders
-── docker-compose.yml # Docker configuration
-── README.md # Project documentation
 
+```
+## 📦 Project Structure
+│
+├── db/ # Database-related files or scripts
+├── ecommerce_cart/ # Cart management app
+├── ecommerce_home/ # Home/landing page app
+├── ecommerce_order/ # Order processing app
+├── ecommerce_product/ # Product listing & details app
+├── ecommerce_review/ # Product review & ratings app
+├── .gitignore # Ignored files & folders
+├── docker-compose.yml # Docker configuration
+└── README.md # Project documentation
+```
 
 ---
 
 ## ✨ Features
 - **User-friendly product browsing** – View products by search.
 - **Cart Management** – Add, update, remove and clear items from the cart.
-- **Order Processing** – Place orders and view order history.
+- **Order Processing** – Place orders ,view order history and directly review or edit reviews from here.
 - **Product Reviews & Ratings** – Create, edit, delete, vote on reviews.
 - **Modular Django Apps** – Each major feature is an independent app.
 - **Docker Ready** – Easily deploy using Docker Compose.
@@ -54,12 +56,13 @@ cd EcommerceApp
 in the project..just install python 11 and use this command (python3.11 -m venv venv)
    
 python -m venv venv
-# Windows
+
+Windows
 venv\Scripts\activate
-# macOS/Linux
+macOS/Linux
 source venv/bin/activate
 
-2.  Install Dependencies
+2. Install Dependencies
  pip install -r requirements.txt
 
 3. In Pgadmin(Postgres) cretae a server and databases which should match db names in settings.py
@@ -74,8 +77,3 @@ source venv/bin/activate
 5. Running with Docker
   - docker-compose up --build
 
-📌 API Endpoints (Review Service Example)
-POST /api/reviews/ – Create a review
-PUT /api/reviews/<id>/ – Edit a review
-DELETE /api/reviews/<id>/ – Delete a review
-PATCH /api/reviews/<id>/vote/ – Vote on a review
