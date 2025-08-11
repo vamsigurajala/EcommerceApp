@@ -1,0 +1,475 @@
+<!-- templates/review_gallery.html — FRAGMENT injected into #rvDlgBody -->
+<style>
+  /* Let our fragment control layout inside the dialog */
+  #rvDlgBody{overflow:visible !important;max-height:unset !important;}
+  #rvDlgCloseFloat{ display:none !important; } 
+
+  /* Prevent annoying text selection during fast nav */
+  .rvgal-wrap, .rvgal-wrap *{ -webkit-user-select:none; user-select:none; }
+
+  .rvgal-wrap{
+    position:relative;
+    max-width:1100px;
+    margin:0 auto;
+    background:#fff; color:#0f172a;
+    border-radius:1px;                     /* smooth edges */
+    box-shadow:0 22px 50px rgba(0,0,0,.35);
+    overflow:hidden;
+  }
+
+  /* NEW: variables so we can reserve exact space for the thumb strip */
+  :root{
+    --thumbSize: 80px;
+    --thumbPad:   8px;
+    --thumbGap:   8px;
+    --thumbRailH: calc(var(--thumbSize) + var(--thumbPad)*2);
+  }
+
+  /* Two columns, with NO gap between them */
+  .rvgal-grid{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:0;align-items:stretch}
+  @media (max-width: 980px){ .rvgal-grid{grid-template-columns:1fr} }
+
+  /* LEFT: edge-to-edge black canvas */
+  .rvgal-left{border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+  overflow: hidden;position:relative;background:#000;border-radius:0 }
+  .rvgal-lg{
+    position:relative;
+    height:68vh; max-height:68vh;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:#000;
+    padding-bottom:var(--thumbRailH);       /* reserve space for the strip */
+  }
+
+  /* give the left panel a variable we can tweak from JS */
+  .rvgal-left{ --stripH: 0px; }
+
+  /* MAIN IMAGE — no padding here; fills above the strip */
+  .rvgal-lg img{
+    max-width:100%; width:auto;height:auto;
+    max-height: calc(100% - var(--stripH, 0px));
+    object-fit:contain;display:block;background:#000;
+  }
+
+  /* Arrows: show only on hover; hide when disabled */
+  .rvgal-nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    background:transparent;border:0;border-radius:0;padding:0;
+    font-size:42px; line-height:1; font-weight:700; color:#fff;
+    cursor:pointer; opacity:0; pointer-events:none;transition:opacity .12s ease;
+  }
+  .rvgal-left:hover .rvgal-nav, .rvgal-nav:focus{ opacity:1;  pointer-events:auto; }
+  .rvgal-prev{ left:16px; } .rvgal-next{ right:16px; }
+  .rvgal-nav:focus{ outline:none; }
+  .rvgal-nav[disabled]{ opacity:0 !important; pointer-events:none; }  /* hidden at ends */
+
+  /* THUMBS rail (centered overlay) */
+  .rvgal-strip{
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px; pointer-events:auto;
+    padding:var(--thumbPad);
+    background:rgba(0,0,0,.62); border-radius:12px; backdrop-filter:blur(4px);
+  }
+  .rvgal-viewport{ overflow:hidden; border-radius:2px; scrollbar-width:none; -ms-overflow-style:none; }
+  .rvgal-viewport::-webkit-scrollbar{ display:none; }
+  .rvgal-track{ display:flex; gap:var(--thumbGap); transform:translateX(0); transition:transform .18s ease; }
+  .rvgal-track img{
+    width:var(--thumbSize);height:var(--thumbSize);object-fit:cover;border-radius:8px;
+    border:2px solid transparent;cursor:pointer; background:#111;
+  }
+  .rvgal-track img.active{ border-color:#fff; }   /* white active stroke */
+
+  /* RIGHT: attached panel */
+  .rvgal-right{
+    height:68vh; max-height:68vh; overflow:auto;
+    padding:16px 18px; background:#fff; color:#0f172a;
+  }
+
+  .rvgal-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .rvgal-badge{display:inline-flex;align-items:center;gap:6px;height:26px;min-width:22px;padding:0 10px;border-radius:5px;
+    border:1px solid #16a34a;font-weight:700;font-size:13px;line-height:1;color:#fff;background:#16a34a}
+  .rvgal-title{font-weight:800}
+  .rvgal-muted{color:#64748b;font-size:13px}
+  .rvgal-verified{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:2px 8px;margin-left:8px}
+  .rvgal-verified svg{opacity:.65}
+
+  .rvgal-body{white-space:pre-wrap;margin-top:6px}
+  .rvgal-clamped .rvgal-body{
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:10; overflow:hidden;
+  }
+  .rvgal-moreless{background:none;border:0;padding:0;margin-top:6px;color:#2563eb;cursor:pointer;font-weight:700}
+
+  /* Reactions */
+  .rvgal-reactions{display:flex;gap:10px;margin-top:10px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:20px;padding:6px 10px;font-weight:600;background:#fff}
+  .chip.btn{cursor:pointer;}
+  .chip.btn.active.like{background:#065f46;color:#fff;border-color:#064e3b}
+  .chip.btn.active.dislike{background:#7f1d1d;color:#fff;border-color:#7f1d1d}
+
+  /* Floating text-only X outside the dialog */
+  .rvgal-x{
+    position:fixed; z-index:2147483647; background:transparent; border:0; box-shadow:none; border-radius:0;
+    padding:0; width:auto; height:auto; font-size:26px; line-height:1; font-weight:700; color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .rvgal-x:focus{ outline:none; }
+
+  @media (max-width: 980px){
+  .rvgal-lg{
+    width: 100%;
+    max-height: 80vh;       /* safety for very small viewports */
+    aspect-ratio: 1 / 1;
+  }
+}
+/* --- lightweight toasts for the gallery --- */
+.rvgal-toasts{
+  position:fixed; right:16px; bottom:16px; z-index:2147483600;
+  display:flex; flex-direction:column; gap:8px;
+}
+.rvgal-toast{
+  min-width:240px; max-width:340px; padding:10px 12px; border-radius:10px;
+  box-shadow:0 6px 22px rgba(0,0,0,.18); font-weight:600; border:1px solid transparent;
+  opacity:0; transform:translateY(10px); transition:opacity .25s ease, transform .25s ease;
+  background:#eff6ff; border-color:#bfdbfe; color:#1e3a8a;  /* info default */
+}
+.rvgal-toast.err{ background:#fef2f2; border-color:#fecaca; color:#7f1d1d; }
+.rvgal-toast.ok{  background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
+.rvgal-toast.show{ opacity:1; transform:translateY(0); }
+</style>
+
+<div class="rvgal-wrap">
+  <!-- single “X” close outside -->
+  <button class="rvgal-x" id="rvgalClose" aria-label="Close">✕</button>
+
+  <div class="rvgal-grid">
+    <!-- LEFT -->
+    <div class="rvgal-left">
+      <div class="rvgal-lg">
+        <button class="rvgal-nav rvgal-prev" id="rvgalPrev" aria-label="Previous">‹</button>
+        <img id="rvgalImg" alt="review image" />
+        <button class="rvgal-nav rvgal-next" id="rvgalNext" aria-label="Next">›</button>
+      </div>
+
+      <!-- overlaid thumbs -->
+      <div class="rvgal-strip">
+        <div class="rvgal-viewport">
+          <div class="rvgal-track" id="rvgalTrack"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <aside class="rvgal-right rvgal-clamped" id="rvgalRight" data-id="{{ review_id }}">
+      <div class="rvgal-row">
+        <span class="rvgal-badge"><span>{{ rating }}</span>★</span>
+        <span class="rvgal-title">{{ title|default:"" }}</span>
+      </div>
+
+      {% if body %}
+        <div class="rvgal-body" id="rvgalBody">{{ body }}</div>
+        <button type="button" class="rvgal-moreless" id="rvgalMoreLess" hidden>Read more</button>
+      {% endif %}
+
+      <div class="rvgal-muted" style="margin-top:10px">
+        <span>{{ user_name|default:"Anonymous" }}</span>
+        {% if is_verified %}
+          <span class="rvgal-verified" title="Verified Purchase">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>
+              <path d="M7 12.5l3 3 6-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            Verified Purchase
+          </span>
+        {% endif %}
+        <span> · </span>
+        <span>{{ created_at }}</span>
+      </div>
+
+      <!-- live, clickable reaction buttons -->
+      <div class="rvgal-reactions" id="rvgalReactions">
+        <button type="button" class="chip btn like" id="rvgalLikeBtn">👍 <span id="rvgalLike">{{ like_count|default:0 }}</span></button>
+        <button type="button" class="chip btn dislike" id="rvgalDisBtn">👎 <span id="rvgalDis">{{ dislike_count|default:0 }}</span></button>
+      </div>
+    </aside>
+  </div>
+</div>
+<div id="rvgalToasts" class="rvgal-toasts"></div>
+
+{{ images|json_script:"rvgal-imgs" }}
+
+<script>
+(function(){
+  const imgsEl = document.getElementById('rvgal-imgs');
+  let IMGS = [];
+  try { IMGS = JSON.parse(imgsEl?.textContent || "[]") || []; } catch(_) {}
+
+  const start = Number("{{ start_index|default:0 }}") || 0;
+
+  const lg     = document.getElementById('rvgalImg');
+  const prev   = document.getElementById('rvgalPrev');
+  const next   = document.getElementById('rvgalNext');
+
+  const track  = document.getElementById('rvgalTrack');
+  const viewport = document.querySelector('.rvgal-viewport');
+
+  const rightBox = document.getElementById('rvgalRight');
+  const bodyEl   = document.getElementById('rvgalBody');
+  const moreLess = document.getElementById('rvgalMoreLess');
+
+  /* local toast (independent from reviews.html) */
+  const galToastBox = document.getElementById('rvgalToasts');
+  function galToast(kind, msg, ms=2200){
+    if (!galToastBox) return alert(msg);  // fallback
+    const t = document.createElement('div');
+    t.className = 'rvgal-toast ' + (kind || 'info');
+    t.textContent = msg || '';
+    galToastBox.appendChild(t);
+    requestAnimationFrame(()=> t.classList.add('show'));
+    setTimeout(()=>{ t.classList.remove('show'); }, ms);
+    setTimeout(()=>{ t.remove(); }, ms+250);
+  }
+  /* ---- thumbs ---- */
+  const TILE = 80, GAP = 8, VIEW = 5;  // show exactly 5 thumbs
+
+  function normalize(u){
+    if (!u) return '';
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    return (u.startsWith('/')) ? (location.origin + u) : u;
+  }
+
+  if (!Array.isArray(IMGS) || !IMGS.length){
+    if (lg) lg.alt = "No images";
+    track.innerHTML = '';
+    return;
+  }
+  IMGS = IMGS.map(normalize);
+
+  let cur = Math.max(0, Math.min(start, IMGS.length-1));
+  let offset = Math.max(0, Math.min(cur - Math.floor(VIEW/2), Math.max(IMGS.length - VIEW, 0)));
+
+  function setViewportWidth(){
+    const count = IMGS.length;
+    const tiles = Math.min(count, VIEW);
+    const w = tiles*TILE + (tiles-1)*GAP;
+    viewport.style.width = w + 'px';
+  }
+
+  function buildThumbs(){
+    track.innerHTML = IMGS.map((u,i)=>`<img src="${u}" alt="photo ${i+1}" data-i="${i}">`).join('');
+  }
+
+  function ensureVisible(){
+    if (cur < offset) offset = cur;
+    if (cur >= offset + VIEW) offset = cur - VIEW + 1;
+    offset = Math.max(0, Math.min(offset, Math.max(IMGS.length - VIEW, 0)));
+  }
+
+  function paint(){
+    lg.src = IMGS[cur];
+    lg.onerror = () => { lg.alt = "Image failed to load"; };
+
+    [...track.children].forEach((n,i)=> n.classList.toggle('active', i===cur));
+    const dx = offset * (TILE + GAP);
+    track.style.transform = `translateX(-${dx}px)`;
+
+    /* disable arrows at ends (no wrap) */
+    prev.disabled = (cur <= 0);
+    next.disabled = (cur >= IMGS.length - 1);
+  }
+
+  /* keep main image clear of the overlaid thumb strip (still used) */
+  function updateStripSpace(){
+    const left  = document.querySelector('.rvgal-left');
+    const strip = document.querySelector('.rvgal-strip');
+    if (!left || !strip) return;
+    const EXTRA = 12;
+    left.style.setProperty('--stripH', (strip.offsetHeight + EXTRA) + 'px');
+  }
+
+  setViewportWidth();
+  buildThumbs();
+  ensureVisible();
+  paint();
+  updateStripSpace();
+  window.addEventListener('resize', updateStripSpace);
+
+  /* no circular wrap */
+  prev.onclick = () => { if (cur > 0) { cur--; ensureVisible(); paint(); } };
+  next.onclick = () => { if (cur < IMGS.length - 1) { cur++; ensureVisible(); paint(); } };
+
+  track.addEventListener('click', (e)=>{
+    const t = e.target.closest('img[data-i]'); if(!t) return;
+    cur = parseInt(t.dataset.i,10)||0;
+    ensureVisible(); paint();
+  });
+  // Hide any residual focus on the arrows when mouse leaves the image area
+  const leftArea = document.querySelector('.rvgal-left');
+  if (leftArea) {
+    const clearArrowFocus = () => { prev?.blur(); next?.blur(); };
+    leftArea.addEventListener('mouseleave', clearArrowFocus);
+    leftArea.addEventListener('pointerleave', clearArrowFocus);
+  }
+
+  /* wheel-scroll the thumb strip (hidden scrollbar) */
+  document.querySelector('.rvgal-strip').addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    const max = Math.max(IMGS.length - VIEW, 0);
+    if (!max) return;
+    const dir = (e.deltaY || e.deltaX) > 0 ? 1 : -1;
+    offset = Math.max(0, Math.min(offset + dir, max));
+    paint();
+  }, {passive:false});
+
+  /* ---- description clamp ---- */
+  if (bodyEl && moreLess){
+    requestAnimationFrame(()=>{ moreLess.hidden = !(bodyEl.scrollHeight > bodyEl.clientHeight + 2); });
+    moreLess.onclick = ()=>{ const cl = rightBox.classList.toggle('rvgal-clamped'); moreLess.textContent = cl ? 'Read more' : 'Show less'; moreLess.setAttribute('aria-expanded', String(!cl)); };
+    moreLess.textContent = 'Read more';
+  }
+
+  /* ---- reactions: (unchanged & working) ---- */
+  function getCookie(name){
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const CSRF = getCookie('csrftoken');
+
+  const reviewId = rightBox?.dataset.id;
+  const likeBtn  = document.getElementById('rvgalLikeBtn');
+  const disBtn   = document.getElementById('rvgalDisBtn');
+  const likeCnt  = document.getElementById('rvgalLike');
+  const disCnt   = document.getElementById('rvgalDis');
+
+  (function seedFromHost(){
+    if (!reviewId) return;
+    const host = document.querySelector(`.react[data-id="${reviewId}"]`);
+    if (!host) return;
+    const l = host.querySelector('.js-like'); const d = host.querySelector('.js-dislike');
+    if (l && likeCnt) likeCnt.textContent = l.textContent.trim();
+    if (d && disCnt)  disCnt.textContent  = d.textContent.trim();
+    if (host.querySelector('.react-btn.like.active')) likeBtn.classList.add('active','like');
+    if (host.querySelector('.react-btn.dislike.active')) disBtn.classList.add('active','dislike');
+
+    const mo = new MutationObserver(()=>{
+      if (l && likeCnt) likeCnt.textContent = l.textContent.trim();
+      if (d && disCnt)  disCnt.textContent  = d.textContent.trim();
+    });
+    mo.observe(host, { subtree:true, characterData:true, childList:true });
+    const dlg = document.getElementById('rvDlg');
+    dlg?.addEventListener('close', ()=> mo.disconnect(), { once:true });
+  })();
+
+  (async function refreshCounts(){
+    try{
+      if (!reviewId) return;
+      const r = await fetch(`/api/reviews/${reviewId}/`, {credentials:'include'});
+      const d = await r.json().catch(()=> ({}));
+      if (likeCnt) likeCnt.textContent = d.like_count ?? likeCnt.textContent;
+      if (disCnt)  disCnt.textContent  = d.dislike_count ?? disCnt.textContent;
+    }catch(_){}
+  })();
+
+    async function vote(val){
+    if (!reviewId) return;
+    try{
+      const resp = await fetch(`/api/reviews/${reviewId}/vote/`, {
+        method:'POST', credentials:'include',
+        headers:{'X-CSRFToken': CSRF, 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+        body: new URLSearchParams({value: String(val)})
+      });
+      const data = await resp.json().catch(()=> ({}));
+
+      if (resp.status === 401){
+        galToast('err','Please log in to vote');
+        return;
+      }
+      if (!resp.ok || !data?.ok){
+        galToast('err', data?.error || 'Could not record vote');
+        return;
+      }
+
+      likeCnt.textContent = data.like_count;
+      disCnt.textContent  = data.dislike_count;
+      likeBtn.classList.remove('active'); disBtn.classList.remove('active');
+      if (data.action==='created' || data.action==='switched'){
+        (val===1 ? likeBtn : disBtn).classList.add('active');
+      }
+
+      const host = document.querySelector(`.react[data-id="${reviewId}"]`);
+      if (host){
+        const l = host.querySelector('.js-like'); const d = host.querySelector('.js-dislike');
+        if (l) l.textContent = String(data.like_count);
+        if (d) d.textContent = String(data.dislike_count);
+        host.querySelector('.react-btn.like')?.classList.remove('active');
+        host.querySelector('.react-btn.dislike')?.classList.remove('active');
+        if (data.action==='created' || data.action==='switched'){
+          host.querySelector(val===1 ? '.react-btn.like' : '.react-btn.dislike')?.classList.add('active');
+        }
+      }
+    }catch(_){
+      galToast('err','Network error');
+    }
+
+  }
+  likeBtn?.addEventListener('click', ()=> vote(1));
+  disBtn?.addEventListener('click',  ()=> vote(-1));
+
+  /* ---- keyboard nav + Escape ---- */
+  document.addEventListener('keydown', (e)=>{
+    const dlg = document.getElementById('rvDlg');
+    if (!dlg?.open) return;
+    if (e.key==='ArrowLeft'  && !prev.disabled) prev.click();
+    if (e.key==='ArrowRight' && !next.disabled) next.click();
+    if (e.key==='Escape')     dlg.close();
+  });
+})();
+</script>
+
+<script>
+/* ---------- Place the text-only X outside the dialog’s top-right ---------- */
+(function(){
+  const dlg  = document.getElementById('rvDlg');
+  const xBtn = document.getElementById('rvgalClose');
+  if (!dlg || !xBtn) return;
+
+  const MARGIN = 10, SAFE = 8;
+  function place(){
+    const r = dlg.getBoundingClientRect();
+    const btnW = xBtn.offsetWidth || 26;
+    let top  = Math.max(SAFE, r.top + MARGIN);
+    let left = r.right + MARGIN;
+    const maxLeft = window.innerWidth - btnW - SAFE;
+    if (left > maxLeft) left = Math.max(r.right - btnW - MARGIN, SAFE);
+    xBtn.style.top  = top + 'px';
+    xBtn.style.left = left + 'px';
+  }
+  function openHook(){
+    xBtn.style.display = 'flex';
+    requestAnimationFrame(place);
+    setTimeout(place, 0);
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, {passive:true});
+  }
+  function closeHook(){
+    xBtn.style.display = 'none';
+    window.removeEventListener('resize', place);
+    window.removeEventListener('scroll', place);
+  }
+  xBtn.addEventListener('click', ()=> dlg.close());
+  dlg.addEventListener('close', closeHook);
+  if (dlg.open) openHook();
+  else {
+    const mo = new MutationObserver(()=>{ if (dlg.open){ openHook(); mo.disconnect(); }});
+    mo.observe(dlg, { attributes:true, attributeFilter:['open'] });
+  }
+
+  /* close dialog when clicking outside the content area */
+  dlg.addEventListener('click', (e)=>{
+    const body = document.getElementById('rvDlgBody');
+    if (!body) return;
+    const r = body.getBoundingClientRect();
+    const inside = e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom;
+    if (!inside) dlg.close();
+  });
+})();
+</script>

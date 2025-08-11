@@ -1,0 +1,56 @@
+{% extends 'changemode.html' %}
+{% block extra_style %}
+    <style>
+        .search-results {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px;
+        }
+        body.dark-mode .search-results {
+            background-color: #222;
+            border: 1px solid #444;
+            color: #fff;
+        }
+        .search-results h2 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .search-results ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .search-results li {
+            padding: 5px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        body.dark-mode .search-results li {
+            border-bottom: 1px solid #444;
+        }
+        .search-results li:last-child {
+            border-bottom: none;
+        }
+        .search-results p {
+            margin: 0;
+            padding: 10px;
+            font-style: italic;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="search-results">
+        {% if products %}
+        <h2>Search Results:</h2>
+        <ul>
+            {% for product in products %}
+            <li>{{ product.product_name }} - {{ product.product_description }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No products found.</p>
+        {% endif %}
+    </div>
+{% endblock %}

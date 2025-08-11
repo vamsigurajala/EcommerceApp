@@ -1,0 +1,426 @@
+{% extends 'changemode.html' %}
+{% block extra_style %}
+<link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Inter', Arial, sans-serif;
+        font-size: 16px;
+        background: #f5f5f5;
+    }
+    body.dark-mode {
+        background: #181818;
+        color: #fff;
+    }
+    .fixed-back-btn {
+        position: fixed;
+        left: 30px;
+        top: 40px;
+        z-index: 1000;
+        background-color: #333;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+    }
+    .fixed-back-btn:hover { background: #555; }
+
+    .checkout-container {
+        max-width: 700px;
+        max-height: calc(120vh - 60px);
+        margin: 12px auto 0 auto;
+        padding: 38px 28px 38px 28px;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 0 22px rgba(0, 0, 0, 0.13);
+        position: relative;
+        overflow: hidden;
+    }
+    body.dark-mode .checkout-container {
+        background: #232323;
+        color: #fff;
+    }
+    h1 {
+        text-align: center;
+        font-size: 2.4rem;
+        margin-bottom: 18px;
+        font-weight: 700;
+        color: #24262b;
+    }
+    body.dark-mode h1 {
+        color: #fff;
+    }
+    .checkout-table-scroll {
+        flex: 1;
+        max-height: 270px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        border-radius: 7px;
+        box-shadow: 0 0 3px #eaeaea;
+        scrollbar-width: none;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: none;
+    }
+    th, td {
+        text-align: left;
+        padding: 16px 10px;
+    }
+    th {
+        background: #24262b;
+        color: #fff;
+        font-weight: 600;
+        font-size: 17px;
+    }
+    body.dark-mode th {
+        background: #232323;
+        color: #fff;
+    }
+    tr:nth-child(even) {
+        background: #f8f8fa;
+    }
+    body.dark-mode tr:nth-child(even) {
+        background: #2b2b2b;
+    }
+    td {
+        font-size: 16px;
+        font-weight: 500;
+        vertical-align: middle;
+        color: #24262b;
+    }
+    body.dark-mode td {
+        color: #fff;
+    }
+    img {
+        width: 70px;
+        height: 70px;
+        border-radius: 6px;
+        object-fit: contain;
+        background: #f6f6f9;
+        display: block;
+        margin: auto;
+        border: 1px solid #eaeaea;
+    }
+    .order-datetime {
+        text-align: center;
+    }
+    .total-row td {
+        border: none;
+        background: none;
+        padding: 18px 0 0 0;
+    }
+    .total-label-box {
+        display: inline-block;
+        background: #eef3fb;
+        color: #273755;
+        padding: 8px 23px 8px 23px;
+        border-radius: 7px;
+        font-weight: 700;
+        font-size: 20px;
+        margin-right: 8px;
+        min-width: 110px;
+        text-align: center;
+    }
+    .total-value-box {
+        display: inline-block;
+        background: #eef3fb;
+        color: #3556b7;
+        padding: 8px 23px 8px 23px;
+        border-radius: 7px;
+        font-weight: 700;
+        font-size: 20px;
+        min-width: 110px;
+        text-align: center;
+    }
+    body.dark-mode .total-label-box,
+    body.dark-mode .total-value-box {
+        background: #181e22;
+        color: #9bbcff;
+    }
+    .checkout-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #24262b; /* same as your th background */
+  color: #fff;
+}
+/* Dark mode header color match */
+body.dark-mode .checkout-table-scroll thead th {
+  background: #232323;
+  color: #fff;
+}
+    .btn-placeorder {
+        border: none;
+        background-color: green;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 7px 28px;
+        border-radius: 7px;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+    .btn-placeorder:hover {
+        background-color: #175c1e;
+    }
+    #address-container {
+        margin-top: 2px;
+    max-height: calc(100vh - 400px); 
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    }
+    label {
+        display: block;
+        margin: 8px 0;
+        font-weight: bold;
+    }
+    .address-details {
+        font-size: 14px;
+        margin-left: 20px;
+        font-weight: bold;
+    }
+    .address-details span {
+        display: block;
+    }
+
+.addresses-scroll {
+  max-height: 90px; /* reduced height so button stays visible */
+    overflow: auto;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    background: inherit;
+
+    /* Hide scrollbar until hover */
+    scrollbar-width: none; /* Firefox */
+}
+.addresses-scroll:hover { scrollbar-width: thin; }
+.addresses-scroll::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+.addresses-scroll:hover::-webkit-scrollbar {
+    width: 6px;
+}
+.addresses-scroll:hover::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
+.action-row {
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    padding-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+    .checkout-container { 
+        max-width: 97vw; 
+        padding: 1px 2vw 1px 2vw; 
+    }
+    .fixed-back-btn { left: 10px; top: 16px; }
+    table, th, td { font-size: 13px; }
+    h1 { font-size: 24px; }
+    .total-label-box, .total-value-box { font-size: 16px;}
+}
+/* Toast (bottom-right) */
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: #232323;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+  z-index: 2000;
+  font-weight: 600;
+}
+.toast.show { display: inline-flex; }
+
+/* Spinner next to text */
+.toast .spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Optional: backdrop to dim page while waiting */
+.wait-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.12);
+  backdrop-filter: blur(0.5px);
+  z-index: 1500;
+  display: none;
+}
+.wait-backdrop.show { display: block; }
+
+/* Success variant (if you ever switch to AJAX later) */
+.toast.success { background: #0a7b34; }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<button class="btn-back fixed-back-btn" onclick="location.href='/api/cart/'">Get Back</button>
+<div class="checkout-container">
+    <h1>Orders</h1>
+    <form action="/api/vieworders/" method="post">
+        {% csrf_token %}
+        <div class="checkout-table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Product Name</th>
+                    <th>Created At</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders_data %}
+                <tr>
+                    <td><img src="{{ order.image }}" alt="{{ order.product_name }}"></td>
+                    <td>{{ order.product_name }}</td>
+                    <td><div class="order-datetime" data-datetime="{{ order.created_at|escape }}"></div></td>
+                    <td>{{ order.quantity }}</td>
+                    <td>{{ order.price }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="3"></td>
+                    <td>
+                        <span class="total-label-box">Total:</span>
+                    </td>
+                    <td>
+                        <span class="total-value-box">Rs.{{ cart_total }}</span>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+
+        <div id="address-container">
+    {% if addresses %}
+        <p>Choose an address:</p>
+
+        <!-- Inner scrollable container -->
+        <div class="addresses-scroll">
+            {% for address in addresses %}
+            <label>
+                <div class="address-details">
+                    <input type="radio" name="address_id" value="{{ address.address_id }}">
+                    {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }}, {{address.state}}, {{address.pincode}}, {{ address.country }}
+                </div>
+            </label>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div id="address-error" style="color: red; font-size: 16px; margin-bottom: 10px; display:none;"></div>
+
+    <div>
+        <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place Order</button>
+    </div>
+</div>
+<!-- lightweight backdrop + toast -->
+<div id="wait-backdrop" class="wait-backdrop"></div>
+<div id="placing-toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+  <!-- SVG status icon -->
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 3a9 9 0 100 18 9 9 0 000-18Z" stroke="currentColor" stroke-width="2"/>
+    <path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+  </svg>
+  <span>Placing your order…</span>
+  <span class="spinner" aria-hidden="true"></span>
+</div>
+</form>
+</div>
+<script>
+document.querySelectorAll('.order-datetime').forEach(function(el) {
+    let now = new Date();
+    var opts = { month: 'long', day: 'numeric', year: 'numeric' };
+    var dateStr = now.toLocaleDateString('en-US', opts);
+    var timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    el.innerHTML = dateStr + "<br><span style='display:block;text-align:center;font-size:14px;'>" + timeStr + "</span>";
+});
+
+document.querySelector('form').onsubmit = function(e) {
+    var checked = document.querySelector('input[name="address_id"]:checked');
+    var errorDiv = document.getElementById('address-error');
+    if (!checked) {
+        errorDiv.textContent = "Please select an address before placing your order.";
+        errorDiv.style.display = "block";
+        e.preventDefault();
+        return false;
+    } else {
+        errorDiv.textContent = "";
+        errorDiv.style.display = "none";
+    }
+};
+(function(){
+  const form = document.querySelector('form');
+  const btn  = document.querySelector('.btn-placeorder');
+  const toast = document.getElementById('placing-toast');
+  const backdrop = document.getElementById('wait-backdrop');
+
+  if (!form || !btn) return;
+
+  form.addEventListener('submit', function(e){
+    // Require address selection (your existing logic)
+    const checked = document.querySelector('input[name="address_id"]:checked');
+    const errorDiv = document.getElementById('address-error');
+    if (!checked) {
+      errorDiv.textContent = "Please select an address before placing your order.";
+      errorDiv.style.display = "block";
+      e.preventDefault();
+      return;
+    } else {
+      errorDiv.textContent = "";
+      errorDiv.style.display = "none";
+    }
+
+    // UX feedback while waiting for the POST navigation
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Placing…';
+
+    // Show toast + backdrop (use a tiny delay so instant responses don’t flash)
+    const showDelay = setTimeout(()=>{
+      toast.classList.add('show');
+      backdrop.classList.add('show');
+    }, 250);
+
+    // Safety: if the form is prevented elsewhere, revert UI
+    setTimeout(()=>{
+      if (!document.hidden) { // still on this page
+        clearTimeout(showDelay);
+        btn.disabled = false;
+        btn.textContent = original;
+        toast.classList.remove('show');
+        backdrop.classList.remove('show');
+      }
+    }, 20000); // auto-recover after 20s if something blocks navigation
+  }, { capture: true });
+})();
+</script>
+{% endblock %}

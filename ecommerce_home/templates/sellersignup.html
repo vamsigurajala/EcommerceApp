@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration or Signup</title>
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+
+<body>
+    <div class="wrapper">
+        <h2>User Registration</h2>
+        <form method="POST" action="{% url 'sellerlogin' %}">
+            {% csrf_token %}
+            <div class="input-box">
+                <input type="text" name="name" placeholder=" Enter your Name" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="email" placeholder=" Enter your Email" required>
+            </div>
+            <div class="input-box">
+                <input type="password" name="password" placeholder="Create password" required>
+            </div>
+            <div class="input-box">
+                <input type="password" name="confirm_password" placeholder="Confirm password" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="address1" placeholder="Address Line 1" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="address2" placeholder="Address Line 2" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="storename" placeholder="Store name" required>
+            </div>
+            <div class="input-box">
+                <input type="text" name="category" placeholder="Category" required>
+            </div>
+            <div class="policy">
+                <input type="checkbox">
+                <h3> I accept all terms and conditions</h3>
+            </div>
+            <div class="input-box button">
+                <input type="submit" value="Register Now">
+            </div>
+            <div class="text">
+                <h3> Already have an account ? <a href="{% url 'sellerlogin' %}">Login Now</a></h3>
+            </div>
+        </form>
+    </div>
+
+
+    <script>
+        const form = document.querySelector('form');
+        const submitButton = document.querySelector('input[type="submit"]');
+
+        submitButton.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const checkbox = document.querySelector('input[type="checkbox"]');
+
+            if (!checkbox.checked) {
+                alert('Please accept the terms and conditions before submitting the form.');
+            } else {
+                form.submit();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

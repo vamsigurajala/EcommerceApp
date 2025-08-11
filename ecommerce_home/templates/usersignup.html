@@ -1,0 +1,195 @@
+{% extends 'changemode.html' %}
+{% block extra_style %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+    body, .wrapper, input, select, button, h2, h3, label, a {
+        font-family: 'Inter', Arial, sans-serif !important;
+    }
+    .wrapper {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 18px 18px 22px 18px;
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+    body.dark-mode .wrapper {
+        background-color: #222;
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255,255,255,0.08);
+    }
+    h2 {
+        margin-top: 0;
+        text-align: center;
+        font-weight: 700;
+    }
+    form {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .input-box {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .input-box input,
+    .input-box select {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        border: 1px solid #e3e3e3;
+        border-radius: 5px;
+        background-color: #f2f2f2;
+        font-size: 16px;
+        color: #222;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+    }
+    .input-box input:focus,
+    .input-box select:focus {
+        outline: none;
+        border: 1.5px solid #0077cc;
+        background: #eaf4fd;
+    }
+    body.dark-mode .input-box input,
+    body.dark-mode .input-box select {
+        background-color: #444;
+        color: #fff;
+        border: 1px solid #383b41;
+    }
+    body.dark-mode .input-box input:focus,
+    body.dark-mode .input-box select:focus {
+        background: #23282f;
+        border: 1.5px solid #00aaff;
+    }
+    .policy input[type="checkbox"] {
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 5px;
+        accent-color: #0077cc;
+    }
+    .policy h3 {
+        display: inline-block;
+        font-size: 16px;
+        margin: 0;
+    }
+    .form-error {
+        color: red;
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 15px;
+        width: 100%;
+    }
+    /* Buttons Row */
+    .button-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        margin-top: 6px;
+        margin-bottom: 8px;
+    }
+    .button-row button {
+        background-color: #0077cc;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 9px 28px;
+        min-width: 100px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .button-row button:hover { background-color: #005fa3; }
+    body.dark-mode .button-row button { background-color: #0077cc !important; color: #fff !important; }
+    body.dark-mode .button-row button:hover { background-color: #005fa3 !important; }
+    .text {
+        width: 100%;
+        text-align: center;
+        margin-top: 18px;
+        font-size: 15px;
+    }
+    .text a {
+        color: #0077cc;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .text a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <h2>User Registration</h2>
+    <form method="POST" id="signupForm" autocomplete="off">
+        {% csrf_token %}
+        <div id="form-error" class="form-error"></div>
+        <div class="input-box">
+            <input type="text" name="name" placeholder="Enter your Name" required>
+        </div>
+        <div class="input-box">
+            <input type="text" name="email" placeholder="Enter your Email" required>
+        </div>
+        <div class="input-box">
+            <input type="password" name="password" placeholder="Create password" required>
+        </div>
+        <div class="input-box">
+            <input type="password" name="confirm_password" placeholder="Confirm password" required>
+        </div>
+        <div class="input-box">
+            <input type="text" name="age" placeholder="Age" required>
+        </div>
+        <div class="input-box">
+            <select name="gender" id="gender" required>
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+        </div>
+        <div class="input-box">
+            <select name="user_role" id="user_role" required>
+                <option value="">Select Role</option>
+                <option value="buyer">Buyer</option>
+                <option value="seller">Seller</option>
+            </select>
+        </div>
+        <div class="policy">
+            <input type="checkbox" name="terms" id="terms" required>
+            <h3>I accept all terms and conditions</h3>
+        </div>
+        <div class="button-row">
+            <button type="submit">Register</button>
+            <button type="button" onclick="location.href='/api/address'">Add Address</button>
+        </div>
+        <div class="text">
+            Already have an account?
+            <a href="{% url 'loginuser'%}">Login Now</a>
+        </div>
+    </form>
+</div>
+<script>
+    document.getElementById('signupForm').onsubmit = function(event) {
+        const fields = Array.from(this.querySelectorAll('input, select'));
+        const errorDiv = document.getElementById('form-error');
+        errorDiv.textContent = '';
+        // Exclude csrf token field
+        const requiredFields = fields.filter(f => f.hasAttribute('required') && f.type !== 'hidden');
+        let allFilled = requiredFields.every(field => {
+            if (field.type === 'checkbox') {
+                return field.checked;
+            }
+            return field.value && field.value.trim() !== '';
+        });
+        if (!allFilled) {
+            errorDiv.textContent = "Please fill all details and accept terms before registering.";
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,6 @@
+# Envs / tooling
+.venv/
+venv/
+.env
+.idea/
+.vscode/
