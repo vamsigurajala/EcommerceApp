@@ -62,18 +62,27 @@ venv\Scripts\activate
 macOS/Linux
 source venv/bin/activate
 
+---
+
 2. Install Dependencies
  pip install -r requirements.txt
+
+---
 
 3. In Pgadmin(Postgres) cretae a server and databases which should match db names in settings.py
     Apply Migrations
    command: python manage.py makemigrations
             python manage.py migrate  
 
+---
+
 4. Run the Development Server
    - python manage.py runserver
    - Now visit: http://127.0.0.1:8000/ in your browser.
 
+---
+
 5. Running with Docker
   - docker-compose up --build
 
+---
