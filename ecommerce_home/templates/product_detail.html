@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ product.product_name }}{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <img src="{{ product.image|default:'' }}" alt="{{ product.product_name }}">
+    <h2>{{ product.product_name }}</h2>
+    <p>₹ {{ product.price }}</p>
+    <p>{{ product.product_description }}</p>
+
+    <!-- Add to cart (AJAX). No template vars inside JS call -->
+    <form
+      action="{% url 'add_to_cart_ajax' %}"
+      method="post"
+      onsubmit="return addToCart(event)"
+      data-product-id="{{ product.product_id }}"
+    >
+      {% csrf_token %}
+      <button type="submit">Add to cart</button>
+    </form>
+  </div>
+
+  <hr>
+
+  <h3>Reviews</h3>
+  {% if reviews.results and reviews.results|length %}
+    {% for r in reviews.results %}
+      <div class="card">
+        <p><strong>Rating:</strong> {{ r.rating }}/5
+          {% if r.is_verified_purchase %}
+            <span style="font-size:12px;">✔ Verified</span>
+          {% endif %}
+        </p>
+        {% if r.title %}<p><strong>{{ r.title }}</strong></p>{% endif %}
+        {% if r.body %}<p>{{ r.body }}</p>{% endif %}
+        <p style="font-size:12px;color:#777;">#{{ r.review_id }} • {{ r.created_at }}</p>
+      </div>
+    {% endfor %}
+
+    <div class="pagination">
+      {% if reviews.previous %}
+        <a href="?page={{ reviews.page|add:"-1" }}">← Prev</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+      <span>Page {{ reviews.page }} of {{ reviews.pages }}</span>
+      {% if reviews.next %}
+        <a href="?page={{ reviews.page|add:"1" }}">Next →</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+    </div>
+  {% else %}
+    <p>No reviews yet.</p>
+  {% endif %}
+
+  <hr>
+
+  <h3>Write a review</h3>
+  <form action="{% url 'submit_review' product.product_id %}" method="post">
+    {% csrf_token %}
+    <label>Rating (1–5)</label><br>
+    <input type="number" name="rating" min="1" max="5" required><br><br>
+    <label>Title</label><br>
+    <input type="text" name="title" maxlength="120"><br><br>
+    <label>Review</label><br>
+    <textarea name="body" rows="4" cols="50"></textarea><br><br>
+    <button type="submit">Submit review</button>
+  </form>
+
+  <script>
+    function addToCart(e){
+      e.preventDefault();
+      const form = e.target;
+      const pid = form.dataset.productId;
+      const url = form.getAttribute('action');
+      const csrf = form.querySelector('input[name=csrfmiddlewaretoken]').value;
+
+      const fd = new FormData();
+      fd.append('product_id', pid);
+      fd.append('csrfmiddlewaretoken', csrf);
+
+      fetch(url, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin'
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          const badge = document.querySelector('.cart-badge');
+          if (badge) badge.textContent = data.cart_count;
+          alert('Added to cart');
+        } else if (data.auth === false) {
+          window.location.href = '{% url "loginuser" %}';
+        } else {
+          alert('Failed to add to cart');
+        }
+      })
+      .catch(() => alert('Network error'));
+      return false;
+    }
+  </script>
+{% endblock %}

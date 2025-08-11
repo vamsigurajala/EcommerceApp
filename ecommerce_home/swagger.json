@@ -1,0 +1,141 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "My API",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/home/": {
+            "get": {
+                "summary": "Homepage",
+                "description": "View function for the homepage",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/usersignup/": {
+            "get": {
+                "summary": "User Signup",
+                "description": "View function for user signup",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/address/": {
+            "get": {
+                "summary": "Adding Address",
+                "description": "View function for adding user address",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/products/": {
+            "get": {
+                "summary": "Products Home",
+                "description": "View function for products home",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/paginate/": {
+            "get": {
+                "summary": "Paginate Products",
+                "description": "View function for paginating products",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/getuserid/{user_id}/": {
+            "get": {
+                "summary": "Get User ID",
+                "description": "View function for getting user ID",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/userview/": {
+            "get": {
+                "summary": "User Details View",
+                "description": "View function for user details",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/login/": {
+            "get": {
+                "summary": "User Login",
+                "description": "View function for user login",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "get": {
+                "summary": "Logout",
+                "description": "View function for user logout",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/getaddress/": {
+            "get": {
+                "summary": "Address View",
+                "description": "View function for user address",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/allproducts/": {
+            "get": {
+                "summary": "Product Info",
+                "description": "View function for all products",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/homepage/": {
+            "get": {
+                "summary": "Homepage",
+                "description": "View function for homepage",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,103 @@
+# verison: '3.7'
+services:
+  user:
+    build: /E-Commerce-App
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - userdb
+    networks:
+      network:
+        ipv4_address: 152.14.0.13
+  userdb:
+    image: postgres
+    environment:
+      - POSTGRES_DB=userprofile
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=2523
+      # - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./db/user:/var/lib/postgresql/data
+    networks:
+      network:
+        ipv4_address: 152.14.0.17
+
+  product:
+    build: /ecommerce_product
+    command: python manage.py runserver 0.0.0.0:8001
+    ports:
+      - "8001:8001"
+    depends_on:
+      - productdb
+    networks:
+      network:
+        ipv4_address: 152.14.0.14
+    volumes:
+      - ./ecommerce_product/media/media:/app/media/media
+  productdb:
+    image: postgres
+    environment:
+      - POSTGRES_DB=items
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=2523
+      # - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./db/product:/var/lib/postgresql/data
+    networks:
+      network:
+        ipv4_address: 152.14.0.18
+
+  cart:
+    build: /ecommerce_cart
+    command: python manage.py runserver 0.0.0.0:8002
+    ports:
+      - "8002:8002"
+    depends_on:
+      - cartdb
+    networks:
+      network:
+        ipv4_address: 152.14.0.15
+  cartdb:
+    image: postgres
+    environment:
+      - POSTGRES_DB=cart
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=2523
+      # - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./db/cart:/var/lib/postgresql/data
+    networks:
+      network:
+        ipv4_address: 152.14.0.19
+
+  order:
+    build: /ecommerce_order
+    command: python manage.py runserver 0.0.0.0:8003
+    ports:
+      - "8003:8003"
+    depends_on:
+      - orderdb
+    networks:
+      network:
+        ipv4_address: 152.14.0.16
+  orderdb:
+    image: postgres
+    environment:
+      - POSTGRES_DB=orders
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=2523
+      # - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./db/order:/var/lib/postgresql/data
+    networks:
+      network:
+        ipv4_address: 152.14.0.20
+
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 152.14.0.0/16
+          gateway: 152.14.0.1

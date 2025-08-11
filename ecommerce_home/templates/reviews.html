@@ -1,0 +1,980 @@
+{% extends 'base.html' %}
+{% block gallery_assets %}{% endblock %}
+{% block title %}Reviews · {{ product.product_name }}{% endblock %}
+
+{% block extra_style %}
+<style>
+  :root{
+  --bg:#fff; --fg:#0f172a; --muted:#64748b; --line:#e5e7eb;
+  --brand:#2563eb; --brand-600:#1d4ed8; --amber:#f59e0b; --ok:#16a34a; --err:#e11d48;
+}
+/* apply dark tokens when body has .dark-mode */
+body.dark-mode{
+  --bg:#0b1220;         /* page surfaces */
+  --fg:#e2e8f0;         /* main text */
+  --muted:#94a3b8;      /* secondary text / placeholders */
+  --line:#3b4252;       /* borders/dividers */
+}
+body{ background:var(--bg); color:var(--fg); }
+
+
+/* the fade on collapsed photo grid already uses var(--bg), so it adapts */
+
+  .page{max-width:900px;margin:24px auto;padding:0 16px}
+  .muted{color:var(--muted)}
+
+  .prod-header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+  .prod-left{display:flex;gap:12px;align-items:center}
+  .prod-img{width:70px;height:70px;border-radius:8px;object-fit:cover;border:1px solid var(--line)}
+  .prod-title{font-size:22px;font-weight:700;margin:0}
+  .prod-price{font-weight:700}
+
+  .section-title{font-size:18px;font-weight:700;margin:0 0 8px}
+  .stars{display:inline-flex;gap:6px;margin:8px 0}
+  .star{font-size:22px;cursor:pointer;color:#d1d5db}
+  .star.on{color:var(--amber)}
+  .input{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:10px;border-radius:8px;outline:none;margin:4px 0 8px}
+  .textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:10px;border-radius:8px;outline:none;min-height:120px;max-height:220px;resize:none}
+  .media-row{display:flex;align-items:flex-start;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .preview{display:flex;gap:6px;flex-wrap:wrap}
+  .preview > div{position:relative;display:inline-block}
+  .preview img{height:80px;width:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+  .btn{border:none;border-radius:6px;padding:10px 16px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.primary:hover{background:var(--brand-600)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+  .actions{margin-top:12px;display:flex;gap:8px;align-items:center}
+  .notice{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;border:1px solid rgba(14,165,233,.35);background:rgba(14,165,233,.08);font-weight:600}
+
+  .divider{border:none;border-top:1px solid var(--line);margin:20px 0}
+  .empty{color:var(--muted)}
+
+  .rv{padding:14px 0;border-bottom:1px solid var(--line)}
+  .rv-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .rv-left{display:flex;align-items:center;gap:10px}
+  .rv-title{font-weight:700;font-size:15px}
+  .rv-body{white-space:pre-wrap;margin-top:4px;font-size:14px}
+  .rv-footer{margin-top:6px;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+  .rv-name{font-weight:600;color:var(--fg)}
+  .rv-dot{opacity:.6}
+  .rv-when{white-space:nowrap}
+  .badge{font-size:11px;padding:2px 6px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.03)}
+  .rv-footer .spacer{flex:1}
+
+  /* grid of review photos */
+  .rv-images{
+    display:grid;
+    grid-template-columns:repeat(5, 80px);
+    gap:8px;
+    margin-top:6px;
+  }
+  .rv-images img{
+    width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line)
+  }
+  /* collapse to 2 rows initially */
+  .rv-images.collapsed{
+    max-height:calc(80px*2 + 8px*1);
+    overflow:hidden; position:relative;
+  }
+  .rv-images.collapsed::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:36px;
+    background:linear-gradient(to bottom, rgba(255,255,255,0), var(--bg));
+  }
+  .photo-toggle{margin-top:6px;background:none;border:0;color:var(--brand);font-weight:700;cursor:pointer}
+
+  /* Rating badge */
+  .rate-badge,.rate-badge.good,.rate-badge.avg,.rate-badge.bad{
+    display:inline-flex;align-items:center;gap:6px;height:26px;min-width:22px;padding:0 10px;border-radius:5px;border:1px solid var(--line);font-weight:700;font-size:13px;line-height:1;color:#fff;flex:0 0 auto
+  }
+  .rate-badge.good{background:#1aa14c;border-color:#25a458}
+  .rate-badge.avg{background:#b76527;border-color:#c66832}
+  .rate-badge.bad{background:#c43535;border-color:#ad2b2b}
+  .rate-star{font-size:14px}
+
+  /* Reactions */
+  .react{display:flex;align-items:center;gap:10px}
+  .react-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:20px;padding:6px 10px;background:var(--bg);cursor:pointer;font-weight:600}
+  .react-btn:hover{background:#f3f4f6}
+  .react-btn.active.like{background:#065f46;color:#fff;border-color:#064e3b}
+  .react-btn.active.dislike{background:#7f1d1d;color:#fff;border-color:#7f1d1d}
+  .react-count{font-size:12px;opacity:.8}
+
+  /* 3-dots */
+  .kebab-item{ color: var(--fg); } 
+  .kebab{position:relative}
+.kebab-btn{
+  background: transparent;
+  border:1px solid var(--line);
+  border-radius:8px;
+  cursor:pointer;
+  padding:6px 8px;
+  font-weight:700;
+  font-size:18px;   /* make the dots bigger */
+  line-height:1;
+  color: var(--fg);
+}
+.kebab-btn:hover{ background: rgba(255,255,255,.06); }
+  .kebab-menu{position:absolute;right:0;top:36px;min-width:140px;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,.14);padding:6px;display:none;z-index:5}
+  .kebab-menu.open{display:block}
+  .kebab-item{width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .kebab-item:hover{background:#f3f4f6}
+  .kebab-item.danger{color:#b91c1c}
+
+  body.dark-mode .kebab-menu{
+  background:#0f172a;
+  border-color:rgba(255,255,255,.14);
+  box-shadow:0 12px 26px rgba(0,0,0,.55);
+}
+body.dark-mode .kebab-item{ color:#e2e8f0; }
+body.dark-mode .kebab-item:hover{ background:rgba(255,255,255,.08); }
+body.dark-mode .kebab-item.danger{ color:#fca5a5; }
+body.dark-mode .kebab-item.danger:hover{
+  background:rgba(239,68,68,.12);
+  color:#fecaca;
+}
+
+  /* Pager */
+  .pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0}
+  .pager .btn{display:inline-block;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-weight:700;text-decoration:none}
+  .btn.is-disabled{pointer-events:none;opacity:.55}
+  .pager .meta{color:var(--muted);font-size:13px}
+
+  /* Summary */
+  .summary{display:none;grid-template-columns:130px 1fr;gap:18px;align-items:center;margin:6px 0 18px;border:1px solid var(--line);border-radius:10px;padding:14px}
+  .summary-left{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .avg{font-size:34px;font-weight:800}
+  .avg-star{color:#f59e0b;font-weight:800}
+  .total{color:var(--muted);font-size:12px}
+  .bars{display:flex;flex-direction:column;gap:6px}
+  .bar{display:flex;align-items:center;gap:8px}
+  .bar .label{width:18px;text-align:right;font-weight:700}
+  .track{flex:1;height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+  .fill{height:100%;background:#10b981}
+  .fill.mid{background:#f59e0b}
+  .fill.low{background:#ef4444}
+
+  /* Toasts */
+  .toasts{position:fixed;right:16px;bottom:16px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+  .toast{min-width:260px;max-width:360px;padding:12px 14px;border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.18);display:flex;gap:10px;align-items:flex-start;opacity:0;transform:translateY(10px);animation:slideIn .25s ease forwards;font-weight:600;border:1px solid transparent}
+  .toast.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
+  .toast.err{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
+  .toast.info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+  @keyframes slideIn{to{opacity:1;transform:translateY(0)}}
+
+  /* Modal confirm */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:1200}
+  .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,92vw);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25);display:none;z-index:1201}
+  .modal.open,.modal-backdrop.open{display:block}
+  .modal .hd{padding:14px 16px;font-weight:800;border-bottom:1px solid var(--line)}
+  .modal .bd{padding:16px}
+  .modal .ft{padding:12px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line)}
+  .btn.danger{background:#dc2626;color:#fff}
+
+  /* Clamp long review text and show a toggle */
+.rv.collapsed .rv-body{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:5;   /* show first 5 lines */
+  overflow:hidden;
+}
+.moreless{
+  background:none;border:0;padding:0;margin-top:6px;
+  color:var(--brand);cursor:pointer;font-weight:700;
+}
+.moreless:focus{outline:2px solid var(--brand-600);outline-offset:2px}
+
+/* ---- inline gallery overlay (light friendly) ---- */
+.gal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;display:none}
+.gal{position:fixed;inset:auto auto 6vh auto;left:50%;top:50%;transform:translate(-50%,-50%);
+     width:min(1100px,96vw);max-height:90vh;background:#fff;color:#111;border-radius:14px;
+     border:1px solid #e5e7eb;box-shadow:0 14px 44px rgba(0,0,0,.35);z-index:1201;display:none}
+.gal.open,.gal-backdrop.open{display:block}
+.gal-wrap{display:grid;grid-template-columns:1fr 360px;gap:18px;padding:18px;max-height:90vh}
+.gal-left{display:flex;flex-direction:column;gap:10px}
+.gal-canvas{flex:1;min-height:360px;border:1px dashed #e5e7eb;border-radius:12px;
+            display:flex;align-items:center;justify-content:center;overflow:hidden}
+.gal-canvas img{max-width:100%;max-height:100%}
+.gal-thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.gal-thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid transparent;cursor:pointer}
+.gal-thumbs img.active{border-color:#2563eb}
+.gal-nav{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.gal-arrow{width:36px;height:36px;border-radius:9999px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;font-weight:800}
+.gal-close{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+
+.gi-title{font-weight:800;margin:0 0 6px}
+.gi-meta{color:#64748b;font-size:12px;margin-bottom:8px;display:flex;gap:8px;align-items:center}
+.gi-body{white-space:pre-wrap;font-size:14px}
+.gi-read{background:none;border:0;color:#2563eb;font-weight:700;cursor:pointer;padding:0;margin-top:6px}
+.gi-rate{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;background:#16a34a;color:#fff;font-weight:800;margin-right:8px}
+
+/* --- Focus ring like login (blue highlight) --- */
+.input, .textarea{
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+}
+.input:focus, .textarea:focus{
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.35); /* blue soft ring */
+  background: rgba(255,255,255,.02);
+}
+body.light-mode .input:focus,
+body.light-mode .textarea:focus{ background:#fff; }
+
+/* placeholders follow theme in both modes */
+.input::placeholder, .textarea::placeholder{ color: var(--muted); opacity:.9; }
+
+/* --- Make reaction counts readable in dark mode --- */
+.react-count{ color: var(--fg); opacity:.95; font-weight:700; }
+.react-btn.active.like .react-count,
+.react-btn.active.dislike .react-count{ color:#fff; opacity:1; }
+
+/* --- Thumbnail "View" button (so it feels like a button not cursor) --- */
+.rv-images{ position:relative; }
+.rv-images .rv-thumb-wrap{ position:relative; display:inline-block; }
+.rv-images img{ cursor: default; } /* not a pointer anymore */
+
+body.dark-mode .rv-view-btn{ border-color: rgba(255,255,255,.2); }
+
+/* icon color + hover for dark mode */
+body.dark-mode #theme-toggle{ color:#fff; }
+body.dark-mode #theme-toggle:hover{ background: rgba(255,255,255,.10); }
+
+.moreless,
+.photo-toggle{
+  background:none;
+  border:0;
+  color:var(--brand);
+  font-weight:700;
+  padding:0;
+  cursor:pointer;
+  border-radius:6px;            /* avoids hard square corners */
+}
+
+.moreless:hover,
+.photo-toggle:hover{ text-decoration:underline; }
+
+/* remove the default “blue box” focus outline, keep an accessible ring */
+.moreless:focus,
+.photo-toggle:focus{ outline:none; }
+.moreless:focus-visible,
+.photo-toggle:focus-visible{
+  box-shadow:0 0 0 3px rgba(37,99,235,.35);
+  border-radius:6px;
+}
+/* review row divider in dark */
+body.dark-mode .rv{ border-bottom-color: rgba(255,255,255,.10); }
+
+/* reaction chips contrast in dark */
+body.dark-mode .react-btn{
+  background:#0b1220;
+  border-color:rgba(255,255,255,.16);
+  color:#e2e8f0;
+}
+body.dark-mode .react-btn:hover{ background:rgba(255,255,255,.06); }
+
+/* keep active states punchy */
+body.dark-mode .react-btn.active.like{ background:#065f46; border-color:#064e3b; color:#fff; }
+body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d1d; color:#fff; }
+
+/* thumbnails should show hand cursor (Flipkart-style) */
+.rv-images img{ cursor:pointer !important; }
+
+/* Keep header visible and let us place the toggle inside it */
+
+/* Theme toggle lives INSIDE header, not fixed */
+#theme-toggle{
+  position: relative;          /* sits in the header flow */
+  width:36px; height:36px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:none;
+  color:#fff;                  /* white icon in both themes (header is dark) */
+  cursor:pointer;
+  transition:background .18s;
+  margin-left:8px;
+}
+#theme-toggle:hover{ background:rgba(255,255,255,.10); }
+
+/* tooltip stays the same */
+#theme-tooltip{
+  position:absolute; left:50%; top:110%; transform:translateX(-50%);
+  background:#232323; color:#fff; padding:7px 16px; border-radius:6px;
+  font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,.18);
+  white-space:nowrap; margin-top:7px; z-index:2147483000; pointer-events:none;
+  opacity:0; transition:opacity .15s;
+}
+#theme-toggle:hover #theme-tooltip{ opacity:1; }
+#theme-tooltip::before{
+  content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%);
+  border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent;
+}
+
+/* Pager: same layout, just better dark treatment */
+.pager{ display:flex; align-items:center; justify-content:center; gap:12px; margin:24px 0; }
+.pager .btn{
+  background:var(--bg); color:var(--fg); border:1px solid var(--line);
+  border-radius:999px; font-weight:700;
+}
+.pager .btn:hover{ background:rgba(148,163,184,.12) }
+.pager .btn.is-disabled{ opacity:.45; pointer-events:none; }
+.pager .meta{ color:var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <!-- config for JS -->
+  <div id="config"
+       data-submit-url="{% url 'submit_review' product.product_id %}"
+       data-product-id="{{ product.product_id }}"></div>
+
+  <!-- header -->
+  <div class="prod-header">
+    <div class="prod-left">
+      <img class="prod-img" src="{{ product.image|default:'' }}" alt="{{ product.product_name }}">
+      <div>
+        <h1 class="prod-title">{{ product.product_name }}</h1>
+        <div class="prod-price">₹ {{ product.price }}</div>
+        <div class="muted">{{ product.product_description }}</div>
+      </div>
+    </div>
+    <div class="muted"><span id="review-count">
+      {% if total_count %}{{ total_count }} review{{ total_count|pluralize }}{% else %}No reviews yet{% endif %}
+    </span></div>
+  </div>
+
+  <!-- rating summary (hidden until JS fills it) -->
+  <div id="rating-summary" class="summary">
+    <div class="summary-left">
+      <div class="avg"><span id="avg-rating">0.0</span> <span class="avg-star">★</span></div>
+      <div class="total" id="total-ratings">0 reviews</div>
+    </div>
+    <div class="bars">
+      {% for s in "54321" %}
+      <div class="bar">
+        <div class="label">{{ s }}★</div>
+        <div class="track"><div class="fill {% if s == '3' %}mid{% elif s in '21' %}low{% endif %}" id="bar-{{ s }}" style="width:0%"></div></div>
+        <div class="count" id="count-{{ s }}">0</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- write review -->
+  {% if can_review %}
+    <h3 class="section-title">Write a review</h3>
+    <div id="already-msg" class="notice">You’ve already reviewed this product. You can edit your existing review below.</div>
+
+    <form id="review-form" action="{% url 'submit_review' product.product_id %}" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="rating" id="rating-input" value="0">
+
+      <div class="stars" id="stars">
+        {% for i in "12345" %}<span class="star" data-v="{{ forloop.counter }}">★</span>{% endfor %}
+      </div>
+
+      <input id="title" name="title" type="text" class="input" placeholder="Add a review title (e.g., ‘Must buy!’)">
+      <textarea id="body" name="body" class="textarea" placeholder="Share details on quality, fit, pros & cons…"></textarea>
+
+      <div class="media-row">
+        <label for="images" class="btn ghost">+ Add photo</label>
+        <input id="images" name="images" type="file" accept="image/*" style="display:none" multiple>
+        <div id="img-preview" class="preview hint">No image selected</div>
+      </div>
+
+      <div class="actions">
+        <button id="submit-btn" type="submit" class="btn primary">Submit review</button>
+        <button id="cancel-edit" type="button" class="btn ghost" style="display:none">Cancel edit</button>
+      </div>
+    </form>
+  {% else %}
+    <h3 class="section-title">Write a review</h3>
+    <div class="notice" style="display:block">Only customers who purchased this item can leave a review.</div>
+  {% endif %}
+
+  <hr class="divider">
+
+  <!-- customer reviews -->
+  <h3 class="section-title">Customer reviews</h3>
+
+  {% if pinned_review %}
+    <div class="rv" data-review-id="{{ pinned_review.review_id }}" style="border-left:3px solid #aee1f8;padding-left:10px">
+    <div class="rv-head">
+      <div class="rv-left">
+        {% with pinned_review.rating as rt %}
+          <div class="rate-badge {% if rt >= 4 %}good{% elif rt == 3 %}avg{% else %}bad{% endif %}">
+            <span>{{ rt }}</span><span class="rate-star">★</span>
+          </div>
+        {% endwith %}
+        {% if pinned_review.title %}<div class="rv-title">{{ pinned_review.title }}</div>{% endif %}
+      </div>
+    </div>
+
+{% if pinned_review.body %}
+  <div class="rv-body">{{ pinned_review.body }}</div>
+  <button type="button" class="moreless" hidden>Read more</button>
+{% endif %}
+    {% if pinned_review.image_urls and pinned_review.image_urls|length %}
+      <div class="rv-images collapsed">
+        {% for u in pinned_review.image_urls %}<img src="{{ u }}" alt="">{% endfor %}
+      </div>
+      <button type="button" class="photo-toggle" hidden>See more photos</button>
+    {% elif pinned_review.image_url %}
+      <div class="rv-images collapsed"><img src="{{ pinned_review.image_url }}" alt=""></div>
+      <button type="button" class="photo-toggle" hidden>See more photos</button>
+    {% endif %}
+
+    <div class="rv-footer">
+      <span class="rv-name">{{ pinned_review.user_name|default:"Anonymous" }}</span>
+      {% if pinned_review.is_verified_purchase %}<span class="badge">Verified Purchase</span>{% endif %}
+      <span class="rv-dot">•</span>
+      <span class="rv-when">{% if pinned_review.display_date %}{{ pinned_review.display_date }}{% else %}{{ pinned_review.created_at|date:"M j, Y, g:i A" }}{% endif %}</span>
+      <span class="spacer"></span>
+
+      <div class="react" data-id="{{ pinned_review.review_id }}">
+        <button type="button" class="react-btn like" data-val="1">👍 <span class="react-count js-like">{{ pinned_review.like_count }}</span></button>
+        <button type="button" class="react-btn dislike" data-val="-1">👎 <span class="react-count js-dislike">{{ pinned_review.dislike_count }}</span></button>
+      </div>
+
+      <div class="kebab">
+        <button type="button" class="kebab-btn" aria-label="More">⋯</button>
+        <div class="kebab-menu">
+          <button class="kebab-item js-edit"
+            data-id="{{ pinned_review.review_id }}"
+            data-body="{{ pinned_review.body|default_if_none:''|escape }}"
+            data-rating="{{ pinned_review.rating }}"
+            data-title="{{ pinned_review.title|default_if_none:''|escape }}">Edit</button>
+          <button class="kebab-item danger js-delete" data-id="{{ pinned_review.review_id }}">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="pinned-data"
+     data-id="{{ pinned_review.review_id }}"
+     data-title="{{ pinned_review.title|default_if_none:''|escape }}"
+     data-body="{{ pinned_review.body|default_if_none:''|escape }}"
+     data-rating="{{ pinned_review.rating }}">
+</div>
+  {% endif %}
+
+  {% if reviews and reviews|length > 0 %}
+    {% for r in reviews %}
+    <div class="rv" data-review-id="{{ r.review_id }}">
+      <div class="rv-head">
+        <div class="rv-left">
+          {% with r.rating as rt %}
+            <div class="rate-badge {% if rt >= 4 %}good{% elif rt == 3 %}avg{% else %}bad{% endif %}">
+              <span>{{ rt }}</span><span class="rate-star">★</span>
+            </div>
+          {% endwith %}
+          {% if r.title %}<div class="rv-title">{{ r.title }}</div>{% endif %}
+        </div>
+      </div>
+
+     {% if r.body %}
+  <div class="rv-body">{{ r.body }}</div>
+  <button type="button" class="moreless" hidden>Read more</button>
+{% endif %}
+
+
+      {% if r.image_urls and r.image_urls|length %}
+        <div class="rv-images collapsed">
+          {% for u in r.image_urls %}<img src="{{ u }}" alt="review image">{% endfor %}
+        </div>
+        <button type="button" class="photo-toggle" hidden>See more photos</button>
+      {% elif r.image_url %}
+        <div class="rv-images collapsed"><img src="{{ r.image_url }}" alt="review image"></div>
+        <button type="button" class="photo-toggle" hidden>See more photos</button>
+      {% endif %}
+
+      <div class="rv-footer">
+        <span class="rv-name">{{ r.user_name|default:"Anonymous" }}</span>
+        {% if r.is_verified_purchase %}<span class="badge">Verified Purchase</span>{% endif %}
+        <span class="rv-dot">•</span>
+        <span class="rv-when">{% if r.display_date %}{{ r.display_date }}{% else %}{{ r.created_at|date:"M j, Y, g:i A" }}{% endif %}</span>
+        <span class="spacer"></span>
+
+        <div class="react" data-id="{{ r.review_id }}">
+          <button type="button" class="react-btn like" data-val="1">👍 <span class="react-count js-like">{{ r.like_count }}</span></button>
+          <button type="button" class="react-btn dislike" data-val="-1">👎 <span class="react-count js-dislike">{{ r.dislike_count }}</span></button>
+        </div>
+
+        {% if current_user_id and r.user_id == current_user_id %}
+        <div class="kebab">
+          <button type="button" class="kebab-btn" aria-label="More">⋯</button>
+          <div class="kebab-menu">
+            <button class="kebab-item js-edit"
+              data-id="{{ r.review_id }}"
+              data-body="{{ r.body|default_if_none:''|escape }}"
+              data-rating="{{ r.rating }}"
+              data-title="{{ r.title|default_if_none:''|escape }}">Edit</button>
+            <button class="kebab-item danger js-delete" data-id="{{ r.review_id }}">Delete</button>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% elif not pinned_review %}
+    <div class="empty">No reviews yet. Be the first to review this product.</div>
+  {% endif %}
+
+</div>
+
+{% if next_url or prev_url %}
+  <div class="pager">
+    <a href="{{ prev_url|default:'#' }}" class="btn {% if not prev_url %}is-disabled{% endif %}">← Previous</a>
+    <span class="meta">Page {{ cur_page }} of {{ total_pages }}</span>
+    <a href="{{ next_url|default:'#' }}" class="btn {% if not next_url %}is-disabled{% endif %}">Next →</a>
+  </div>
+{% endif %}
+
+<!-- Toast container -->
+<div class="toasts" id="toasts"></div>
+
+<!-- Modal confirm -->
+<div id="confirmBackdrop" class="modal-backdrop"></div>
+<div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="hd" id="confirmTitle">Delete review</div>
+  <div class="bd">Delete this review permanently?</div>
+  <div class="ft">
+    <button type="button" class="btn ghost" id="confirmCancel">Cancel</button>
+    <button type="button" class="btn danger" id="confirmOk">Delete</button>
+  </div>
+</div>
+<script>
+(function(){
+  function getCookie(name){
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const CSRF = getCookie('csrftoken');
+  const cfg  = document.getElementById('config');
+  const SUBMIT = cfg?.dataset.submitUrl || '';
+
+  const toastBox = document.getElementById('toasts');
+  function toast(kind, msg, ms=2200){
+    const t = document.createElement('div');
+    t.className = 'toast ' + (kind || 'info');
+    t.innerHTML = '<div>'+msg+'</div>';
+    toastBox.appendChild(t);
+    setTimeout(()=>{ t.style.opacity = '0'; t.style.transform='translateY(10px)'; }, ms);
+    setTimeout(()=>{ t.remove(); }, ms+250);
+  }
+
+  // stars input
+  const starsWrap = document.getElementById('stars');
+  const stars = starsWrap ? [...starsWrap.querySelectorAll('.star')] : [];
+  const ratingInput = document.getElementById('rating-input');
+  function paint(n){ stars.forEach((s,i)=> s.classList.toggle('on', i < n)); }
+  stars.forEach(s=>{
+    s.addEventListener('mouseenter', ()=>paint(parseInt(s.dataset.v,10)));
+    s.addEventListener('mouseleave', ()=>paint(parseInt(ratingInput.value||'0',10)));
+    s.addEventListener('click', ()=>{ const v = parseInt(s.dataset.v,10); ratingInput.value=v; paint(v); });
+  });
+
+  // --- multi-image preview with remove
+  const fileInput = document.getElementById('images');
+  const imgPrev   = document.getElementById('img-preview');
+  let selectedFiles = [];
+  function renderPreviews(){
+    if (!selectedFiles.length){
+      imgPrev.textContent = 'No image selected';
+      imgPrev.classList.add('hint');
+      return;
+    }
+    imgPrev.classList.remove('hint');
+    imgPrev.innerHTML = selectedFiles.map((f, idx) => {
+      const url = URL.createObjectURL(f);
+      return `
+        <div>
+          <img src="${url}" alt="selected image">
+          <button type="button" data-idx="${idx}" aria-label="Remove image"
+            style="position:absolute;top:-6px;right:-6px;border:none;background:#ef4444;color:#fff;
+                   width:22px;height:22px;border-radius:999px;cursor:pointer;font-weight:800;line-height:1">×</button>
+        </div>`;
+    }).join('');
+    imgPrev.querySelectorAll('button[data-idx]').forEach(btn=>{
+      btn.onclick = () => {
+        const i = parseInt(btn.dataset.idx, 10);
+        selectedFiles.splice(i,1);
+        const dt = new DataTransfer();
+        selectedFiles.forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+        renderPreviews();
+      };
+    });
+  }
+  fileInput?.addEventListener('change', ()=>{
+    const incoming = Array.from(fileInput.files || []);
+    selectedFiles = selectedFiles.concat(incoming);
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+    renderPreviews();
+  });
+
+  // submit / edit
+  const form   = document.getElementById('review-form');
+  const btn    = document.getElementById('submit-btn');
+  const cancel = document.getElementById('cancel-edit');
+  const already = document.getElementById('already-msg');
+  let editingId = null;
+
+  function toEditMode(id){ editingId=id; btn.textContent='Update review'; cancel.style.display='inline-block'; if(already) already.style.display='block'; }
+  function exitEdit(){ editingId=null; btn.textContent='Submit review'; cancel.style.display='none'; form.reset(); document.getElementById('title').value=''; ratingInput.value=0; paint(0); imgPrev.textContent='No image selected'; imgPrev.classList.add('hint'); if(already) already.style.display='none'; }
+  cancel?.addEventListener('click', e=>{ e.preventDefault(); exitEdit(); });
+
+  document.addEventListener('click', (e)=>{
+    const b = e.target.closest('.js-edit'); if(!b) return;
+    e.preventDefault();
+    document.getElementById('body').value  = b.dataset.body || '';
+    document.getElementById('title').value = b.dataset.title || '';
+    ratingInput.value = b.dataset.rating || '5';
+    paint(parseInt(ratingInput.value,10));
+    toEditMode(b.dataset.id);
+    window.scrollTo({top:0,behavior:'smooth'});
+    toast('info','Editing your review');
+  });
+
+  form?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const rating = parseInt(ratingInput.value||'0',10);
+    if(!rating || rating<1 || rating>5){ toast('err','Please select a rating (1–5)'); return; }
+    const fd = new FormData(form);
+    try{
+      btn.disabled = true; const orig = btn.textContent;
+      btn.textContent = editingId ? 'Updating…' : 'Submitting…';
+      let url = SUBMIT, method = 'POST';
+      if (editingId){ url = `/api/reviews/${editingId}/edit/`; method = 'POST'; }
+
+      const resp = await fetch(url, { method, body: fd, credentials:'include', headers:{'X-CSRFToken': CSRF} });
+      let data = {}; const ct = resp.headers.get('content-type')||'';
+      if (ct.includes('application/json')) { try{ data = await resp.json(); } catch(_){} }
+
+      if (!resp.ok){
+        if (resp.status===409 && (data?.existing_review_id || data?.backend?.existing_review_id)){
+          const id = data.existing_review_id || data.backend.existing_review_id;
+          toEditMode(id); toast('err',"You already reviewed this product. Editing your existing one.");
+          btn.disabled=false; btn.textContent=orig; return;
+        }
+        if (resp.status===403){
+          toast('err', data?.error || 'You must purchase this product before leaving a review.');
+          btn.disabled=false; btn.textContent=orig; return;
+        }
+        toast('err', data?.error || 'Could not submit review');
+        btn.disabled=false; btn.textContent=orig; return;
+      }
+      toast('ok', editingId ? 'Your review was updated' : 'Your review was submitted');
+      setTimeout(()=>window.location.reload(), 650);
+    }catch(err){ console.error(err); toast('err','Network error. Please try again.'); btn.disabled=false; }
+  });
+
+  // reactions
+  document.addEventListener('click', async (e)=>{
+    const el = e.target.closest('.react-btn'); if(!el) return;
+    const wrap = el.closest('.react'); const reviewId = wrap?.dataset.id; const value = el.dataset.val;
+    if(!reviewId || !value) return;
+    try{
+      const resp = await fetch(`/api/reviews/${reviewId}/vote/`, {
+        method:'POST', credentials:'include',
+        headers:{'X-CSRFToken': CSRF, 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+        body: new URLSearchParams({value})
+      });
+      const data = await resp.json().catch(()=> ({}));
+      if (resp.status===401){ toast('err','Please log in to vote'); return; }
+      if (!resp.ok || !data?.ok){ toast('err', data?.error || 'Could not record vote'); return; }
+      wrap.querySelector('.js-like').textContent = data.like_count;
+      wrap.querySelector('.js-dislike').textContent = data.dislike_count;
+      const likeBtn = wrap.querySelector('.react-btn.like');
+      const dislikeBtn = wrap.querySelector('.react-btn.dislike');
+      likeBtn.classList.remove('active'); dislikeBtn.classList.remove('active');
+      if (data.action==='created' || data.action==='switched'){ (value==='1'? likeBtn : dislikeBtn).classList.add('active'); }
+    }catch(err){ console.error(err); toast('err','Network error'); }
+  });
+
+  // kebab menu open/close
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.kebab-btn');
+    const anyMenu = document.querySelectorAll('.kebab-menu');
+    if (btn){
+      e.preventDefault();
+      const wrap = btn.closest('.kebab');
+      const menu = wrap.querySelector('.kebab-menu');
+      anyMenu.forEach(m => { if (m !== menu) m.classList.remove('open'); });
+      menu.classList.toggle('open');
+      return;
+    }
+    if (!e.target.closest('.kebab')) anyMenu.forEach(m => m.classList.remove('open'));
+  });
+
+  // modal confirm for delete
+  const modal = document.getElementById('confirmModal');
+  const backdrop = document.getElementById('confirmBackdrop');
+  const btnOk = document.getElementById('confirmOk');
+  const btnCancel = document.getElementById('confirmCancel');
+  let _pendingDeleteId = null;
+  function openConfirm(id){ _pendingDeleteId = id; backdrop.classList.add('open'); modal.classList.add('open'); }
+  function closeConfirm(){ _pendingDeleteId = null; backdrop.classList.remove('open'); modal.classList.remove('open'); }
+  btnCancel.addEventListener('click', closeConfirm);
+  backdrop.addEventListener('click', closeConfirm);
+
+  document.addEventListener('click', (e)=>{
+    const del = e.target.closest('.js-delete'); if(!del) return;
+    e.preventDefault();
+    openConfirm(del.dataset.id);
+  });
+
+  btnOk.addEventListener('click', async ()=>{
+    const id = _pendingDeleteId; if (!id) return;
+    try{
+      const resp = await fetch(`/api/reviews/${id}/delete/`, {
+        method:'POST', credentials:'include',
+        headers:{'X-CSRFToken': CSRF}
+      });
+      if (!resp.ok){
+        const data = await resp.json().catch(()=> ({}));
+        toast('err', data?.error || 'Could not delete review');
+        closeConfirm(); return;
+      }
+      toast('ok','Review deleted');
+      closeConfirm();
+      setTimeout(()=>window.location.reload(), 500);
+    }catch(err){ console.error(err); toast('err','Network error'); closeConfirm(); }
+  });
+
+  // photos: show toggle only if there are >2 rows hidden
+  function initPhotoToggles(){
+    document.querySelectorAll('.photo-toggle').forEach(btn=>{
+      const grid = btn.previousElementSibling;
+      if (!grid || !grid.classList.contains('rv-images')) return;
+      // ensure collapsed first for measurement
+      grid.classList.add('collapsed');
+      // show button if scrollHeight > visible height (meaning more rows exist)
+      btn.hidden = !(grid.scrollHeight > grid.clientHeight + 2);
+      btn.textContent = 'See more photos';
+      btn.onclick = ()=>{
+        grid.classList.toggle('collapsed');
+        btn.textContent = grid.classList.contains('collapsed') ? 'See more photos' : 'See fewer photos';
+      };
+    });
+  }
+  window.addEventListener('load', initPhotoToggles);
+  setTimeout(initPhotoToggles, 500); // safety
+
+  // fetch stats
+  (function(){
+    fetch('/api/reviews/{{ product.product_id }}/stats/')
+      .then(r => r.json())
+      .then(data => {
+        if(!data) return;
+        const top = document.getElementById('review-count');
+        if (top){ top.textContent = (data.total ? `${data.total} review${data.total===1?'':'s'}` : 'No reviews yet'); }
+        if (data.total && document.getElementById('rating-summary')){
+          document.getElementById('rating-summary').style.display='grid';
+          document.getElementById('avg-rating').textContent = data.average?.toFixed ? data.average.toFixed(1) : data.average;
+          document.getElementById('total-ratings').textContent = `${data.total} review${data.total===1?'':'s'}`;
+          const total = data.total || 1;
+          for (let star=5; star>=1; star--){
+            const count = (data.counts && (data.counts[String(star)] ?? 0)) || 0;
+            const pct = Math.round((count/total)*100);
+            const bar = document.getElementById(`bar-${star}`);
+            const cnt = document.getElementById(`count-${star}`);
+            if(bar) bar.style.width = pct + '%';
+            if(cnt) cnt.textContent = count;
+          }
+        }
+      })
+      .catch(err => console.error('Stats fetch error:', err));
+  })();
+
+  // --- clamp long review text + toggle
+function initBodyClamp(){
+  document.querySelectorAll('.rv').forEach(rv=>{
+    const body = rv.querySelector('.rv-body');
+    const btn  = rv.querySelector('.moreless');
+    if(!body || !btn) return;
+
+    // start collapsed
+    rv.classList.add('collapsed');
+
+    // only show button if there is overflow (i.e., more than 5 lines)
+    requestAnimationFrame(()=>{
+      if (body.scrollHeight > body.clientHeight + 2) {
+        btn.hidden = false;
+        btn.textContent = 'Read more';
+      }
+    });
+
+    btn.onclick = ()=>{
+      const isCollapsed = rv.classList.toggle('collapsed');
+      btn.textContent = isCollapsed ? 'Read more' : 'Show less';
+      btn.setAttribute('aria-expanded', String(!isCollapsed));
+    };
+  });
+}
+
+// run on load (and after any async content if needed)
+window.addEventListener('load', initBodyClamp);
+(function () {
+    const params = new URLSearchParams(location.search);
+    if (!params.get('edit')) return;       // only run when ?edit=1 is present
+
+    const el = document.getElementById('pinned-data');
+    if (!el) return;                        // no pinned review found
+
+    const d = el.dataset;
+    const bodyEl     = document.getElementById('body');
+    const titleEl    = document.getElementById('title');
+    const ratingEl   = document.getElementById('rating-input');
+
+    if (bodyEl)   bodyEl.value   = d.body || '';
+    if (titleEl)  titleEl.value  = d.title || '';
+    if (ratingEl) {
+      ratingEl.value = d.rating || '5';
+      if (typeof paint === 'function') paint(parseInt(ratingEl.value, 10));
+    }
+
+    if (typeof toEditMode === 'function') toEditMode(d.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // optional: remove ?edit=1 from the URL so refresh doesn't re-open
+    if (history.replaceState) {
+      const url = new URL(location.href);
+      url.searchParams.delete('edit');
+      history.replaceState({}, '', url);
+    }
+  })();
+})();
+(function(){
+  const backdrop = document.getElementById('galBackdrop');
+  const modal    = document.getElementById('gal');
+  const imgEl    = document.getElementById('galImg');
+  const thumbsEl = document.getElementById('galThumbs');
+  const prevBtn  = document.getElementById('galPrev');
+  const nextBtn  = document.getElementById('galNext');
+  const closeBtn = document.getElementById('galClose');
+
+  const giTitle = document.getElementById('giTitle');
+  const giBody  = document.getElementById('giBody');
+  const giMore  = document.getElementById('giMore');
+  const giRate  = document.getElementById('giRate');
+  const giUser  = document.getElementById('giUser');
+  const giDate  = document.getElementById('giDate');
+  const giVerify= document.getElementById('giVerify');
+  const giLike  = document.getElementById('giLike');
+  const giDis   = document.getElementById('giDislike');
+
+  let IMGS = []; let cur = 0;
+
+  function lock(){ document.body.style.overflow = 'hidden'; }
+  function unlock(){ document.body.style.overflow = ''; }
+
+  function normalize(u){
+    if (!u) return '';
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    // fallback: if review service sends "/media/..." make it absolute to current origin (or proxy)
+    return (u.startsWith('/')) ? (location.origin + u) : u;
+  }
+
+  function paint(){
+    if (!IMGS.length){ imgEl.removeAttribute('src'); return; }
+    cur = (cur + IMGS.length) % IMGS.length;
+    imgEl.src = IMGS[cur];
+    [...thumbsEl.children].forEach((n,i)=> n.classList.toggle('active', i===cur));
+  }
+
+  function buildThumbs(){
+    thumbsEl.innerHTML = IMGS.map((u,i)=>`<img src="${u}" data-i="${i}" alt="thumb ${i+1}">`).join('');
+    thumbsEl.onclick = (e)=>{
+      const t = e.target.closest('img[data-i]'); if(!t) return;
+      cur = parseInt(t.dataset.i,10)||0; paint();
+    };
+  }
+
+  function clampBody(text){
+    giBody.textContent = text || '';
+    giMore.hidden = true;
+    if (!text) return;
+    // measure after paint to decide clamping
+    requestAnimationFrame(()=>{
+      const full = giBody.textContent;
+      if (giBody.scrollHeight <= 240) return; // ~10-12 lines
+      // naive clamp: show ~230 chars then toggle
+      const short = full.slice(0, 230) + (full.length>230 ? '…' : '');
+      giBody.textContent = short;
+      giMore.hidden = false;
+      giMore.textContent = 'Read more';
+      giMore.onclick = ()=>{
+        const isShort = giMore.textContent !== 'Show less';
+        giBody.textContent = isShort ? full : short;
+        giMore.textContent = isShort ? 'Show less' : 'Read more';
+      };
+    });
+  }
+
+  async function openGallery(reviewId, startIdx){
+    try{
+      const res = await fetch(`/api/reviews/${reviewId}/`, {credentials:'include'});
+      const data = await res.json();
+      // images
+      let imgs = data.image_urls || [];
+      if ((!imgs || !imgs.length) && data.image_url) imgs = [data.image_url];
+      IMGS = (imgs || []).map(normalize);
+      cur  = Math.max(0, Math.min(startIdx||0, Math.max(IMGS.length-1,0)));
+
+      // right info
+      const r = Number(data.rating||0);
+      if (r>0){ giRate.hidden=false; giRate.textContent = `${r} ★`; } else giRate.hidden=true;
+      giTitle.textContent = data.title || '';
+      clampBody(data.body || '');
+      giUser.textContent  = data.user_name || 'Anonymous';
+      giDate.textContent  = data.display_date || '';
+      giVerify.hidden     = !Boolean(data.is_verified_purchase);
+      giLike.textContent  = data.like_count ?? 0;
+      giDis.textContent   = data.dislike_count ?? 0;
+
+      // thumbs + main image
+      buildThumbs(); paint();
+
+      // open
+      backdrop.classList.add('open'); modal.classList.add('open'); lock();
+    }catch(e){
+      console.error(e); alert('Could not open gallery');
+    }
+  }
+
+  function close(){ backdrop.classList.remove('open'); modal.classList.remove('open'); unlock(); }
+
+  prevBtn.onclick = ()=>{ if(IMGS.length){ cur--; paint(); } };
+  nextBtn.onclick = ()=>{ if(IMGS.length){ cur++; paint(); } };
+  closeBtn.onclick = close;
+  backdrop.onclick = close;
+  document.addEventListener('keydown', (e)=>{ if (!modal.classList.contains('open')) return;
+    if (e.key==='Escape') close();
+    if (e.key==='ArrowLeft'){ cur--; paint(); }
+    if (e.key==='ArrowRight'){ cur++; paint(); }
+  });
+
+  // delegate: click any review photo to open overlay
+  document.addEventListener('click', (e)=>{
+    const img = e.target.closest('.rv-images img'); if (!img) return;
+    const list = [...img.parentElement.querySelectorAll('img')];
+    const start = Math.max(0, list.indexOf(img));
+
+    // find review_id from nearby .react or .js-edit (your markup already has these)
+    const rv   = img.closest('.rv');
+    const rid1 = rv?.querySelector('.react[data-id]')?.dataset.id;
+    const rid2 = rv?.querySelector('.js-edit[data-id]')?.dataset.id;
+    const rid  = rid1 || rid2;
+    if (!rid) return;
+
+    openGallery(rid, start);
+  });
+
+
+})();
+
+</script>
+{% endblock %}
