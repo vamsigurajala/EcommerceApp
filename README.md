@@ -12,16 +12,15 @@ This project is container-ready with Docker support and follows a service-based 
 
 ## 📦 Project Structure
 EcommerceApp/
-│
-├── db/ # Database-related files or scripts
-├── ecommerce_cart/ # Cart management app
-├── ecommerce_home/ # Home/landing page app
-├── ecommerce_order/ # Order processing app
-├── ecommerce_product/ # Product listing & details app
-├── ecommerce_review/ # Product review & ratings app
-├── .gitignore # Ignored files & folders
-├── docker-compose.yml # Docker configuration
-└── README.md # Project documentation
+── db/ # Database-related files or scripts
+── ecommerce_cart/ # Cart management app
+── ecommerce_home/ # Home/landing page app
+── ecommerce_order/ # Order processing app
+── ecommerce_product/ # Product listing & details app
+── ecommerce_review/ # Product review & ratings app
+── .gitignore # Ignored files & folders
+── docker-compose.yml # Docker configuration
+── README.md # Project documentation
 
 
 ---
@@ -46,7 +45,7 @@ EcommerceApp/
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/vamsigurajala>/EcommerceApp.git
+git clone https://github.com/vamsigurajala/EcommerceApp.git
 cd EcommerceApp
 ```
 ## 🚀 Installation & Setup
