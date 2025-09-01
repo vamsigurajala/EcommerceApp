@@ -6,12 +6,3 @@ venv/
 .vscode/
 *.pyc
 __pycache__/
-
-.migrations
-
-.migrations/
-__pycache__
-
-
-media/
-*.mp4
