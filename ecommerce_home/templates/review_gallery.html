@@ -1,5 +1,6 @@
 <!-- templates/review_gallery.html — FRAGMENT injected into #rvDlgBody -->
 <style>
+  html.rvgal-lock, body.rvgal-lock{ overflow:hidden; }
   /* Let our fragment control layout inside the dialog */
   #rvDlgBody{overflow:visible !important;max-height:unset !important;}
   #rvDlgCloseFloat{ display:none !important; } 
@@ -38,34 +39,111 @@
     height:68vh; max-height:68vh;
     display:flex;align-items:center;justify-content:center;overflow:hidden;
     background:#000;
-    padding-bottom:var(--thumbRailH);       /* reserve space for the strip */
+    padding-bottom:calc(var(--thumbRailH) + 14px);       /* reserve space for the strip */
   }
 
   /* give the left panel a variable we can tweak from JS */
   .rvgal-left{ --stripH: 0px; }
 
-  /* MAIN IMAGE — no padding here; fills above the strip */
-  .rvgal-lg img{
-    max-width:100%; width:auto;height:auto;
-    max-height: calc(100% - var(--stripH, 0px));
-    object-fit:contain;display:block;background:#000;
-  }
+
+/* NEW: applied briefly while the new image is loading */
+.rvgal-lg img.is-entering{
+  opacity: 0;
+  transform: scale(.985);   /* tiny settle-in */
+}
+.rvgal-track{
+  display:flex; gap:var(--thumbGap);
+  transform:translateX(0);
+  /* smoother thumb glide */
+  transition: transform .28s cubic-bezier(.22,.61,.36,1);
+  will-change: transform;
+}
+
+.rvgal-lg img,
+.rvgal-lg video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  background:#000;
+  position:relative;
+  z-index:1;
+  transition: opacity .28s ease, transform .28s ease;
+  will-change: opacity, transform;
+}
+.rvgal-lg video.is-entering{ opacity:0; transform:scale(.985); }
+
+/* Thumbs: let videos use the same box as image thumbs */
+.rvgal-track video{
+  width:var(--thumbSize);height:var(--thumbSize);object-fit:cover;border-radius:8px;
+  border:2px solid transparent;cursor:pointer; background:#111;
+}
+/* Active state for video thumbs to match image thumbs */
+.rvgal-track video.active{ border-color:#fff; }
+
+/* meta block under the title */
+.rvgal-meta{ margin-top:6px; }
+
+.rvgal-line1{
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px;
+  font-weight:700;                          /* bold like Flipkart */
+  color:#111827;
+}
+.rvgal-name{ font-weight:700; }
+.rvgal-dot{ opacity:.5; }                   /* subtle separator */
+.rvgal-date{ color:#374151; font-weight:700; }
+
+
+/* --- Meta tone: darker name, lighter rest (badge unchanged) --- */
+.rvgal-meta{ margin-top:12px; }
+
+.rvgal-meta .rvgal-author{
+  display:flex; align-items:center; gap:8px;
+}
+
+.rvgal-meta .rvgal-user{
+  font-weight:700;
+  color:#111827;              
+}
+
+.rvgal-meta .rvgal-bullet{ opacity:.45; }
+
+.rvgal-meta .rvgal-stamp{
+  font-weight:600;
+  color:#6b7280;              /* lighter */
+}
 
   /* Arrows: show only on hover; hide when disabled */
   .rvgal-nav{
-    position:absolute; top:50%; transform:translateY(-50%);
+    position:absolute; top:50%; transform:translateY(-50%); z-index:5; 
     background:transparent;border:0;border-radius:0;padding:0;
     font-size:42px; line-height:1; font-weight:700; color:#fff;
     cursor:pointer; opacity:0; pointer-events:none;transition:opacity .12s ease;
   }
-  .rvgal-left:hover .rvgal-nav, .rvgal-nav:focus{ opacity:1;  pointer-events:auto; }
-  .rvgal-prev{ left:16px; } .rvgal-next{ right:16px; }
-  .rvgal-nav:focus{ outline:none; }
-  .rvgal-nav[disabled]{ opacity:0 !important; pointer-events:none; }  /* hidden at ends */
+  .rvgal-nav.booting{ transition: none !important; }
 
+  .rvgal-left:hover .rvgal-nav, .rvgal-nav:focus{ opacity:1;  pointer-events:auto; }
+.rvgal-prev{ left:16px; } .rvgal-next{ right:16px; }
+.rvgal-nav:focus{ outline:none; }
+
+/* default: disabled arrows are hidden just like normal ones */
+.rvgal-nav[disabled]{
+  opacity:0 !important;
+  pointer-events:none;              /* nothing to hover when not over image */
+}
+
+/* when hovering the image area, show disabled arrows faded with not-allowed cursor */
+.rvgal-left:hover .rvgal-nav[disabled]{
+  opacity:.35 !important;           /* visible but dim */
+  pointer-events:auto;              /* enable hover for cursor feedback */
+  cursor:not-allowed;
+}
+
+/* keep them dim even if the generic :hover rule would try to brighten */
+.rvgal-left:hover .rvgal-nav[disabled]:hover{ opacity:.35 !important; }
   /* THUMBS rail (centered overlay) */
   .rvgal-strip{
-    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);z-index:4;
     display:flex; align-items:center; gap:10px; pointer-events:auto;
     padding:var(--thumbPad);
     background:rgba(0,0,0,.62); border-radius:12px; backdrop-filter:blur(4px);
@@ -135,6 +213,148 @@
 .rvgal-toast.err{ background:#fef2f2; border-color:#fecaca; color:#7f1d1d; }
 .rvgal-toast.ok{  background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
 .rvgal-toast.show{ opacity:1; transform:translateY(0); }
+
+#rvDlg{
+  border: 0 !important;
+  padding: 0 !important;
+  outline: none !important;
+}
+#rvDlg:focus{ outline: none !important; }
+
+/* click target + pointer */
+.rvgal-thumb{ position:relative; cursor:pointer; }
+
+/* centered circle badge – slight inner highlight so it reads on white */
+.rvgal-thumb[data-vid="1"]::after{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  width:40px; height:40px; border-radius:999px;
+  /* soft highlight toward center + dark glass */
+  background:
+    radial-gradient(circle at 45% 35%, rgba(255,255,255,.14), transparent 45%),
+    rgba(0,0,0,.55);
+  border:2px solid rgba(255,255,255,.95);
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transform:translate(-50%,-50%);
+  opacity:1; transition:opacity .15s ease;
+  pointer-events:none;
+  z-index:1;
+}
+
+/* triangle – keep white fill but add a dark halo so it stays visible on light bgs */
+.rvgal-thumb[data-vid="1"]::before{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  border-left:12px solid #fff;
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  transform:translate(calc(-50% + 2px), -50%);
+  opacity:1; transition:opacity .15s ease;
+  pointer-events:none;
+  z-index:2;
+  /* gives the triangle a subtle outline on both light & dark thumbs */
+  filter:
+    drop-shadow(0 0 1px rgba(0,0,0,.85))
+    drop-shadow(0 1px 2px rgba(0,0,0,.45));
+}
+
+/* hide badge while hovering or when this thumb is the active one */
+.rvgal-thumb[data-vid="1"]:hover::after,
+.rvgal-thumb[data-vid="1"]:hover::before{ opacity:0; }
+.rvgal-track .active.rvgal-thumb[data-vid="1"]::after,
+.rvgal-track .active.rvgal-thumb[data-vid="1"]::before{ opacity:0; }
+
+/* thumb’s <video> must not “eat” the click */
+.rvgal-thumb[data-vid="1"] video{ pointer-events:none; }
+
+
+/* Each thumb is a fixed-size wrapper; keeps math exact */
+.rvgal-thumb{
+  position: relative;
+  width: var(--thumbSize);
+  height: var(--thumbSize);
+  border-radius: 8px;           /* same visuals as before */
+  overflow: visible;            /* keep as default; no clipping change */
+  display: inline-flex;
+}
+
+/* Make inner media fill the wrapper and include its border in the width */
+.rvgal-thumb > img,
+.rvgal-thumb > video{
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  box-sizing: border-box;       /* <-- ensures 80px includes the 2px border */
+}
+
+/* The active white stroke now responds to wrapper.active */
+.rvgal-thumb.active > img,
+.rvgal-thumb.active > video{
+  border-color: #fff;
+}
+
+.rvgal-thumb[data-vid="1"]{ cursor:pointer; }
+.rvgal-thumb[data-vid="1"] video{ pointer-events:none; }
+
+.rvgal-cert{
+  display:flex; align-items:center; gap:8px;
+  margin-top:6px;
+  font-weight:700;
+  color:#6b7280;                 /* grey label text */
+}
+
+.rvgal-cert .tick{
+  width:18px; height:18px;       /* slightly larger, crisp */
+  flex:0 0 18px;
+  display:inline-block;
+}
+
+/* solid grey circle behind the tick */
+.rvgal-cert .tick-bg{ fill:#9ca3af; }         /* slate-400 */
+@media (prefers-color-scheme: dark){
+  .rvgal-cert .tick-bg{ fill:#6b7280; }       /* slate-500 in dark */
+}
+
+/* bold, fully white check */
+.rvgal-cert .tick-mark{
+  stroke:#fff;
+  stroke-width:3;                 /* thicker like Flipkart */
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* stronger dark overlay ON HOVER over the main media area */
+.rvgal-lg::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,0);        /* default = transparent */
+  transition: background .2s ease;
+  pointer-events:none;
+  z-index:2;                        /* keep below arrows but above image */
+}
+
+.rvgal-left:hover .rvgal-lg::after{
+  background: rgba(0,0,0,.48);       /* ~48% darkness, clearly visible */
+}
+
+.rvgal-left:hover .rvgal-lg::after{
+  background:
+    radial-gradient(circle at 50% 55%, rgba(0,0,0,0) 45%, rgba(0,0,0,.28) 100%);
+}
+/* round soft corners for the whole lightbox */
+#rvDlg {
+  border-radius: 10px;       
+  overflow: hidden;          
+  box-shadow: 0 12px 28px rgba(0,0,0,.25); 
+}
+
+#rvgalRight {
+  border-radius: 0 10px 10px 0;
+  overflow: hidden;
+}
+
 </style>
 
 <div class="rvgal-wrap">
@@ -159,7 +379,7 @@
     </div>
 
     <!-- RIGHT -->
-    <aside class="rvgal-right rvgal-clamped" id="rvgalRight" data-id="{{ review_id }}">
+    <aside class="rvgal-right rvgal-clamped" id="rvgalRight" data-id="{{ review_id }}" data-uid="{{ request.user.id|default:'' }}">
       <div class="rvgal-row">
         <span class="rvgal-badge"><span>{{ rating }}</span>★</span>
         <span class="rvgal-title">{{ title|default:"" }}</span>
@@ -170,56 +390,128 @@
         <button type="button" class="rvgal-moreless" id="rvgalMoreLess" hidden>Read more</button>
       {% endif %}
 
-      <div class="rvgal-muted" style="margin-top:10px">
-        <span>{{ user_name|default:"Anonymous" }}</span>
-        {% if is_verified %}
-          <span class="rvgal-verified" title="Verified Purchase">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"></circle>
-              <path d="M7 12.5l3 3 6-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-            Verified Purchase
-          </span>
-        {% endif %}
-        <span> · </span>
-        <span>{{ created_at }}</span>
-      </div>
+<div class="rvgal-meta">
+  <div class="rvgal-author">
+    <span class="rvgal-user">{{ user_name|default:"Anonymous" }}</span>
+    <span class="rvgal-bullet">•</span>
+    <span class="rvgal-stamp">{{ created_at }}</span>
+  </div>
 
+  {% if is_verified %}
+    <div class="rvgal-cert">
+  <!-- Green circle + white check (Flipkart-style) -->
+  <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" class="tick-bg"></circle>
+    <path d="M7.5 12.5l2.7 2.7 5.3-6.2" class="tick-mark"/>
+  </svg>
+  Certified Buyer
+</div>
+ {% endif %}
+ </div>
       <!-- live, clickable reaction buttons -->
       <div class="rvgal-reactions" id="rvgalReactions">
         <button type="button" class="chip btn like" id="rvgalLikeBtn">👍 <span id="rvgalLike">{{ like_count|default:0 }}</span></button>
         <button type="button" class="chip btn dislike" id="rvgalDisBtn">👎 <span id="rvgalDis">{{ dislike_count|default:0 }}</span></button>
+
+        <!-- ▼ same arrow + hover dropdown as reviews.html -->
+  <div class="abuse-dd" id="rvgalAbuse">
+    <button type="button" class="abuse-trigger" aria-haspopup="true" aria-expanded="false" title="More">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 9l6 6 6-6"></path>
+      </svg>
+    </button>
+    <div class="abuse-menu" role="menu">
+      <button class="abuse-item danger" id="rvgalReport" role="menuitem">Report Abuse</button>
+    </div>
+  </div>
+</div>
       </div>
     </aside>
   </div>
 </div>
 <div id="rvgalToasts" class="rvgal-toasts"></div>
 
+{{ media|json_script:"rvgal-media" }}
 {{ images|json_script:"rvgal-imgs" }}
 
 <script>
+/* ===== Main gallery IIFE (media, thumbs, arrows, keyboard, votes) ===== */
 (function(){
-  const imgsEl = document.getElementById('rvgal-imgs');
-  let IMGS = [];
-  try { IMGS = JSON.parse(imgsEl?.textContent || "[]") || []; } catch(_) {}
+  // limit all DOM queries to the dialog body so we don't hit other reviews
+  const SCOPE = document.getElementById('rvDlgBody') || document;
+  // --- READ MEDIA: accept images OR videos without changing UI ---
+  const mediaEl = SCOPE.querySelector('#rvgal-media');
+  const imgsEl  = SCOPE.querySelector('#rvgal-imgs'); 
+
+  function normalize(u){
+    if (!u) return '';
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    return (u.startsWith('/')) ? (location.origin + u) : u;
+  }
+
+  /** MEDIA = [{url, type:'image'|'video'}] */
+  let MEDIA = [];
+  try{
+    if (mediaEl && mediaEl.textContent.trim()){
+      const raw = JSON.parse(mediaEl.textContent) || [];
+      MEDIA = raw.map(m=>{
+        if (typeof m === 'string') return { url: m, type:'image' };
+        const url    = m.url || m.src || m.path || '';
+        const type   = /video/i.test(String(m.type||m.kind||'')) ? 'video' : 'image';
+        const poster = m.poster || m.thumbnail || m.thumb || null; // optional
+        return { url, type, poster };
+      }).filter(x => !!x.url);
+    }else{
+      const raw = JSON.parse(imgsEl?.textContent || '[]') || [];
+      MEDIA = raw.map(x => ({
+        url: (typeof x === 'string' ? x : (x.url || x.src || x.path || '')),
+        type:'image'
+      })).filter(x => !!x.url);
+    }
+  }catch(_){ MEDIA = []; }
 
   const start = Number("{{ start_index|default:0 }}") || 0;
 
-  const lg     = document.getElementById('rvgalImg');
-  const prev   = document.getElementById('rvgalPrev');
-  const next   = document.getElementById('rvgalNext');
+  // Main area & controls
+  const prev   = SCOPE.querySelector('#rvgalPrev');
+  const next   = SCOPE.querySelector('#rvgalNext');
+  prev?.classList.add('booting');  
+  next?.classList.add('booting');
+  const track  = SCOPE.querySelector('#rvgalTrack');
+  const viewport = SCOPE.querySelector('.rvgal-viewport');
 
-  const track  = document.getElementById('rvgalTrack');
-  const viewport = document.querySelector('.rvgal-viewport');
+  const rightBox = SCOPE.querySelector('#rvgalRight');
+  const bodyEl   = SCOPE.querySelector('#rvgalBody');
+  const moreLess = SCOPE.querySelector('#rvgalMoreLess');
 
-  const rightBox = document.getElementById('rvgalRight');
-  const bodyEl   = document.getElementById('rvgalBody');
-  const moreLess = document.getElementById('rvgalMoreLess');
+  // Only this instance handles keyboard
+  const __INSTANCE = Math.random().toString(36).slice(2);
+  window.__rvgalActiveInstance = __INSTANCE;
 
-  /* local toast (independent from reviews.html) */
+  // helpers
+  function syncThumbActive(){
+    const thumbs = track.querySelectorAll('.rvgal-thumb');
+    thumbs.forEach((n,i) => n.classList.toggle('active', i === cur));
+  }
+  function syncArrows(){
+    const atStart = (cur <= 0);
+    const atEnd   = (cur >= MEDIA.length - 1);
+    prev.toggleAttribute('disabled', atStart);
+    next.toggleAttribute('disabled', atEnd);
+    prev.disabled = atStart;
+    next.disabled = atEnd;
+  }
+  function goTo(i){
+    cur = Math.max(0, Math.min(i, MEDIA.length - 1));
+    ensureVisible();
+    paint();
+  }
+  function go(delta){ goTo(cur + delta); }
+
+  // toasts
   const galToastBox = document.getElementById('rvgalToasts');
   function galToast(kind, msg, ms=2200){
-    if (!galToastBox) return alert(msg);  // fallback
+    if (!galToastBox) return alert(msg);
     const t = document.createElement('div');
     t.className = 'rvgal-toast ' + (kind || 'info');
     t.textContent = msg || '';
@@ -228,97 +520,220 @@
     setTimeout(()=>{ t.classList.remove('show'); }, ms);
     setTimeout(()=>{ t.remove(); }, ms+250);
   }
-  /* ---- thumbs ---- */
-  const TILE = 80, GAP = 8, VIEW = 5;  // show exactly 5 thumbs
 
-  function normalize(u){
-    if (!u) return '';
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
-    return (u.startsWith('/')) ? (location.origin + u) : u;
+  // layout constants
+  const TILE = 80, GAP = 8, VIEW = 5;
+
+  // preload video metadata
+  const _videoMetaCache = new Map();
+  function preloadVideoMeta(url){
+    if (_videoMetaCache.has(url)) return;
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.src = url;
+    v.onloadedmetadata = () => _videoMetaCache.set(url, true);
+    v.onerror = () => _videoMetaCache.set(url, false);
   }
+// --- per-user vote memory so colors persist across refresh AND per user ---
+const RIGHT_BOX = SCOPE.querySelector('#rvgalRight');
+const CURRENT_USER_ID = RIGHT_BOX?.dataset.uid || 'anon';           // ← from data-uid
+const VOTE_KEY = `review_vote_state_v2:${CURRENT_USER_ID}`;          // namespaced by user
 
-  if (!Array.isArray(IMGS) || !IMGS.length){
-    if (lg) lg.alt = "No images";
+function _getVoteMap(){
+  try { return JSON.parse(localStorage.getItem(VOTE_KEY) || '{}') || {}; }
+  catch(_){ return {}; }
+}
+function _setVoteMap(m){ try{ localStorage.setItem(VOTE_KEY, JSON.stringify(m)); }catch(_){ } }
+function rememberVote(reviewId, val){      // val: 1=like, -1=dislike, 0=clear
+  const m = _getVoteMap();
+  if (val === 0) delete m[reviewId]; else m[reviewId] = val;
+  _setVoteMap(m);
+}
+function readRememberedVote(reviewId){
+  const m = _getVoteMap();
+  return Number(m[reviewId] || 0);         // 1, -1, or 0
+}
+
+  // If no media, keep existing behavior
+  if (!Array.isArray(MEDIA) || !MEDIA.length){
+    const img = SCOPE.querySelector('#rvgalImg');
+    if (img) img.alt = "No media";
     track.innerHTML = '';
     return;
   }
-  IMGS = IMGS.map(normalize);
-
-  let cur = Math.max(0, Math.min(start, IMGS.length-1));
-  let offset = Math.max(0, Math.min(cur - Math.floor(VIEW/2), Math.max(IMGS.length - VIEW, 0)));
 
   function setViewportWidth(){
-    const count = IMGS.length;
-    const tiles = Math.min(count, VIEW);
+    const tiles = Math.min(MEDIA.length, VIEW);
     const w = tiles*TILE + (tiles-1)*GAP;
     viewport.style.width = w + 'px';
   }
 
-  function buildThumbs(){
-    track.innerHTML = IMGS.map((u,i)=>`<img src="${u}" alt="photo ${i+1}" data-i="${i}">`).join('');
+  // Build thumbs (img OR muted video)
+  function thumbHTML(m, i){
+    const url = normalize(m.url);
+    if (m.type === 'video'){
+      const inner = m.poster
+        ? `<img src="${normalize(m.poster)}" alt="media ${i+1}">`
+        : `<video muted preload="metadata" playsinline
+                 disablepictureinpicture
+                 controlslist="nodownload noplaybackrate noremoteplayback" poster="">
+             <source src="${url}">
+           </video>`;
+      return `<div class="rvgal-thumb" data-i="${i}" data-vid="1">
+                ${inner}
+                <span class="rvgal-play-badge" aria-hidden="true"></span>
+              </div>`;
+    }
+    return `<div class="rvgal-thumb" data-i="${i}"><img src="${url}" alt="media ${i+1}"></div>`;
   }
+
+  function buildThumbs(){
+    track.innerHTML = MEDIA.map(thumbHTML).join('');
+  }
+
+  // Swap the main element to IMG/VIDEO as needed but keep the same id/position
+  function ensureMainEl(kind){
+    const want = (kind === 'video') ? 'VIDEO' : 'IMG';
+    let el = SCOPE.querySelector('#rvgalImg');
+    if (!el || el.tagName !== want){
+      const parent = SCOPE.querySelector('.rvgal-lg');
+      const nextBtn = SCOPE.querySelector('#rvgalNext');
+      const repl = document.createElement(want.toLowerCase());
+      repl.id = 'rvgalImg';
+      if (el && el.parentNode) el.parentNode.replaceChild(repl, el);
+      else if (parent && nextBtn) parent.insertBefore(repl, nextBtn);
+      else if (parent) parent.appendChild(repl);
+      el = repl;
+    }
+    return el;
+  }
+
+  let cur = Math.max(0, Math.min(start, MEDIA.length-1));
+  let offset = Math.max(0, Math.min(cur - Math.floor(VIEW/2), Math.max(MEDIA.length - VIEW, 0)));
 
   function ensureVisible(){
     if (cur < offset) offset = cur;
     if (cur >= offset + VIEW) offset = cur - VIEW + 1;
-    offset = Math.max(0, Math.min(offset, Math.max(IMGS.length - VIEW, 0)));
+    offset = Math.max(0, Math.min(offset, Math.max(MEDIA.length - VIEW, 0)));
   }
 
-  function paint(){
-    lg.src = IMGS[cur];
-    lg.onerror = () => { lg.alt = "Image failed to load"; };
+  let _swapToken = 0;
+let _firstPaint = true;   // ⬅ NEW
 
-    [...track.children].forEach((n,i)=> n.classList.toggle('active', i===cur));
+function paint(){
+  _swapToken++;
+  const my = _swapToken;
+
+  const m = MEDIA[cur];
+  const kind = (m.type === 'video') ? 'video' : 'image';
+  const url  = normalize(m.url);
+
+  const lg = ensureMainEl(kind);
+
+  // Only fade after first render
+  if (!_firstPaint){
+    lg.classList.add('is-entering');
+  }
+    if (kind === 'video'){
+      lg.controls = true; lg.autoplay = true; lg.muted = true; lg.loop = true; lg.playsInline = true;
+      lg.preload = 'auto';
+      lg.src = url;
+      lg.poster = MEDIA[cur].poster || '';
+      lg.onloadeddata = () => {
+        if (my !== _swapToken) return;
+        requestAnimationFrame(()=> lg.classList.remove('is-entering'));
+        lg.play().catch(()=>{});
+      };
+      lg.onerror = () => { lg.classList.remove('is-entering'); };
+      lg.load();
+    }else{
+      lg.onload  = () => { if (my !== _swapToken) return; requestAnimationFrame(()=> lg.classList.remove('is-entering')); };
+      lg.onerror = () => { lg.alt = "Image failed to load"; lg.classList.remove('is-entering'); };
+      lg.removeAttribute('poster');
+      lg.src = url;
+      lg.alt = 'review image';
+    }
+
+    // thumbs + arrows + strip
+    syncThumbActive();
     const dx = offset * (TILE + GAP);
     track.style.transform = `translateX(-${dx}px)`;
+    syncArrows();
 
-    /* disable arrows at ends (no wrap) */
-    prev.disabled = (cur <= 0);
-    next.disabled = (cur >= IMGS.length - 1);
-  }
+    // Preload neighbors (video metadata)
+    const nextIdx = Math.min(MEDIA.length - 1, cur + 1);
+    const prevIdx = Math.max(0, cur - 1);
+    if (MEDIA[nextIdx]?.type === 'video') preloadVideoMeta(normalize(MEDIA[nextIdx].url));
+    if (MEDIA[prevIdx]?.type === 'video') preloadVideoMeta(normalize(MEDIA[prevIdx].url));
+if (_firstPaint){                 
+  prev?.classList.remove('booting');
+  next?.classList.remove('booting');
+}
 
-  /* keep main image clear of the overlaid thumb strip (still used) */
+_firstPaint = false;              
+}  
+
+  // keep main image clear of the overlaid thumb strip
   function updateStripSpace(){
-    const left  = document.querySelector('.rvgal-left');
-    const strip = document.querySelector('.rvgal-strip');
+    const left  = SCOPE.querySelector('.rvgal-left');
+    const strip = SCOPE.querySelector('.rvgal-strip');
     if (!left || !strip) return;
-    const EXTRA = 12;
+    const EXTRA = 14;
     left.style.setProperty('--stripH', (strip.offsetHeight + EXTRA) + 'px');
   }
 
   setViewportWidth();
   buildThumbs();
   ensureVisible();
+  syncThumbActive();
   paint();
   updateStripSpace();
   window.addEventListener('resize', updateStripSpace);
 
-  /* no circular wrap */
-  prev.onclick = () => { if (cur > 0) { cur--; ensureVisible(); paint(); } };
-  next.onclick = () => { if (cur < IMGS.length - 1) { cur++; ensureVisible(); paint(); } };
+  // no circular wrap
+  prev.onclick = () => go(-1);
+  next.onclick = () => go(+1);
 
+  // click thumb
   track.addEventListener('click', (e)=>{
-    const t = e.target.closest('img[data-i]'); if(!t) return;
-    cur = parseInt(t.dataset.i,10)||0;
-    ensureVisible(); paint();
+    const t = e.target.closest('[data-i]'); if(!t) return;
+    goTo(parseInt(t.dataset.i,10) || 0);
   });
-  // Hide any residual focus on the arrows when mouse leaves the image area
-  const leftArea = document.querySelector('.rvgal-left');
+
+  // Hide residual focus on arrows when mouse leaves image area
+  const leftArea = SCOPE.querySelector('.rvgal-left');
   if (leftArea) {
     const clearArrowFocus = () => { prev?.blur(); next?.blur(); };
     leftArea.addEventListener('mouseleave', clearArrowFocus);
     leftArea.addEventListener('pointerleave', clearArrowFocus);
   }
 
-  /* wheel-scroll the thumb strip (hidden scrollbar) */
-  document.querySelector('.rvgal-strip').addEventListener('wheel',(e)=>{
-    e.preventDefault();
-    const max = Math.max(IMGS.length - VIEW, 0);
-    if (!max) return;
-    const dir = (e.deltaY || e.deltaX) > 0 ? 1 : -1;
-    offset = Math.max(0, Math.min(offset + dir, max));
-    paint();
-  }, {passive:false});
+  // smoother wheel scroll over the strip
+  (() => {
+    const strip = SCOPE.querySelector('.rvgal-strip');
+    if (!strip) return;
+    const THRESHOLD = 140, COOLDOWN = 120;
+    let acc = 0, last = 0;
+
+    strip.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const max = Math.max(MEDIA.length - VIEW, 0);
+      if (!max) return;
+
+      acc += (Math.abs(e.deltaY) > Math.abs(e.deltaX)) ? e.deltaY : e.deltaX;
+      const now = Date.now();
+      if (now - last < COOLDOWN) return;
+
+      if (acc >= THRESHOLD) {
+        offset = Math.max(0, Math.min(offset + 1, max));
+        acc = 0; last = now; paint();
+      } else if (acc <= -THRESHOLD) {
+        offset = Math.max(0, Math.min(offset - 1, max));
+        acc = 0; last = now; paint();
+      }
+    }, { passive:false });
+    
+  })();
 
   /* ---- description clamp ---- */
   if (bodyEl && moreLess){
@@ -327,7 +742,7 @@
     moreLess.textContent = 'Read more';
   }
 
-  /* ---- reactions: (unchanged & working) ---- */
+  /* ---- reactions + host sync ---- */
   function getCookie(name){
     const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return m ? m.pop() : '';
@@ -335,41 +750,69 @@
   const CSRF = getCookie('csrftoken');
 
   const reviewId = rightBox?.dataset.id;
-  const likeBtn  = document.getElementById('rvgalLikeBtn');
-  const disBtn   = document.getElementById('rvgalDisBtn');
-  const likeCnt  = document.getElementById('rvgalLike');
-  const disCnt   = document.getElementById('rvgalDis');
+  const likeBtn  = SCOPE.querySelector('#rvgalLikeBtn');
+  const disBtn   = SCOPE.querySelector('#rvgalDisBtn');
+  const likeCnt  = SCOPE.querySelector('#rvgalLike');
+  const disCnt   = SCOPE.querySelector('#rvgalDis');
 
   (function seedFromHost(){
-    if (!reviewId) return;
-    const host = document.querySelector(`.react[data-id="${reviewId}"]`);
-    if (!host) return;
-    const l = host.querySelector('.js-like'); const d = host.querySelector('.js-dislike');
-    if (l && likeCnt) likeCnt.textContent = l.textContent.trim();
-    if (d && disCnt)  disCnt.textContent  = d.textContent.trim();
-    if (host.querySelector('.react-btn.like.active')) likeBtn.classList.add('active','like');
-    if (host.querySelector('.react-btn.dislike.active')) disBtn.classList.add('active','dislike');
+  if (!reviewId) return;
+  const host = document.querySelector(`.react[data-id="${reviewId}"]`);
 
+  // counts
+  const l = host?.querySelector('.js-like');
+  const d = host?.querySelector('.js-dislike');
+  if (l && likeCnt) likeCnt.textContent = l.textContent.trim();
+  if (d && disCnt)  disCnt.textContent  = d.textContent.trim();
+
+  // reset color classes
+  likeBtn.classList.remove('active','like');
+  disBtn.classList.remove('active','dislike');
+
+  // 1) Prefer server-rendered state if the host row marks it
+  const hostLiked    = !!host?.querySelector('.react-btn.like.active');
+  const hostDisliked = !!host?.querySelector('.react-btn.dislike.active');
+
+  if (hostLiked){
+    likeBtn.classList.add('active','like');
+    rememberVote(reviewId, 1);        // keep memory in sync
+  } else if (hostDisliked){
+    disBtn.classList.add('active','dislike');
+    rememberVote(reviewId, -1);
+  } else {
+    // 2) Otherwise show remembered state for THIS user id
+    const remembered = readRememberedVote(reviewId);
+    if (remembered === 1){
+      likeBtn.classList.add('active','like');
+    }else if (remembered === -1){
+      disBtn.classList.add('active','dislike');
+    }
+  }
+
+  // Keep counts + state synced while dialog is open (if host row updates)
+  if (host){
     const mo = new MutationObserver(()=>{
       if (l && likeCnt) likeCnt.textContent = l.textContent.trim();
       if (d && disCnt)  disCnt.textContent  = d.textContent.trim();
+
+      const nowLiked    = !!host.querySelector('.react-btn.like.active');
+      const nowDisliked = !!host.querySelector('.react-btn.dislike.active');
+
+      likeBtn.classList.toggle('active', nowLiked);
+      likeBtn.classList.toggle('like',   nowLiked);
+      disBtn.classList.toggle('active',  nowDisliked);
+      disBtn.classList.toggle('dislike', nowDisliked);
+
+      rememberVote(reviewId, nowLiked ? 1 : (nowDisliked ? -1 : 0));
     });
     mo.observe(host, { subtree:true, characterData:true, childList:true });
     const dlg = document.getElementById('rvDlg');
     dlg?.addEventListener('close', ()=> mo.disconnect(), { once:true });
-  })();
+  }
+})();
 
-  (async function refreshCounts(){
-    try{
-      if (!reviewId) return;
-      const r = await fetch(`/api/reviews/${reviewId}/`, {credentials:'include'});
-      const d = await r.json().catch(()=> ({}));
-      if (likeCnt) likeCnt.textContent = d.like_count ?? likeCnt.textContent;
-      if (disCnt)  disCnt.textContent  = d.dislike_count ?? disCnt.textContent;
-    }catch(_){}
-  })();
 
-    async function vote(val){
+  async function vote(val){
     if (!reviewId) return;
     try{
       const resp = await fetch(`/api/reviews/${reviewId}/vote/`, {
@@ -379,21 +822,28 @@
       });
       const data = await resp.json().catch(()=> ({}));
 
-      if (resp.status === 401){
-        galToast('err','Please log in to vote');
-        return;
-      }
-      if (!resp.ok || !data?.ok){
-        galToast('err', data?.error || 'Could not record vote');
-        return;
-      }
+      if (resp.status === 401){ galToast('err','Please log in to vote'); return; }
+      if (!resp.ok || !data?.ok){ galToast('err', data?.error || 'Could not record vote'); return; }
 
       likeCnt.textContent = data.like_count;
-      disCnt.textContent  = data.dislike_count;
-      likeBtn.classList.remove('active'); disBtn.classList.remove('active');
-      if (data.action==='created' || data.action==='switched'){
-        (val===1 ? likeBtn : disBtn).classList.add('active');
-      }
+disCnt.textContent  = data.dislike_count;
+
+// reset then set the one chosen
+likeBtn.classList.remove('active','like');
+disBtn.classList.remove('active','dislike');
+
+if (data.action==='created' || data.action==='switched'){
+  if (val === 1){
+    likeBtn.classList.add('active','like');
+    rememberVote(reviewId, 1);       // ← save for this user
+  }else{
+    disBtn.classList.add('active','dislike');
+    rememberVote(reviewId, -1);      // ← save for this user
+  }
+}else{
+  rememberVote(reviewId, 0);         // e.g., un-voted
+}
+
 
       const host = document.querySelector(`.react[data-id="${reviewId}"]`);
       if (host){
@@ -406,35 +856,162 @@
           host.querySelector(val===1 ? '.react-btn.like' : '.react-btn.dislike')?.classList.add('active');
         }
       }
-    }catch(_){
-      galToast('err','Network error');
-    }
-
+    }catch(_){ galToast('err','Network error'); }
   }
   likeBtn?.addEventListener('click', ()=> vote(1));
   disBtn?.addEventListener('click',  ()=> vote(-1));
 
-  /* ---- keyboard nav + Escape ---- */
-  document.addEventListener('keydown', (e)=>{
+  // keyboard
+  function onKey(e){
     const dlg = document.getElementById('rvDlg');
     if (!dlg?.open) return;
-    if (e.key==='ArrowLeft'  && !prev.disabled) prev.click();
-    if (e.key==='ArrowRight' && !next.disabled) next.click();
-    if (e.key==='Escape')     dlg.close();
+    if (window.__rvgalActiveInstance !== __INSTANCE) return;
+
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+    const k = e.key;
+    if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'Escape'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+    }
+
+    if (k === 'ArrowLeft' && cur > 0){
+      go(-1);
+    } else if (k === 'ArrowRight' && cur < MEDIA.length - 1){
+      go(+1);
+    } else if (k === 'Escape'){
+      dlg.close();
+    }
+  }
+  window.addEventListener('keydown', onKey, { capture:true });
+
+  const dlg = document.getElementById('rvDlg');
+  dlg?.addEventListener('cancel', (e)=> e.preventDefault());
+  dlg?.addEventListener('close', () => {
+    window.removeEventListener('keydown', onKey, true);
+  }, { once:true });
+})();   // END main gallery IIFE
+
+
+/* ---- Report Abuse (unchanged, scoped) ---- */
+(function(){
+  const SCOPE = document.getElementById('rvDlgBody') || document;
+  const REPORT_KEY = 'review_reported_v1';
+  const rightBox   = SCOPE.querySelector('#rvgalRight');
+  const reviewId   = rightBox?.dataset.id || "";
+  const abuseWrap  = SCOPE.querySelector('#rvgalAbuse');
+  const reportItem = SCOPE.querySelector('#rvgalReport');
+
+  if (!abuseWrap || !reviewId) { abuseWrap?.remove(); return; }
+
+  const hostReportBtn = document.querySelector(`.js-report[data-id="${reviewId}"]`);
+  if (!hostReportBtn) { abuseWrap.remove(); return; }
+
+  function cleanSet(s){ s.delete(''); s.delete('undefined'); return s; }
+  function getReportedSet(){
+    try { return cleanSet(new Set(JSON.parse(localStorage.getItem(REPORT_KEY) || '[]'))); }
+    catch(_) { return new Set(); }
+  }
+  function saveReportedSet(s){ localStorage.setItem(REPORT_KEY, JSON.stringify([...cleanSet(s)])); }
+
+  function setReportUI(disabled){
+    if (!reportItem) return;
+    if (disabled){ reportItem.textContent = 'Reported'; reportItem.setAttribute('disabled',''); }
+    else { reportItem.textContent = 'Report Abuse'; reportItem.removeAttribute('disabled'); }
+  }
+  function syncHost(disabled){
+    if (!hostReportBtn) return;
+    if (disabled){ hostReportBtn.textContent = 'Reported'; hostReportBtn.setAttribute('disabled',''); }
+    else { hostReportBtn.textContent = 'Report Abuse'; hostReportBtn.removeAttribute('disabled'); }
+  }
+
+  (function initState(){
+    const s = getReportedSet();
+    const already = s.has(String(reviewId)) ||
+                    hostReportBtn.hasAttribute('disabled') ||
+                    /reported/i.test(hostReportBtn.textContent);
+    setReportUI(already);
+  })();
+
+  function getCookie(name){
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const CSRF = getCookie('csrftoken');
+
+  const galToastBox = document.getElementById('rvgalToasts');
+  function galToast(kind, msg, ms=2200){
+    if (!galToastBox) return alert(msg);
+    const t = document.createElement('div');
+    t.className = 'rvgal-toast ' + (kind || 'info');
+    t.textContent = msg || '';
+    galToastBox.appendChild(t);
+    requestAnimationFrame(()=> t.classList.add('show'));
+    setTimeout(()=>{ t.classList.remove('show'); }, ms);
+    setTimeout(()=>{ t.remove(); }, ms+250);
+  }
+
+  reportItem?.addEventListener('click', async ()=>{
+    const id = String(reviewId); if (!id) return;
+
+    const s = getReportedSet();
+    if (s.has(id)){ galToast('info','Already reported for review moderation.'); return; }
+
+    setReportUI(true); syncHost(true); s.add(id); saveReportedSet(s);
+    galToast('ok','Thanks for reporting it. Our team will look into it at the earliest.');
+
+    try{
+      const resp = await fetch(`/api/reviews/${id}/report/`, {
+        method:'POST', credentials:'include',
+        headers:{ 'X-CSRFToken': CSRF, 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ reason:'abuse' })
+      });
+      if (resp.status === 401){
+        galToast('err','Please log in to report');
+        setReportUI(false); syncHost(false); s.delete(id); saveReportedSet(s);
+      } else if (resp.status === 409){
+        galToast('info','Already reported for review moderation.');
+      }
+    }catch(_){}
   });
 })();
-</script>
 
-<script>
+
 /* ---------- Place the text-only X outside the dialog’s top-right ---------- */
 (function(){
+  const SCOPE = document.getElementById('rvDlgBody') || document;
   const dlg  = document.getElementById('rvDlg');
   const xBtn = document.getElementById('rvgalClose');
   if (!dlg || !xBtn) return;
 
   const MARGIN = 10, SAFE = 8;
-  function place(){
+
+  // NEW: scroll lock helpers (compensate for scrollbar width)
+  function lockBody(){
+    const sbw = window.innerWidth - document.documentElement.clientWidth; // scrollbar width
+    if (sbw > 0) document.body.style.paddingRight = sbw + 'px';
+    document.documentElement.classList.add('rvgal-lock');
+    document.body.classList.add('rvgal-lock');
+  }
+  function unlockBody(){
+    document.body.style.paddingRight = '';
+    document.documentElement.classList.remove('rvgal-lock');
+    document.body.classList.remove('rvgal-lock');
+  }
+
+  function getRect(){
     const r = dlg.getBoundingClientRect();
+    if ((r.right === 0 && r.left === 0) || (r.width === 0 && r.height === 0)){
+      const wrap = SCOPE.querySelector('.rvgal-wrap');
+      return wrap ? wrap.getBoundingClientRect() : r;
+    }
+    return r;
+  }
+
+  function place(){
+    const r = getRect();
     const btnW = xBtn.offsetWidth || 26;
     let top  = Math.max(SAFE, r.top + MARGIN);
     let left = r.right + MARGIN;
@@ -443,27 +1020,37 @@
     xBtn.style.top  = top + 'px';
     xBtn.style.left = left + 'px';
   }
-  function openHook(){
-    xBtn.style.display = 'flex';
-    requestAnimationFrame(place);
-    setTimeout(place, 0);
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, {passive:true});
-  }
-  function closeHook(){
-    xBtn.style.display = 'none';
-    window.removeEventListener('resize', place);
-    window.removeEventListener('scroll', place);
-  }
+
+  // NEW flag
+let openedOnce = false;
+
+function openHook(){
+  if (openedOnce) return;   // ⬅ stop second run
+  openedOnce = true;
+
+  lockBody();
+  xBtn.style.display = 'flex';
+  requestAnimationFrame(place);
+  setTimeout(place, 0);
+  window.addEventListener('resize', place);
+  window.addEventListener('scroll', place, {passive:true});
+}
+function closeHook(){
+  xBtn.style.display = 'none';
+  window.removeEventListener('resize', place);
+  window.removeEventListener('scroll', place);
+  unlockBody();
+  openedOnce = false;       // ⬅ allow next open
+}
   xBtn.addEventListener('click', ()=> dlg.close());
   dlg.addEventListener('close', closeHook);
+
   if (dlg.open) openHook();
   else {
     const mo = new MutationObserver(()=>{ if (dlg.open){ openHook(); mo.disconnect(); }});
     mo.observe(dlg, { attributes:true, attributeFilter:['open'] });
   }
 
-  /* close dialog when clicking outside the content area */
   dlg.addEventListener('click', (e)=>{
     const body = document.getElementById('rvDlgBody');
     if (!body) return;
@@ -471,5 +1058,6 @@
     const inside = e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom;
     if (!inside) dlg.close();
   });
-})();
+})(); // end X-placement IIFE
 </script>
+

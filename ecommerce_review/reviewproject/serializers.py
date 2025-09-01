@@ -1,7 +1,7 @@
 # reviewproject/serializers.py
 from rest_framework import serializers
 from django.utils.timezone import localtime
-from .models import Review, ReviewReaction, ReviewImage
+from .models import Review, ReviewReaction, ReviewImage, ReviewVideo   
 
 class ReviewCreateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
@@ -15,12 +15,26 @@ class ReviewUpdateSerializer(serializers.ModelSerializer):
         model  = Review
         fields = ("rating", "title", "body", "image")
 
+
+class ReviewImageSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReviewImage
+        fields = ("id", "url")
+
+    def get_url(self, obj):
+        req = self.context.get("request")
+        url = obj.image.url
+        return req.build_absolute_uri(url) if req else url
+
 class ReviewSerializer(serializers.ModelSerializer):
     like_count    = serializers.SerializerMethodField()
     dislike_count = serializers.SerializerMethodField()
     image_url     = serializers.SerializerMethodField()
     display_date  = serializers.SerializerMethodField()
     image_urls    = serializers.SerializerMethodField() 
+    video_urls    = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
@@ -56,6 +70,14 @@ class ReviewSerializer(serializers.ModelSerializer):
         req = self.context.get("request")
         url = obj.image.url
         return req.build_absolute_uri(url) if req else url
+    
+    def get_video_urls(self, obj):
+        req = self.context.get("request")
+        out = []
+        for v in obj.videos.all():
+            u = v.video.url
+            out.append(req.build_absolute_uri(u) if req else u)
+        return out
 
     def get_display_date(self, obj):
         dt = localtime(obj.created_at)  
@@ -64,14 +86,4 @@ class ReviewSerializer(serializers.ModelSerializer):
         except ValueError:
             return dt.strftime("%B %#d, %Y, %#I:%M %p")  # Windo
         
-class ReviewImageSerializer(serializers.ModelSerializer):
-    url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ReviewImage
-        fields = ("id", "url")
-
-    def get_url(self, obj):
-        req = self.context.get("request")
-        url = obj.image.url
-        return req.build_absolute_uri(url) if req else url
+        

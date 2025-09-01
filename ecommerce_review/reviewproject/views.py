@@ -12,8 +12,8 @@ from rest_framework.parsers import JSONParser
 from rest_framework.generics import RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import AllowAny
 from reviewservice.settings import user_url, product_url, cart_url, order_url, review_url
-from .models import Review, ReviewReaction, ReviewImage
-from .serializers import ReviewSerializer, ReviewCreateSerializer, ReviewUpdateSerializer as ReviewUpdateSer
+from .models import Review, ReviewReaction, ReviewImage, ReviewVideo
+from .serializers import ReviewSerializer, ReviewCreateSerializer, ReviewUpdateSerializer
 
 
 def health(request):
@@ -104,12 +104,12 @@ class ReviewsPagination(PageNumberPagination):
         )))
 
 
-
 class ReviewListCreateAPIView(APIView):
     """
     GET  /api/reviews/?product_id=123
-    POST /api/reviews/   (multipart or form-encoded)
-          fields: product_id, rating, title?, body?, image?
+    POST /api/reviews/  multipart/form-data
+      fields: product_id, rating, title?, body?, image?
+      files:  images[] (0..n), videos[] (0..n)
     """
     parser_classes = (MultiPartParser, FormParser, JSONParser)
     pagination_class = ReviewsPagination
@@ -139,20 +139,24 @@ class ReviewListCreateAPIView(APIView):
         product_id = s.validated_data["product_id"]
 
         if Review.objects.filter(user_id=user_id, product_id=product_id).exists():
-            # helpful conflict body for FE
-            existing = Review.objects.filter(user_id=user_id, product_id=product_id).only("review_id").first()
+            existing = Review.objects.filter(user_id=user_id, product_id=product_id)\
+                                     .only("review_id").first()
             return Response(
-                {"error": "You already reviewed this product", "existing_review_id": existing.review_id},
+                {"error": "You already reviewed this product",
+                 "existing_review_id": existing.review_id},
                 status=409
             )
 
-    # Enforce verified-only
-        print("[REVIEWS] create: user_id", user_id, "product_id", product_id)
+        # Enforce verified-only
         if not _user_has_purchased_product(product_id, request):
-            print("[REVIEWS] blocked: not verified")
             return Response({"error":"You must purchase this product before leaving a review."}, status=403)
 
-        
+        # (Optional) simple MIME whitelist check for videos before saving
+        # allowed_mimes = {"video/mp4", "video/webm", "video/quicktime"}
+        # for f in request.FILES.getlist("videos"):
+        #     if getattr(f, "content_type", "") not in allowed_mimes:
+        #         return Response({"error": f"Unsupported video type: {f.content_type}"}, status=400)
+
         review = Review.objects.create(
             user_id=user_id,
             user_name=user_name,
@@ -161,43 +165,44 @@ class ReviewListCreateAPIView(APIView):
             title=s.validated_data.get("title", ""),
             body=s.validated_data.get("body", ""),
             is_verified_purchase=True,
-            image=request.FILES.get("image")
+            image=request.FILES.get("image"),
         )
 
-         # save multiple images (new)
-        for f in request.FILES.getlist('images'):
+        # multiple images[]
+        for f in request.FILES.getlist("images"):
             ReviewImage.objects.create(review=review, image=f)
 
-        # (optional) also mirror the legacy single 'image' into the gallery table
+        # mirror legacy single image into gallery
         single = request.FILES.get("image")
         if single:
             ReviewImage.objects.create(review=review, image=single)
-        
-        print("[REVIEWS] created review", review.review_id, "verified:", review.is_verified_purchase)
-        return Response(ReviewSerializer(review, context={'request': request}).data, status=201)
 
+        # multiple videos[]
+        for v in request.FILES.getlist("videos"):
+            ReviewVideo.objects.create(review=review, video=v)
+
+        return Response(ReviewSerializer(review, context={'request': request}).data, status=201)
 
 
 class ReviewDetailAPIView(RetrieveUpdateDestroyAPIView):
     """
     GET    /api/reviews/<pk>/
-    PATCH  /api/reviews/<pk>/  (only author can edit)
-    PUT    /api/reviews/<pk>/  (only author)
-    DELETE /api/reviews/<pk>/  (only author)
+    PATCH  /api/reviews/<pk>/  (author only)
+    PUT    /api/reviews/<pk>/  (author only)
+    DELETE /api/reviews/<pk>/  (author only)
     """
     queryset = Review.objects.all()
-    serializer_class = ReviewUpdateSer
+    serializer_class = ReviewUpdateSerializer 
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get_permissions(self):
-        # Public GET; author checks enforced for write ops
         return [AllowAny()]
-    
+
     def get_serializer_class(self):
         if self.request.method == "GET":
-            return ReviewSerializer  
-        return ReviewUpdateSer
-    
+            return ReviewSerializer
+        return ReviewUpdateSerializer
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         ser = ReviewSerializer(instance, context={'request': request})
@@ -214,60 +219,96 @@ class ReviewDetailAPIView(RetrieveUpdateDestroyAPIView):
         if int(review.user_id) != int(user_id):
             return Response({"error": "You can only edit your own review"}, status=403)
 
+        # validate scalar fields
         partial = request.method.lower() == "patch"
         serializer = self.get_serializer(review, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        new_multi = request.FILES.getlist('images')  # multi-input
-        new_single = request.FILES.get('image')      # legacy single
+        # gather incoming media
+        new_images_multi = request.FILES.getlist("images")   # images[]
+        new_image_single = request.FILES.get("image")        # legacy single
+        new_videos       = request.FILES.getlist("videos")   # videos[]
 
-        if new_multi or new_single:
-            # delete gallery images
+        # (Optional) MIME whitelist
+        # allowed_mimes = {"video/mp4", "video/webm", "video/quicktime"}
+        # for f in new_videos:
+        #     if getattr(f, "content_type", "") not in allowed_mimes:
+        #         return Response({"error": f"Unsupported video type: {f.content_type}"}, status=400)
+
+        # --- replace IMAGES if any new images provided ---
+        if new_images_multi or new_image_single:
+            # delete gallery images (+ files)
             for im in review.images.all():
                 try:
-                    # remove file from storage first (optional but cleaner)
                     if im.image:
                         im.image.delete(save=False)
                 except Exception:
                     pass
                 im.delete()
 
-            # clear legacy single image field (and file)
+            # clear legacy single field (+ file)
             if review.image:
                 try:
                     review.image.delete(save=False)
                 except Exception:
                     pass
                 review.image = None
-                review.save(update_fields=['image'])
+                review.save(update_fields=["image"])
 
-            # add back new images
-            for f in new_multi:
+            # add back
+            for f in new_images_multi:
                 ReviewImage.objects.create(review=review, image=f)
 
-            if new_single:
-                # keep legacy field in sync + mirror into gallery so UI sees it
-                review.image = new_single
-                review.save(update_fields=['image'])
-                ReviewImage.objects.create(review=review, image=new_single)
-        # --------- /REPLACE BEHAVIOR ----------
+            if new_image_single:
+                review.image = new_image_single
+                review.save(update_fields=["image"])
+                ReviewImage.objects.create(review=review, image=new_image_single)
 
-        # Return full read serializer for FE convenience (includes image_urls)
-        return Response(ReviewSerializer(review, context={'request': request}).data, status=200)
-        
-    def destroy(self, request, *args, **kwargs):
-        try:
-            user_id = _get_current_user_id(request)
-        except PermissionError:
-            return Response({"error": "Not authenticated"}, status=401)
+        # --- replace VIDEOS if any new videos provided ---
+        if new_videos:
+            for vv in review.videos.all():
+                try:
+                    if vv.video:
+                        vv.video.delete(save=False)
+                except Exception:
+                    pass
+                vv.delete()   # <-- delete each one correctly
 
-        review = self.get_object()
-        if int(review.user_id) != int(user_id):
-            return Response({"error": "You can only delete your own review"}, status=403)
+            for v in new_videos:
+                ReviewVideo.objects.create(review=review, video=v)
 
-        return super().destroy(request, *args, **kwargs)
-    
+        # return full read serializer
+        return Response(ReviewSerializer(review, context={"request": request}).data, status=200)
+
+    # ensure files are removed when the review is deleted
+    def perform_destroy(self, instance):
+        # delete gallery images
+        for im in instance.images.all():
+            try:
+                if im.image:
+                    im.image.delete(save=False)
+            except Exception:
+                pass
+            im.delete()
+
+        # delete videos
+        for vv in instance.videos.all():
+            try:
+                if vv.video:
+                    vv.video.delete(save=False)
+            except Exception:
+                pass
+            vv.delete()
+
+        # delete legacy single image file
+        if instance.image:
+            try:
+                instance.image.delete(save=False)
+            except Exception:
+                pass
+
+        super().perform_destroy(instance)
     
 
 class ReviewVoteAPIView(APIView):

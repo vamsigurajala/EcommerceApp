@@ -71,6 +71,9 @@ body{ background:var(--bg); color:var(--fg); }
   .rv-images img{
     width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line)
   }
+  .rv-images video{
+  width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line)
+}
   /* collapse to 2 rows initially */
   .rv-images.collapsed{
     max-height:calc(80px*2 + 8px*1);
@@ -132,33 +135,118 @@ body.dark-mode .kebab-item.danger:hover{
   background:rgba(239,68,68,.12);
   color:#fecaca;
 }
-
-  /* Pager */
+  .pager .btn.current{background: var(--brand);color:#fff;border-color: var(--brand);pointer-events:none;}
   .pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0}
   .pager .btn{display:inline-block;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-weight:700;text-decoration:none}
   .btn.is-disabled{pointer-events:none;opacity:.55}
   .pager .meta{color:var(--muted);font-size:13px}
+
+/* container */
+.abuse-dd{ position:relative; display:inline-block; margin-left:6px; }
+
+/* naked downward arrow (no box) */
+.abuse-trigger{
+  background:transparent !important;
+  border:0 !important;
+  cursor:pointer; padding:4px 6px; line-height:1;
+}
+.abuse-trigger:focus{ outline:none; }
+.abuse-trigger svg{
+  width:18px; height:18px; stroke:var(--muted);
+  transition:transform .15s ease, stroke .15s ease;
+}
+.abuse-dd:hover .abuse-trigger svg{
+  transform:rotate(180deg);           /* flip on hover like Flipkart */
+  stroke:var(--fg);
+}
+
+/* tiny dropdown */
+.abuse-menu{
+  position:absolute; right:0; top:28px; min-width:160px;
+  background:var(--bg); color:var(--fg);
+  border:1px solid var(--line); border-radius:10px;
+  box-shadow:0 10px 24px rgba(0,0,0,.18);
+  padding:6px; display:none; z-index:200;
+}
+/* open on hover (no JS needed) */
+.abuse-dd:hover .abuse-menu{ display:block; }
+
+.abuse-item{
+  width:100%; text-align:left; background:transparent; border:0;
+  padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:700;
+}
+.abuse-item:hover{ background:rgba(148,163,184,.12); }
+.abuse-item.danger{ color:#e11d48; }
+.abuse-item[disabled]{ opacity:.6; cursor:default; }
+
+/* dark-only touch-ups */
+body.dark-mode .abuse-menu{
+  border-color:rgba(255,255,255,.16);
+  box-shadow:0 12px 26px rgba(0,0,0,.55);
+}
+
+/* dark tweaks */
+body.dark-mode .abuse-menu{ border-color:rgba(255,255,255,.16); box-shadow:0 12px 26px rgba(0,0,0,.55); }
 
   /* Summary */
   .summary{display:none;grid-template-columns:130px 1fr;gap:18px;align-items:center;margin:6px 0 18px;border:1px solid var(--line);border-radius:10px;padding:14px}
   .summary-left{display:flex;flex-direction:column;align-items:center;gap:6px}
   .avg{font-size:34px;font-weight:800}
   .avg-star{color:#f59e0b;font-weight:800}
-  .total{color:var(--muted);font-size:12px}
+  .total{color:var(--muted);font-size:16px}
   .bars{display:flex;flex-direction:column;gap:6px}
   .bar{display:flex;align-items:center;gap:8px}
   .bar .label{width:18px;text-align:right;font-weight:700}
   .track{flex:1;height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden}
-  .fill{height:100%;background:#10b981}
-  .fill.mid{background:#f59e0b}
-  .fill.low{background:#ef4444}
+  /* rating bars – animate in like Flipkart */
+.fill{
+  height:100%;
+  background:#10b981;
+  width:0;                                      /* start collapsed */
+  transition: width .9s cubic-bezier(.22,.8,.2,1);
+  will-change: width;
+}
+.fill.mid{background:#f59e0b}
+.fill.low{background:#ef4444}
 
-  /* Toasts */
-  .toasts{position:fixed;right:16px;bottom:16px;z-index:1000;display:flex;flex-direction:column;gap:8px}
-  .toast{min-width:260px;max-width:360px;padding:12px 14px;border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.18);display:flex;gap:10px;align-items:flex-start;opacity:0;transform:translateY(10px);animation:slideIn .25s ease forwards;font-weight:600;border:1px solid transparent}
-  .toast.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
+/* accessibility: no motion when user prefers */
+@media (prefers-reduced-motion: reduce){
+  .fill{ transition:none; }
+}
+
+  
+  /*center toast */
+.toasts{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  z-index:2147483000; display:flex; flex-direction:column; gap:10px; align-items:center;
+  pointer-events:none;
+}
+.toast{
+  display:inline-flex;        /* shrink-wrap to content */
+  width:auto;
+  max-width:min(92vw, 720px); /* wrap on small screens/long text */
+  padding:14px 18px;
+  border-radius:12px;
+  box-shadow:0 14px 44px rgba(0,0,0,.35);
+  gap:12px; align-items:center; pointer-events:auto;
+
+  opacity:0; transform:translateY(10px); animation:slideIn .25s ease forwards;
+
+  background:#111827; color:#fff; border:1px solid rgba(255,255,255,.08);
+  font-weight:700;
+  white-space:normal;         /* allow wrapping */
+  word-break:break-word;
+}
   .toast.err{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
   .toast.info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+
+/* small green check circle (only added for 'ok' toasts) */
+.toast .ico{
+  width:20px; height:20px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
+  background:#16a34a; color:#fff; font-size:12px; font-weight:900;
+}
+
   @keyframes slideIn{to{opacity:1;transform:translateY(0)}}
 
   /* Modal confirm */
@@ -174,7 +262,7 @@ body.dark-mode .kebab-item.danger:hover{
 .rv.collapsed .rv-body{
   display:-webkit-box;
   -webkit-box-orient:vertical;
-  -webkit-line-clamp:5;   /* show first 5 lines */
+  -webkit-line-clamp:5;   
   overflow:hidden;
 }
 .moreless{
@@ -247,7 +335,7 @@ body.dark-mode #theme-toggle:hover{ background: rgba(255,255,255,.10); }
   font-weight:700;
   padding:0;
   cursor:pointer;
-  border-radius:6px;            /* avoids hard square corners */
+  border-radius:6px;            
 }
 
 .moreless:hover,
@@ -278,26 +366,28 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
 
 /* thumbnails should show hand cursor (Flipkart-style) */
 .rv-images img{ cursor:pointer !important; }
-
-/* Keep header visible and let us place the toggle inside it */
+.rv-images video{ cursor:pointer !important; }
 
 /* Theme toggle lives INSIDE header, not fixed */
 #theme-toggle{
-  position: relative;          /* sits in the header flow */
-  width:36px; height:36px;
-  border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  background:transparent; border:none;
-  color:#fff;                  /* white icon in both themes (header is dark) */
-  cursor:pointer;
-  transition:background .18s;
-  margin-left:8px;
+  float: right;             /* push to right side */
+  margin-right: 18px;       /* distance from right edge */
+  margin-top: -8px;         /* align vertically */
+  font-size: 20px;          /* same icon size as home */
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: background .18s;
 }
 #theme-toggle:hover{ background:rgba(255,255,255,.10); }
 
 /* tooltip stays the same */
 #theme-tooltip{
-  position:absolute; left:50%; top:110%; transform:translateX(-50%);
+  position:absolute; left:10%; top:110%; transform:translateX(-50%);
   background:#232323; color:#fff; padding:7px 16px; border-radius:6px;
   font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,.18);
   white-space:nowrap; margin-top:7px; z-index:2147483000; pointer-events:none;
@@ -318,6 +408,131 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
 .pager .btn:hover{ background:rgba(148,163,184,.12) }
 .pager .btn.is-disabled{ opacity:.45; pointer-events:none; }
 .pager .meta{ color:var(--muted); }
+
+
+.preview video{ width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line); }
+.preview img  { width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line); }
+.preview .kill{
+  position:absolute;top:-6px;right:-6px;border:none;background:#ef4444;color:#fff;
+  width:22px;height:22px;border-radius:999px;cursor:pointer;font-weight:800;line-height:1
+}
+.preview > div{ position:relative; display:inline-block; }
+
+/* ==== Flipkart-like Certified Buyer mark: grey circle + bold white tick ==== */
+.cert{ display:inline-flex; align-items:center; gap:8px; margin-left:8px; font-weight:700; color:var(--muted); }
+
+.cert .tick{ 
+  width:18px; height:18px; flex:0 0 18px; 
+  display:inline-block; vertical-align:middle;
+}
+
+/* solid grey circle behind the tick */
+.cert .tick-bg{ fill:#9ca3af; }                 /* slate-400 */
+body.dark-mode .cert .tick-bg{ fill:#6b7280; }  /* slate-500 in dark */
+
+/* thick, fully white check */
+.cert .tick-mark{
+  stroke:#fff;            /* pure white */
+  stroke-width:3;         /* bolder like Flipkart */
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+
+/* --- Video thumbs: same play-badge overlay as gallery --- */
+.rv-images .rv-thumb{                         /* wrapper for thumbs */
+  position:relative; display:inline-flex;
+  width:80px; height:80px; border-radius:8px; overflow:visible;
+}
+.rv-images .rv-thumb > video,
+.rv-images .rv-thumb > img{
+  width:100%; height:100%;
+  object-fit:cover; border-radius:8px; border:1px solid var(--line);
+  box-sizing:border-box;
+}
+
+/* centered play badge (circle + triangle) */
+.rv-images .rv-thumb[data-vid="1"]::after{
+  content:""; position:absolute; left:50%; top:50%;
+  width:40px; height:40px; border-radius:999px;
+  background:
+    radial-gradient(circle at 45% 35%, rgba(255,255,255,.14), transparent 45%),
+    rgba(0,0,0,.55);
+  border:2px solid rgba(255,255,255,.95);
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+.rv-images .rv-thumb[data-vid="1"]::before{
+  content:""; position:absolute; left:50%; top:50%;
+  border-left:12px solid #fff; border-top:8px solid transparent; border-bottom:8px solid transparent;
+  transform:translate(calc(-50% + 2px), -50%);
+  filter:drop-shadow(0 0 1px rgba(0,0,0,.85)) drop-shadow(0 1px 2px rgba(0,0,0,.45));
+  pointer-events:none;
+}
+
+/* Play badge should fade away on hover (like review_gallery) */
+.rv-images .rv-thumb[data-vid="1"]::after,
+.rv-images .rv-thumb[data-vid="1"]::before{
+  opacity: 1;
+  transition: opacity .15s ease;
+}
+
+/* on hover hide the badge (video still a static thumb) */
+.rv-images .rv-thumb[data-vid="1"]:hover::after,
+.rv-images .rv-thumb[data-vid="1"]:hover::before{
+  opacity: 0;
+}
+
+/* make sure the wrapper, not the <video>, gets the click */
+.rv-images .rv-thumb{ cursor: pointer; }
+/* Video thumbs shouldn't eat the click or show PiP overlay */
+.rv-images .rv-thumb video{
+  pointer-events: none;       
+}
+.prod-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prod-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;   /* spacing between count and toggle */
+}
+
+/* --- compact pager overrides --- */
+.pager{ gap:8px; margin:16px 0; }
+.pager .btn{ padding:4px 10px; font-size:13px; border-radius:10px; }  /* numbers smaller */
+.pager .meta{ font-size:12px; }
+
+/* make PREVIOUS/NEXT look like plain text links (still clickable) */
+.pager .btn.nav{
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: none;          /* no underline */
+  border-radius: 0;
+}
+.pager .btn.nav:hover{ text-decoration: none; opacity:.85; }
+.pager .btn.nav.is-disabled{ opacity:.45; pointer-events:none; }
+
+/* tiny spinner that appears during fast navigation */
+#pager-spin{
+  display:none; width:14px; height:14px;
+  border:2px solid var(--line);
+  border-top-color: var(--brand);
+  border-radius:50%;
+  animation: pagerSpin .7s linear infinite;
+}
+.pager.loading #pager-spin{ display:inline-block; }
+
+@keyframes pagerSpin{ to{ transform:rotate(360deg); } }
+
 </style>
 {% endblock %}
 
@@ -326,8 +541,11 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
 
   <!-- config for JS -->
   <div id="config"
-       data-submit-url="{% url 'submit_review' product.product_id %}"
-       data-product-id="{{ product.product_id }}"></div>
+     data-submit-url="{% url 'submit_review' product.product_id %}"
+     data-product-id="{{ product.product_id }}"
+     data-user-id="{{ current_user_id|default:'' }}"
+     data-ratings="{{ rating_count|default:0 }}"
+     data-reviews="{{ review_count|default:0 }}"></div>
 
   <!-- header -->
   <div class="prod-header">
@@ -339,16 +557,24 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
         <div class="muted">{{ product.product_description }}</div>
       </div>
     </div>
-    <div class="muted"><span id="review-count">
-      {% if total_count %}{{ total_count }} review{{ total_count|pluralize }}{% else %}No reviews yet{% endif %}
-    </span></div>
+    <div class="muted">
+  <span id="review-count">
+    {% if rating_count or review_count %}
+      {{ rating_count|default:0 }} rating{{ rating_count|pluralize }}{% if review_count %} &amp; {{ review_count }} review{{ review_count|pluralize }}{% endif %}
+    {% else %}
+      No ratings yet
+    {% endif %}
+  </span></div>
   </div>
 
   <!-- rating summary (hidden until JS fills it) -->
   <div id="rating-summary" class="summary">
     <div class="summary-left">
       <div class="avg"><span id="avg-rating">0.0</span> <span class="avg-star">★</span></div>
-      <div class="total" id="total-ratings">0 reviews</div>
+<div class="total" id="total-ratings">
+  <span id="count-ratings">0</span> Ratings<br>
+  <span id="count-reviews">0</span> Reviews
+</div>
     </div>
     <div class="bars">
       {% for s in "54321" %}
@@ -360,6 +586,8 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
       {% endfor %}
     </div>
   </div>
+
+  {% include "review_enhancements.html" %}
 
   <!-- write review -->
   {% if can_review %}
@@ -377,12 +605,14 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
       <input id="title" name="title" type="text" class="input" placeholder="Add a review title (e.g., ‘Must buy!’)">
       <textarea id="body" name="body" class="textarea" placeholder="Share details on quality, fit, pros & cons…"></textarea>
 
-      <div class="media-row">
-        <label for="images" class="btn ghost">+ Add photo</label>
-        <input id="images" name="images" type="file" accept="image/*" style="display:none" multiple>
-        <div id="img-preview" class="preview hint">No image selected</div>
-      </div>
-
+     <div class="media-row">
+  <!-- One visible picker for both types -->
+  <label for="media" class="btn ghost">+ Add photo/video</label>
+  <input id="media" type="file" accept="image/*,video/*" style="display:none" multiple>
+  <input id="images" name="images" type="file" accept="image/*" style="display:none" multiple>
+  <input id="videos" name="videos" type="file" accept="video/*" style="display:none" multiple>
+  <div id="media-preview" class="preview hint">No media selected</div>
+</div>
       <div class="actions">
         <button id="submit-btn" type="submit" class="btn primary">Submit review</button>
         <button id="cancel-edit" type="button" class="btn ghost" style="display:none">Cancel edit</button>
@@ -415,19 +645,43 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
   <div class="rv-body">{{ pinned_review.body }}</div>
   <button type="button" class="moreless" hidden>Read more</button>
 {% endif %}
-    {% if pinned_review.image_urls and pinned_review.image_urls|length %}
-      <div class="rv-images collapsed">
-        {% for u in pinned_review.image_urls %}<img src="{{ u }}" alt="">{% endfor %}
-      </div>
-      <button type="button" class="photo-toggle" hidden>See more photos</button>
-    {% elif pinned_review.image_url %}
-      <div class="rv-images collapsed"><img src="{{ pinned_review.image_url }}" alt=""></div>
-      <button type="button" class="photo-toggle" hidden>See more photos</button>
+    {% if pinned_review.image_urls or pinned_review.image_url or pinned_review.video_urls %}
+  <div class="rv-images collapsed">
+    {% if pinned_review.image_urls %}
+      {% for u in pinned_review.image_urls %}
+        <img src="{{ u }}" alt="">
+      {% endfor %}
     {% endif %}
+
+    {% if pinned_review.image_url %}
+      <img src="{{ pinned_review.image_url }}" alt="">
+    {% endif %}
+
+    {% if pinned_review.video_urls %}
+      {% for u in pinned_review.video_urls %}
+        <span class="rv-thumb" data-vid="1">
+            <video src="{{ u }}" muted playsinline preload="metadata"
+         disablepictureinpicture
+         controlslist="nodownload noplaybackrate noremoteplayback"
+         tabindex="-1"></video>
+      </span>
+      {% endfor %}
+    {% endif %}
+  </div>
+  <button type="button" class="photo-toggle" hidden>See more media</button>
+{% endif %}
 
     <div class="rv-footer">
       <span class="rv-name">{{ pinned_review.user_name|default:"Anonymous" }}</span>
-      {% if pinned_review.is_verified_purchase %}<span class="badge">Verified Purchase</span>{% endif %}
+{% if pinned_review.is_verified_purchase %}
+  <span class="cert">
+  <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" class="tick-bg"></circle>
+    <path d="M7.5 12.5l2.7 2.7 5.3-6.2" class="tick-mark"></path>
+  </svg>
+  Certified Buyer
+</span>
+{% endif %}
       <span class="rv-dot">•</span>
       <span class="rv-when">{% if pinned_review.display_date %}{{ pinned_review.display_date }}{% else %}{{ pinned_review.created_at|date:"M j, Y, g:i A" }}{% endif %}</span>
       <span class="spacer"></span>
@@ -436,6 +690,20 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
         <button type="button" class="react-btn like" data-val="1">👍 <span class="react-count js-like">{{ pinned_review.like_count }}</span></button>
         <button type="button" class="react-btn dislike" data-val="-1">👎 <span class="react-count js-dislike">{{ pinned_review.dislike_count }}</span></button>
       </div>
+
+      {% if not current_user_id or pinned_review.user_id != current_user_id %}
+  <div class="abuse-dd">
+  <button type="button" class="abuse-trigger" aria-haspopup="true" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6"></path> <!-- downward arrow -->
+    </svg>
+  </button>
+  <div class="abuse-menu" role="menu">
+<button class="abuse-item danger js-report" data-id="{{ pinned_review.review_id }}" role="menuitem">Report Abuse</button>
+  </div>
+</div>
+{% endif %}
+
 
       <div class="kebab">
         <button type="button" class="kebab-btn" aria-label="More">⋯</button>
@@ -478,19 +746,48 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
 {% endif %}
 
 
-      {% if r.image_urls and r.image_urls|length %}
-        <div class="rv-images collapsed">
-          {% for u in r.image_urls %}<img src="{{ u }}" alt="review image">{% endfor %}
-        </div>
-        <button type="button" class="photo-toggle" hidden>See more photos</button>
-      {% elif r.image_url %}
-        <div class="rv-images collapsed"><img src="{{ r.image_url }}" alt="review image"></div>
-        <button type="button" class="photo-toggle" hidden>See more photos</button>
-      {% endif %}
+     {# show media block if there are any images, legacy single image, or videos #}
+{% if r.image_urls or r.image_url or r.video_urls %}
+  <div class="rv-images collapsed">
+    {# images (multi) #}
+    {% if r.image_urls %}
+      {% for u in r.image_urls %}
+        <img src="{{ u }}" alt="review image">
+      {% endfor %}
+    {% endif %}
+
+    {# legacy single image #}
+    {% if r.image_url %}
+      <img src="{{ r.image_url }}" alt="review image">
+    {% endif %}
+
+    {# videos #}
+    {% if r.video_urls %}
+      {% for u in r.video_urls %}
+        <span class="rv-thumb" data-vid="1">
+            <video src="{{ u }}" muted playsinline preload="metadata"
+         disablepictureinpicture
+         controlslist="nodownload noplaybackrate noremoteplayback"
+         tabindex="-1"></video>
+      </span>
+      {% endfor %}
+    {% endif %}
+  </div>
+  <button type="button" class="photo-toggle" hidden>See more media</button>
+{% endif %}
+
 
       <div class="rv-footer">
         <span class="rv-name">{{ r.user_name|default:"Anonymous" }}</span>
-        {% if r.is_verified_purchase %}<span class="badge">Verified Purchase</span>{% endif %}
+{% if r.is_verified_purchase %}
+  <span class="cert">
+    <svg class="tick" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" class="tick-bg"></circle>
+      <path d="M7.5 12.5l2.7 2.7 5.3-6.2" class="tick-mark"></path>
+    </svg>
+    Certified Buyer
+  </span>
+{% endif %}
         <span class="rv-dot">•</span>
         <span class="rv-when">{% if r.display_date %}{{ r.display_date }}{% else %}{{ r.created_at|date:"M j, Y, g:i A" }}{% endif %}</span>
         <span class="spacer"></span>
@@ -499,6 +796,20 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
           <button type="button" class="react-btn like" data-val="1">👍 <span class="react-count js-like">{{ r.like_count }}</span></button>
           <button type="button" class="react-btn dislike" data-val="-1">👎 <span class="react-count js-dislike">{{ r.dislike_count }}</span></button>
         </div>
+
+        {% if not current_user_id or r.user_id != current_user_id %}
+  <div class="abuse-dd">
+  <button type="button" class="abuse-trigger" aria-haspopup="true" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6"></path> <!-- downward arrow -->
+    </svg>
+  </button>
+  <div class="abuse-menu" role="menu">
+    <button class="abuse-item danger js-report" data-id="{{ r.review_id }}" role="menuitem">Report Abuse</button>
+  </div>
+</div>
+{% endif %}
+
 
         {% if current_user_id and r.user_id == current_user_id %}
         <div class="kebab">
@@ -522,13 +833,30 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
 
 </div>
 
-{% if next_url or prev_url %}
-  <div class="pager">
-    <a href="{{ prev_url|default:'#' }}" class="btn {% if not prev_url %}is-disabled{% endif %}">← Previous</a>
+{% if total_pages and total_pages > 1 %}
+  <div class="pager" style="gap:10px; flex-wrap:wrap">
     <span class="meta">Page {{ cur_page }} of {{ total_pages }}</span>
-    <a href="{{ next_url|default:'#' }}" class="btn {% if not next_url %}is-disabled{% endif %}">Next →</a>
+
+    <!-- PREVIOUS -->
+    <a href="{{ prev_url|default:'#' }}" class="btn {% if not prev_url %}is-disabled{% endif %}">PREVIOUS</a>
+
+    <!-- Numbered pages with gaps -->
+    {% for it in page_links %}
+      {% if it.dots %}
+        <span class="meta" aria-hidden="true">…</span>
+      {% else %}
+        {% if it.is_current %}
+          <a class="btn current" aria-current="page">{{ it.n }}</a>
+        {% else %}
+          <a href="{{ it.url }}" class="btn">{{ it.n }}</a>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    <a href="{{ next_url|default:'#' }}" class="btn {% if not next_url %}is-disabled{% endif %}">NEXT</a>
+    <span id="pager-spin" aria-hidden="true"></span>
   </div>
 {% endif %}
+
 
 <!-- Toast container -->
 <div class="toasts" id="toasts"></div>
@@ -552,16 +880,35 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
   const CSRF = getCookie('csrftoken');
   const cfg  = document.getElementById('config');
   const SUBMIT = cfg?.dataset.submitUrl || '';
+  // --- Per-user vote memory (so colors survive refresh and are per-user) ---
+const CURRENT_USER_ID = cfg?.dataset.userId || 'anon';
+const VOTE_KEY = `review_vote_state_v2:${CURRENT_USER_ID}`;
+
+function _getVoteMap(){
+  try { return JSON.parse(localStorage.getItem(VOTE_KEY) || '{}') || {}; }
+  catch(_) { return {}; }
+}
+function _setVoteMap(m){ try{ localStorage.setItem(VOTE_KEY, JSON.stringify(m)); }catch(_){} }
+
+function rememberVote(reviewId, val){         // val: 1=like, -1=dislike, 0=clear
+  const m = _getVoteMap();
+  if (val === 0) delete m[reviewId]; else m[reviewId] = val;
+  _setVoteMap(m);
+}
+function readRememberedVote(reviewId){
+  const m = _getVoteMap();
+  return Number(m[reviewId] || 0);
+}
 
   const toastBox = document.getElementById('toasts');
-  function toast(kind, msg, ms=2200){
-    const t = document.createElement('div');
-    t.className = 'toast ' + (kind || 'info');
-    t.innerHTML = '<div>'+msg+'</div>';
-    toastBox.appendChild(t);
-    setTimeout(()=>{ t.style.opacity = '0'; t.style.transform='translateY(10px)'; }, ms);
-    setTimeout(()=>{ t.remove(); }, ms+250);
-  }
+  function toast(kind, msg, ms=2600){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (kind || 'info');
+  t.innerHTML = (kind==='ok' ? '<span class="ico">✔</span>' : '') + '<div>'+msg+'</div>';
+  toastBox.appendChild(t);
+  setTimeout(()=>{ t.style.opacity = '0'; t.style.transform='translateY(10px)'; }, ms);
+  setTimeout(()=>{ t.remove(); }, ms+250);
+}
 
   // stars input
   const starsWrap = document.getElementById('stars');
@@ -574,47 +921,104 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
     s.addEventListener('click', ()=>{ const v = parseInt(s.dataset.v,10); ratingInput.value=v; paint(v); });
   });
 
-  // --- multi-image preview with remove
-  const fileInput = document.getElementById('images');
-  const imgPrev   = document.getElementById('img-preview');
-  let selectedFiles = [];
-  function renderPreviews(){
-    if (!selectedFiles.length){
-      imgPrev.textContent = 'No image selected';
-      imgPrev.classList.add('hint');
-      return;
-    }
-    imgPrev.classList.remove('hint');
-    imgPrev.innerHTML = selectedFiles.map((f, idx) => {
-      const url = URL.createObjectURL(f);
-      return `
-        <div>
-          <img src="${url}" alt="selected image">
-          <button type="button" data-idx="${idx}" aria-label="Remove image"
-            style="position:absolute;top:-6px;right:-6px;border:none;background:#ef4444;color:#fff;
-                   width:22px;height:22px;border-radius:999px;cursor:pointer;font-weight:800;line-height:1">×</button>
-        </div>`;
-    }).join('');
-    imgPrev.querySelectorAll('button[data-idx]').forEach(btn=>{
-      btn.onclick = () => {
-        const i = parseInt(btn.dataset.idx, 10);
-        selectedFiles.splice(i,1);
-        const dt = new DataTransfer();
-        selectedFiles.forEach(f => dt.items.add(f));
-        fileInput.files = dt.files;
-        renderPreviews();
-      };
-    });
-  }
-  fileInput?.addEventListener('change', ()=>{
-    const incoming = Array.from(fileInput.files || []);
-    selectedFiles = selectedFiles.concat(incoming);
-    const dt = new DataTransfer();
-    selectedFiles.forEach(f => dt.items.add(f));
-    fileInput.files = dt.files;
-    renderPreviews();
-  });
+  function seedAllReactions(){
+  document.querySelectorAll('.react[data-id]').forEach(wrap=>{
+    const id = wrap.dataset.id;
+    const likeBtn = wrap.querySelector('.react-btn.like');
+    const disBtn  = wrap.querySelector('.react-btn.dislike');
+    if (!likeBtn || !disBtn) return;
 
+    // reset
+    likeBtn.classList.remove('active');
+    disBtn.classList.remove('active');
+
+    // 1) Prefer server-rendered state if present
+    const hostLiked    = likeBtn.classList.contains('active');
+    const hostDisliked = disBtn.classList.contains('active');
+    if (hostLiked){ rememberVote(id, 1); return; }
+    if (hostDisliked){ rememberVote(id, -1); return; }
+
+    // 2) Otherwise, restore our remembered state for THIS user
+    const memo = readRememberedVote(id);
+    if (memo === 1) likeBtn.classList.add('active');
+    else if (memo === -1) disBtn.classList.add('active');
+  });
+}
+
+
+  // Unified media picker (images + videos) with one preview, but submits to hidden images/videos 
+const mediaInput    = document.getElementById('media');
+const imagesHidden  = document.getElementById('images');   
+const videosHidden  = document.getElementById('videos');   
+const mediaPreview  = document.getElementById('media-preview');
+
+// Keep selection order; each entry knows if it's image or video
+let mediaFiles = []; 
+
+function syncHiddenInputs(){
+  const imgDT = new DataTransfer();
+  const vidDT = new DataTransfer();
+  mediaFiles.forEach(({file, type}) => {
+    (type === 'video' ? vidDT : imgDT).items.add(file);
+  });
+  imagesHidden.files = imgDT.files;
+  videosHidden.files = vidDT.files;
+}
+
+function renderMediaPreviews(){
+  if (!mediaPreview) return;
+  if (!mediaFiles.length){
+    mediaPreview.textContent = 'No media selected';
+    mediaPreview.classList.add('hint');
+    return;
+  }
+  mediaPreview.classList.remove('hint');
+
+  mediaPreview.innerHTML = mediaFiles.map(({file, type}, i) => {
+    const u = URL.createObjectURL(file);
+    if (type === 'video'){
+      return `
+        <div style="position:relative;display:inline-block">
+          <video src="${u}" muted playsinline loop
+                 style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></video>
+          <button type="button" class="kill" data-idx="${i}"
+                  style="position:absolute;top:-6px;right:-6px;border:none;background:#ef4444;color:#fff;
+                         width:22px;height:22px;border-radius:999px;cursor:pointer;font-weight:800;line-height:1">×</button>
+        </div>`;
+    }
+    // image
+    return `
+      <div style="position:relative;display:inline-block">
+        <img src="${u}" alt="media ${i+1}"
+             style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">
+        <button type="button" class="kill" data-idx="${i}"
+                style="position:absolute;top:-6px;right:-6px;border:none;background:#ef4444;color:#fff;
+                       width:22px;height:22px;border-radius:999px;cursor:pointer;font-weight:800;line-height:1">×</button>
+      </div>`;
+  }).join('');
+
+  // remove handlers
+  mediaPreview.querySelectorAll('button.kill[data-idx]').forEach(btn=>{
+    btn.onclick = () => {
+      const i = +btn.dataset.idx;
+      mediaFiles.splice(i, 1);
+      syncHiddenInputs();
+      renderMediaPreviews();
+    };
+  });
+}
+
+mediaInput?.addEventListener('change', () => {
+  const incoming = Array.from(mediaInput.files || []);
+  incoming.forEach(f => {
+    const type = (f.type || '').startsWith('video') ? 'video' : 'image';
+    mediaFiles.push({ file: f, type });
+  });
+  // Clear the visible input so selecting the same files again will still fire 'change'
+  mediaInput.value = '';
+  syncHiddenInputs();
+  renderMediaPreviews();
+});
   // submit / edit
   const form   = document.getElementById('review-form');
   const btn    = document.getElementById('submit-btn');
@@ -625,6 +1029,7 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
   function toEditMode(id){ editingId=id; btn.textContent='Update review'; cancel.style.display='inline-block'; if(already) already.style.display='block'; }
   function exitEdit(){ editingId=null; btn.textContent='Submit review'; cancel.style.display='none'; form.reset(); document.getElementById('title').value=''; ratingInput.value=0; paint(0); imgPrev.textContent='No image selected'; imgPrev.classList.add('hint'); if(already) already.style.display='none'; }
   cancel?.addEventListener('click', e=>{ e.preventDefault(); exitEdit(); });
+
 
   document.addEventListener('click', (e)=>{
     const b = e.target.closest('.js-edit'); if(!b) return;
@@ -685,12 +1090,27 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
       const data = await resp.json().catch(()=> ({}));
       if (resp.status===401){ toast('err','Please log in to vote'); return; }
       if (!resp.ok || !data?.ok){ toast('err', data?.error || 'Could not record vote'); return; }
-      wrap.querySelector('.js-like').textContent = data.like_count;
+      wrap.querySelector('.js-like').textContent    = data.like_count;
       wrap.querySelector('.js-dislike').textContent = data.dislike_count;
       const likeBtn = wrap.querySelector('.react-btn.like');
       const dislikeBtn = wrap.querySelector('.react-btn.dislike');
-      likeBtn.classList.remove('active'); dislikeBtn.classList.remove('active');
-      if (data.action==='created' || data.action==='switched'){ (value==='1'? likeBtn : dislikeBtn).classList.add('active'); }
+      likeBtn.classList.remove('active');
+      dislikeBtn.classList.remove('active');
+      if (data.action === 'created' || data.action === 'switched'){
+      if (value === '1'){
+        likeBtn.classList.add('active');
+        rememberVote(reviewId, 1);
+      }else{
+        dislikeBtn.classList.add('active');
+        rememberVote(reviewId, -1);
+      }
+      }else if (data.action === 'deleted' || data.action === 'cleared'){
+        rememberVote(reviewId, 0);
+      }else{
+    const v = likeBtn.classList.contains('active') ? 1 :
+            (dislikeBtn.classList.contains('active') ? -1 : 0);
+      rememberVote(reviewId, v);
+    }
     }catch(err){ console.error(err); toast('err','Network error'); }
   });
 
@@ -764,30 +1184,73 @@ body.dark-mode .react-btn.active.dislike{ background:#7f1d1d; border-color:#7f1d
   setTimeout(initPhotoToggles, 500); // safety
 
   // fetch stats
-  (function(){
-    fetch('/api/reviews/{{ product.product_id }}/stats/')
-      .then(r => r.json())
-      .then(data => {
-        if(!data) return;
-        const top = document.getElementById('review-count');
-        if (top){ top.textContent = (data.total ? `${data.total} review${data.total===1?'':'s'}` : 'No reviews yet'); }
-        if (data.total && document.getElementById('rating-summary')){
-          document.getElementById('rating-summary').style.display='grid';
-          document.getElementById('avg-rating').textContent = data.average?.toFixed ? data.average.toFixed(1) : data.average;
-          document.getElementById('total-ratings').textContent = `${data.total} review${data.total===1?'':'s'}`;
-          const total = data.total || 1;
-          for (let star=5; star>=1; star--){
-            const count = (data.counts && (data.counts[String(star)] ?? 0)) || 0;
-            const pct = Math.round((count/total)*100);
-            const bar = document.getElementById(`bar-${star}`);
-            const cnt = document.getElementById(`count-${star}`);
-            if(bar) bar.style.width = pct + '%';
-            if(cnt) cnt.textContent = count;
+  (function () {
+  fetch('/api/reviews/{{ product.product_id }}/stats/')
+    .then(r => r.json())
+    .then(data => {
+      if (!data) return;
+
+      const top = document.getElementById('review-count');
+const cfgEl = document.getElementById('config');
+const ratingsFromTpl = Number(cfgEl?.dataset.ratings || 0);
+const reviewsFromTpl = Number(cfgEl?.dataset.reviews || 0);
+
+// data.total = ratings total from stats API (bars use this)
+const ratingsTotal = Number(data?.total ?? ratingsFromTpl);
+const reviewsTotal = reviewsFromTpl;
+
+if (top) {
+  if (ratingsTotal || reviewsTotal) {
+    const rWord = ratingsTotal === 1 ? 'rating' : 'ratings';
+    const vWord = reviewsTotal === 1 ? 'review' : 'reviews';
+    top.textContent = reviewsTotal
+      ? `${ratingsTotal} ${rWord} & ${reviewsTotal} ${vWord}`
+      : `${ratingsTotal} ${rWord}`;
+  } else {
+    top.textContent = 'No ratings yet';
+  }
+}
+      const summary = document.getElementById('rating-summary');
+      if (data.total && summary) {
+        summary.style.display = 'grid';
+        const avgEl = document.getElementById('avg-rating');
+        if (avgEl) avgEl.textContent = (data.average?.toFixed ? data.average.toFixed(1) : data.average);
+        const totalEl = document.getElementById('total-ratings');
+if (totalEl) {
+  const rWord = ratingsTotal === 1 ? 'rating' : 'ratings';
+  const vWord = reviewsTotal === 1 ? 'review' : 'reviews';
+  totalEl.textContent = reviewsTotal
+    ? `${ratingsTotal} ${rWord} & ${reviewsTotal} ${vWord}`
+    : `${ratingsTotal} ${rWord}`;
+}
+
+        const total = data.total || 1;
+        for (let star = 5; star >= 1; star--) {
+          const count = (data.counts && (data.counts[String(star)] ?? 0)) || 0;
+          const pct = Math.round((count / total) * 100);
+          const bar = document.getElementById(`bar-${star}`);
+          const cnt = document.getElementById(`count-${star}`);
+
+          if (cnt) cnt.textContent = count;
+
+          if (bar) {
+            // reset to 0 so the transition always plays
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            void bar.offsetWidth; // force reflow
+
+            // animate to the real percent (slight stagger)
+            const delay = (5 - star) * 90;
+            requestAnimationFrame(() => {
+              bar.style.transition = 'width .9s cubic-bezier(.22,.8,.2,1)';
+              setTimeout(() => { bar.style.width = pct + '%'; }, delay);
+            });
           }
         }
-      })
-      .catch(err => console.error('Stats fetch error:', err));
-  })();
+      }
+    }) // <-- close the .then block properly
+    .catch(err => console.error('Stats fetch error:', err));
+})();
 
   // --- clamp long review text + toggle
 function initBodyClamp(){
@@ -846,135 +1309,167 @@ window.addEventListener('load', initBodyClamp);
       history.replaceState({}, '', url);
     }
   })();
-})();
-(function(){
-  const backdrop = document.getElementById('galBackdrop');
-  const modal    = document.getElementById('gal');
-  const imgEl    = document.getElementById('galImg');
-  const thumbsEl = document.getElementById('galThumbs');
-  const prevBtn  = document.getElementById('galPrev');
-  const nextBtn  = document.getElementById('galNext');
-  const closeBtn = document.getElementById('galClose');
 
-  const giTitle = document.getElementById('giTitle');
-  const giBody  = document.getElementById('giBody');
-  const giMore  = document.getElementById('giMore');
-  const giRate  = document.getElementById('giRate');
-  const giUser  = document.getElementById('giUser');
-  const giDate  = document.getElementById('giDate');
-  const giVerify= document.getElementById('giVerify');
-  const giLike  = document.getElementById('giLike');
-  const giDis   = document.getElementById('giDislike');
+/* Report Abuse – Flipkart-like: hover menu + one-time report + bottom toast */
+const REPORT_KEY = 'review_reported_v1';
+const getSet = () => { try { return new Set(JSON.parse(localStorage.getItem(REPORT_KEY) || '[]')); } catch (_) { return new Set(); } };
+const saveSet = s => localStorage.setItem(REPORT_KEY, JSON.stringify([...s]));
 
-  let IMGS = []; let cur = 0;
+// keep buttons disabled if already reported
+function markReported(){
+  const s = getSet();
+  document.querySelectorAll('.js-report[data-id]').forEach(b=>{
+    if (s.has(String(b.dataset.id))){
+      b.textContent = 'Reported';
+      b.setAttribute('disabled','');
+    }
+  });
+}
+markReported();
 
-  function lock(){ document.body.style.overflow = 'hidden'; }
-  function unlock(){ document.body.style.overflow = ''; }
+document.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('.js-report'); if(!btn) return;
+  const id = btn.dataset.id; if(!id) return;
 
-  function normalize(u){
-    if (!u) return '';
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
-    // fallback: if review service sends "/media/..." make it absolute to current origin (or proxy)
-    return (u.startsWith('/')) ? (location.origin + u) : u;
-  }
+  const s = getSet();
+  if (s.has(String(id))){ toast('info','Already reported for review moderation.'); return; }
 
-  function paint(){
-    if (!IMGS.length){ imgEl.removeAttribute('src'); return; }
-    cur = (cur + IMGS.length) % IMGS.length;
-    imgEl.src = IMGS[cur];
-    [...thumbsEl.children].forEach((n,i)=> n.classList.toggle('active', i===cur));
-  }
+  // optimistic UI like Flipkart
+  toast('ok','Thanks for reporting it. Our team will look into it at the earliest.');
+  btn.textContent = 'Reported';
+  btn.setAttribute('disabled','');
+  s.add(String(id)); saveSet(s);
 
-  function buildThumbs(){
-    thumbsEl.innerHTML = IMGS.map((u,i)=>`<img src="${u}" data-i="${i}" alt="thumb ${i+1}">`).join('');
-    thumbsEl.onclick = (e)=>{
-      const t = e.target.closest('img[data-i]'); if(!t) return;
-      cur = parseInt(t.dataset.i,10)||0; paint();
-    };
-  }
+  // backend call
+  try{
+    const resp = await fetch(`/api/reviews/${id}/report/`, {
+      method:'POST', credentials:'include',
+      headers:{ 'X-CSRFToken': CSRF, 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: new URLSearchParams({ reason:'abuse' })
+    });
+    if (resp.status === 401){
+      toast('err','Please log in to report');
+      s.delete(String(id)); saveSet(s);
+      btn.textContent = 'Report Abuse';
+      btn.removeAttribute('disabled');
+    } else if (resp.status === 409){
+      toast('info','Already reported for review moderation.');
+    }
+  }catch(_){ /* keep disabled to avoid spam */ }
+});
 
-  function clampBody(text){
-    giBody.textContent = text || '';
-    giMore.hidden = true;
-    if (!text) return;
-    // measure after paint to decide clamping
-    requestAnimationFrame(()=>{
-      const full = giBody.textContent;
-      if (giBody.scrollHeight <= 240) return; // ~10-12 lines
-      // naive clamp: show ~230 chars then toggle
-      const short = full.slice(0, 230) + (full.length>230 ? '…' : '');
-      giBody.textContent = short;
-      giMore.hidden = false;
-      giMore.textContent = 'Read more';
-      giMore.onclick = ()=>{
-        const isShort = giMore.textContent !== 'Show less';
-        giBody.textContent = isShort ? full : short;
-        giMore.textContent = isShort ? 'Show less' : 'Read more';
-      };
+
+(function fastPager(){
+  const root = () => document.getElementById('rv-root');
+  const pager = () => document.querySelector('.pager');
+
+  function attach(){
+    if (!root() || !pager()) return;
+    pager().querySelectorAll('a[href]').forEach(a=>{
+      if (a.classList.contains('is-disabled')) return;
+      a.addEventListener('click', (e)=>{
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // let new-tab etc work
+        e.preventDefault();
+        const url = a.getAttribute('href');
+        if (!url || url === '#') return;
+
+        // show tiny spinner
+        pager().classList.add('loading');
+
+        fetch(url, { credentials: 'include' })
+          .then(r => r.text())
+          .then(html => {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const fresh = doc.getElementById('rv-root');
+            if (!fresh) { location.href = url; return; } // fallback
+            root().replaceWith(fresh);
+            window.history.pushState({}, '', url);
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            // reattach handlers to the new pager
+            setTimeout(()=>{ fastPager(); }, 0);
+          })
+          .catch(()=> location.href = url)
+          .finally(()=> {
+            const p = pager();
+            if (p) p.classList.remove('loading');
+          });
+      });
     });
   }
 
-  async function openGallery(reviewId, startIdx){
-    try{
-      const res = await fetch(`/api/reviews/${reviewId}/`, {credentials:'include'});
-      const data = await res.json();
-      // images
-      let imgs = data.image_urls || [];
-      if ((!imgs || !imgs.length) && data.image_url) imgs = [data.image_url];
-      IMGS = (imgs || []).map(normalize);
-      cur  = Math.max(0, Math.min(startIdx||0, Math.max(IMGS.length-1,0)));
-
-      // right info
-      const r = Number(data.rating||0);
-      if (r>0){ giRate.hidden=false; giRate.textContent = `${r} ★`; } else giRate.hidden=true;
-      giTitle.textContent = data.title || '';
-      clampBody(data.body || '');
-      giUser.textContent  = data.user_name || 'Anonymous';
-      giDate.textContent  = data.display_date || '';
-      giVerify.hidden     = !Boolean(data.is_verified_purchase);
-      giLike.textContent  = data.like_count ?? 0;
-      giDis.textContent   = data.dislike_count ?? 0;
-
-      // thumbs + main image
-      buildThumbs(); paint();
-
-      // open
-      backdrop.classList.add('open'); modal.classList.add('open'); lock();
-    }catch(e){
-      console.error(e); alert('Could not open gallery');
-    }
-  }
-
-  function close(){ backdrop.classList.remove('open'); modal.classList.remove('open'); unlock(); }
-
-  prevBtn.onclick = ()=>{ if(IMGS.length){ cur--; paint(); } };
-  nextBtn.onclick = ()=>{ if(IMGS.length){ cur++; paint(); } };
-  closeBtn.onclick = close;
-  backdrop.onclick = close;
-  document.addEventListener('keydown', (e)=>{ if (!modal.classList.contains('open')) return;
-    if (e.key==='Escape') close();
-    if (e.key==='ArrowLeft'){ cur--; paint(); }
-    if (e.key==='ArrowRight'){ cur++; paint(); }
+  // Re-hydrate on back/forward
+  window.addEventListener('popstate', ()=>{
+    fetch(location.href, { credentials: 'include' })
+      .then(r=>r.text())
+      .then(html=>{
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const fresh = doc.getElementById('rv-root');
+        if (fresh && root()) { root().replaceWith(fresh); fastPager(); }
+      });
   });
 
-  // delegate: click any review photo to open overlay
-  document.addEventListener('click', (e)=>{
-    const img = e.target.closest('.rv-images img'); if (!img) return;
-    const list = [...img.parentElement.querySelectorAll('img')];
-    const start = Math.max(0, list.indexOf(img));
-
-    // find review_id from nearby .react or .js-edit (your markup already has these)
-    const rv   = img.closest('.rv');
-    const rid1 = rv?.querySelector('.react[data-id]')?.dataset.id;
-    const rid2 = rv?.querySelector('.js-edit[data-id]')?.dataset.id;
-    const rid  = rid1 || rid2;
-    if (!rid) return;
-
-    openGallery(rid, start);
-  });
-
-
+  attach();
 })();
+  // Open lightbox (review_gallery) for both images and video thumbs
+document.addEventListener('click', (e) => {
+  // Accept clicks on both images and video thumb wrappers
+  const node = e.target.closest('.rv-images img, .rv-images .rv-thumb[data-vid]');
+  if (!node) return;
 
+  // Get the review id
+  const rv = node.closest('.rv');
+  const reviewId = rv?.dataset.reviewId || rv?.getAttribute('data-review-id');
+  if (!reviewId) return;
+
+  // Build ordered list of thumbnails (images + video-thumbs)
+  const grid  = rv.querySelector('.rv-images');
+  const items = [...grid.querySelectorAll('img, .rv-thumb[data-vid]')];
+
+  // Figure out the index of the clicked item
+  const start = Math.max(0, items.indexOf(node));
+
+  fetch("{% url 'review_gallery' %}" + "?review_id=" + encodeURIComponent(reviewId) + "&idx=" + start, { credentials: 'include' })
+  .then(r => r.text())
+  .then(html => {
+    const dlg  = document.getElementById('rvDlg');
+    const body = document.getElementById('rvDlgBody');
+    if (!dlg || !body) { alert('Gallery host not found'); return; }
+
+    // 1) Insert the HTML
+    body.innerHTML = html;
+
+    // 2) Execute any <script> tags inside the injected HTML
+    body.querySelectorAll('script').forEach(oldS => {
+      const s = document.createElement('script');
+      if (oldS.src) s.src = oldS.src;
+      else s.textContent = oldS.textContent;
+      // carry over type (module vs classic)
+      if (oldS.type) s.type = oldS.type;
+      document.body.appendChild(s);
+      // optional cleanup
+      setTimeout(() => s.remove(), 0);
+    });
+
+    // 3) Make backdrop click close the dialog (in case the gallery code didn't wire it)
+    dlg.onclick = (e) => {
+      const r = dlg.getBoundingClientRect();
+      // if click happened outside the dialog's bounding box, close
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+        dlg.close();
+      }
+    };
+
+    // 4) Also close when a button/link inside has data-rg-close (the close "X" in our template below)
+    body.addEventListener('click', (e) => {
+      if (e.target.closest('[data-rg-close]')) dlg.close();
+    });
+
+    dlg.showModal();
+  })
+  .catch(() => alert('Could not open gallery'));
+
+});
+seedAllReactions(); 
+})();
 </script>
 {% endblock %}

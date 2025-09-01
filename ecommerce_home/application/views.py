@@ -13,13 +13,20 @@ import requests
 from rest_framework.decorators import api_view
 from rest_framework import views, status, generics
 import json
-import jwt, datetime
+import jwt
+from datetime import datetime, timedelta  
 from register.settings import user_url, product_url, cart_url, order_url, review_url
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt 
 from django.views.decorators.http import require_POST, require_GET, require_http_methods 
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseNotFound
 from urllib.parse import urljoin
+from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from urllib.parse import urlencode
+from typing import List, Dict
+
 
 def landing_page(request):
    return redirect("homepage")
@@ -27,37 +34,51 @@ def landing_page(request):
 
 class UserLoginAPIView(APIView):
     def get(self, request):
+        # Allow showing errors via context too (optional)
         return render(request, "userlogin.html")
 
     def post(self, request):
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        email = (request.POST.get('email') or '').strip()
+        password = request.POST.get('password') or ''
+
         user = authenticate(request, email=email, password=password)
         if user is None:
-            return redirect('loginuser')
+            # Bad credentials → show inline error and preserve email
+            return render(
+                request,
+                "userlogin.html",
+                {
+                    "message_type": "error",
+                    "message": "Invalid email or password.",
+                    "email": email,
+                },
+                status=401,
+            )
 
-        if not user.check_password(password):
-            return JsonResponse({'error': 'Incorrect password!'})
+        # (Optional) block inactive users
+        if not user.is_active:
+            return render(
+                request,
+                "userlogin.html",
+                {
+                    "message_type": "error",
+                    "message": "Your account is inactive. Please contact support.",
+                    "email": email,
+                },
+                status=403,
+            )
 
-        # Generate JWT token
+        # Success: issue JWT and continue
         payload = {
             'user_id': user.user_id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
-            'iat': datetime.datetime.utcnow()
+            'exp': datetime.utcnow() + timedelta(minutes=60),
+            'iat': datetime.utcnow(),
         }
         token = jwt.encode(payload, 'secret', algorithm='HS256')
-        
-        # Create response
+
         response = redirect('paginatedproducts')
         response.set_cookie(key='jwt', value=token, httponly=True)
-        response.data = {
-            'jwt': token,
-            'user': UserSerializer(user).data,
-        }
-        print(response)
-
         return response
-
 
 
 
@@ -83,7 +104,45 @@ class UserDetailsView(APIView):
     
 
 def forgot_password(request):
-    return render(request, 'forgot_password.html')
+    User = get_user_model()
+    ctx = {}
+    if request.method == "POST":
+        email = (request.POST.get("email") or "").strip().lower()
+        new_password = request.POST.get("new_password") or ""
+        confirm_password = request.POST.get("confirm_password") or ""
+
+        if not email or not new_password or not confirm_password:
+            ctx.update({"message_type": "error", "message": "All fields are required."})
+            return render(request, "forgot_password.html", ctx)
+
+        if new_password != confirm_password:
+            ctx.update({"message_type": "error", "message": "Passwords do not match."})
+            return render(request, "forgot_password.html", ctx)
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            ctx.update({"message_type": "error", "message": "No account found for that email."})
+            return render(request, "forgot_password.html", ctx)
+
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as ve:
+            ctx.update({"message_type": "error", "message": " ".join(ve.messages)})
+            return render(request, "forgot_password.html", ctx)
+
+        user.set_password(new_password)
+        user.save()
+
+        resp = render(request, "forgot_password.html", {
+            "step": "done",
+            "message_type": "success",
+            "message": "Your password has been reset successfully. Please log in with your new password.",
+        })
+        resp.delete_cookie("jwt")
+        return resp
+
+    return render(request, "forgot_password.html", ctx)
+
 
 def usersignup(request):
     if request.method=="GET":
@@ -212,7 +271,7 @@ def order_address(request):
         return render(request,'orderaddress.html')
         
 
-      
+
 def products(request):
     response = requests.get(f'{product_url}/api/products/')
    # print(type(json.loads(response.content)))
@@ -599,30 +658,143 @@ def vieworders(request):
 
 from django.urls import reverse
 
+
+PAGE_SIZE = 3  
+
+def _safe_str(x):
+    return (x or "").strip() if isinstance(x, str) else ""
+
+def _parse_dt(s: str):
+    if not s:
+        return datetime.min
+    s = s.strip()
+    fmts = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
+    for f in fmts:
+        try:
+            return datetime.strptime(s, f)
+        except Exception:
+            pass
+    return datetime.min
+
+def _helpfulness(rv: Dict) -> int:
+    return int(rv.get("like_count", 0))
+
+def _fetch_all_reviews_for_product(request, product_id) -> List[Dict]:
+    all_reviews, page = [], 1
+    while True:
+        try:
+            r = requests.get(
+                f"{review_url}/api/reviews/",
+                params={"product_id": product_id, "page": page},
+                cookies=request.COOKIES, timeout=10
+            )
+        except requests.RequestException:
+            break
+        if not r.ok:
+            break
+        data = r.json() if r.headers.get("content-type","").startswith("application/json") else {}
+        chunk = data.get("results", [])
+        if not chunk:
+            break
+        all_reviews.extend(chunk)
+        pages = int(data.get("pages", page) or page)
+        if page >= pages:
+            break
+        page += 1
+    return all_reviews
+
+
+def _is_review_entry(rv):
+    """Count as a 'review' only if user added text or media."""
+    if rv.get('title') or rv.get('body') or rv.get('image_url'):
+        return True
+    if isinstance(rv.get('image_urls'), list) and rv['image_urls']:
+        return True
+    if isinstance(rv.get('video_urls'), list) and rv['video_urls']:
+        return True
+    return False
+
+def _build_page_links(cur_page, total_pages, make_url):
+    """
+    Return a list like:
+    [{'n':1,'url':...,'is_current':False}, {'dots':True}, {'n':8,...}, {'n':9,...}, {'n':10,...}, {'dots':True}, {'n':114,...}]
+    Rules:
+      - If pages <= 9: show all
+      - Else: 1 … (cur-2..cur+2) … last
+      - Avoid duplicate dots when ranges touch
+    """
+    items = []
+
+    def add_num(n):
+        items.append({'n': n, 'url': make_url(n), 'is_current': (n == cur_page)})
+
+    def add_dots():
+        if not items or items[-1].get('dots'):
+            return
+        items.append({'dots': True})
+
+    if total_pages <= 9:
+        for n in range(1, total_pages + 1):
+            add_num(n)
+        return items
+
+    # Always include first
+    add_num(1)
+
+    # Left dots?
+    left_start = max(2, cur_page - 2)
+    left_gap_needed = left_start > 2
+    if left_gap_needed:
+        add_dots()
+    else:
+        # If no gap, include pages up to left_start - 1 (i.e., page 2)
+        for n in range(2, left_start):
+            add_num(n)
+
+    # Middle window
+    mid_start = left_start
+    mid_end = min(total_pages - 1, cur_page + 2)
+    for n in range(mid_start, mid_end + 1):
+        add_num(n)
+
+    # Right dots?
+    right_gap_needed = mid_end < (total_pages - 1)
+    if right_gap_needed:
+        add_dots()
+    else:
+        # If no gap, include the tail pages up to last-1
+        for n in range(mid_end + 1, total_pages):
+            add_num(n)
+
+    # Always include last (if not already 1)
+    if total_pages > 1:
+        add_num(total_pages)
+
+    return items
+
+
 def reviews_page(request, product_id):
+    # product info
     product = requests.get(f'{product_url}/api/singleproduct/{product_id}/').json()
 
-    # who is logged in?
+    # logged in user & can_review
     current_user_id = _get_current_user_id(request)
+    can_review = bool(current_user_id and _has_purchased(request, product_id))
 
-    # can this user review? (verified purchase check)
-    can_review = False
-    if current_user_id:
-        can_review = _has_purchased(request, product_id)   
-
-    try:
-        u = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES).json()
-        current_user_id = u.get('user_id')
-    except Exception:
-        pass
+    # query params
+    sort  = request.GET.get('sort', 'recent')  # recent | helpful | rating_desc | rating_asc
+    stars = request.GET.get('stars')           # '1'..'5' or None
+    valid_stars = {'1','2','3','4','5'}
+    if stars not in valid_stars:
+        stars = None
 
     # page param
     try:
-        page = int(request.GET.get('page', '1'))
-        if page < 1: page = 1
+        page = max(1, int(request.GET.get('page', '1')))
     except Exception:
         page = 1
-# Fetch stats
+
+    # stats for header
     stats = {}
     try:
         rs = requests.get(
@@ -633,23 +805,46 @@ def reviews_page(request, product_id):
         if rs.ok:
             stats = rs.json()
     except Exception:
-        stats = {}
-    # fetch this page of reviews
-    r = requests.get(f'{review_url}/api/reviews/', params={'product_id': product_id, 'page': page},
-                     cookies=request.COOKIES, timeout=10)
-    data = r.json() if r.ok else {}
-    reviews = data.get('results', []) if isinstance(data, dict) else []
-    cur_page = int(data.get('page', page) or 1)
-    total_pages = int(data.get('pages', 1) or 1)
-    total_count = data.get('count', len(reviews))
+        pass
 
-    # Optional: move my review to top if it's in THIS page
+    # fetch all, then filter + sort
+    all_reviews = _fetch_all_reviews_for_product(request, product_id)
+
+    # Stars filter
+    if stars:
+        s = int(stars)
+        all_reviews = [rv for rv in all_reviews if int(rv.get('rating', 0)) == s]
+    rating_count = sum(1 for rv in all_reviews if int(rv.get('rating', 0)) > 0)
+    review_count = sum(1 for rv in all_reviews if _is_review_entry(rv))
+
+    # Sort
+    if sort == 'rating_desc':
+        all_reviews.sort(key=lambda rv: int(rv.get('rating', 0)), reverse=True)
+    elif sort == 'rating_asc':
+        all_reviews.sort(key=lambda rv: int(rv.get('rating', 0)))
+    elif sort == 'helpful':
+        all_reviews.sort(
+            key=lambda rv: (_helpfulness(rv), _parse_dt(_safe_str(rv.get('created_at')))),
+            reverse=True
+        )
+    else:  # recent
+        all_reviews.sort(key=lambda rv: _parse_dt(_safe_str(rv.get('created_at'))), reverse=True)
+
+    # pagination
+    total_count = len(all_reviews)
+    total_pages = max(1, (total_count + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = min(page, total_pages)
+    start, end = (page - 1) * PAGE_SIZE, (page * PAGE_SIZE)
+    reviews = all_reviews[start:end]
+    cur_page = page
+
+    # pin my review to top within the current page
     if current_user_id:
         mine = [rv for rv in reviews if int(rv.get('user_id', 0)) == int(current_user_id)]
-        others = [rv for rv in reviews if not (int(rv.get('user_id', 0)) == int(current_user_id))]
+        others = [rv for rv in reviews if int(rv.get('user_id', 0)) != int(current_user_id)]
         reviews = mine + others
 
-    # NEW: fetch the user's review (regardless of page) so we can pin it at top
+    # pinned review (my review anywhere); only show if it matches stars filter (when set)
     pinned_review = None
     if current_user_id:
         try:
@@ -658,25 +853,37 @@ def reviews_page(request, product_id):
                 params={'product_id': product_id},
                 cookies=request.COOKIES, timeout=10
             ).json()
-            pinned_review = mr.get('review')
+            pr = mr.get('review')
+            if pr and (not stars or int(pr.get('rating',0)) == int(stars)):
+                pinned_review = pr
         except Exception:
             pinned_review = None
 
-# 🔧 DEDUPE: if pinned exists and is also in this page, remove it from the page list
+    # de-dup pinned from this page
     if pinned_review:
         pr_id = int(pinned_review.get('review_id'))
         reviews = [rv for rv in reviews if int(rv.get('review_id')) != pr_id]
 
-
-    # build prev/next urls
+    # pager URLs – preserve sort & stars
     base = reverse('reviews_page', args=[product_id])
-    prev_url = f"{base}?page={cur_page-1}" if cur_page > 1 else None
-    next_url = f"{base}?page={cur_page+1}" if cur_page < total_pages else None
+    common = {}
+    if sort and sort != 'recent':
+        common['sort'] = sort
+    if stars:
+        common['stars'] = stars
 
+    def page_url(n):
+        q = common.copy()
+        q['page'] = n
+        return f"{base}?{urlencode(q)}"
+
+    prev_url = page_url(cur_page - 1) if cur_page > 1 else None
+    next_url = page_url(cur_page + 1) if cur_page < total_pages else None
+    page_links = _build_page_links(cur_page, total_pages, page_url)
     return render(request, 'reviews.html', {
         'product': product,
         'reviews': reviews,
-        'pinned_review': pinned_review,           
+        'pinned_review': pinned_review,
         'current_user_id': current_user_id,
         'cur_page': cur_page,
         'total_pages': total_pages,
@@ -684,8 +891,12 @@ def reviews_page(request, product_id):
         'next_url': next_url,
         'stats': stats,
         'total_count': total_count,
-        'can_review': can_review,        
-
+        'can_review': can_review,
+        'sort': sort,
+        'stars': stars,
+        'rating_count': rating_count,
+        'review_count': review_count,
+        'page_links': page_links,
     })
 
 
@@ -697,6 +908,7 @@ def review_stats(request, product_id):
         return JsonResponse(data, status=rr.status_code, safe=True)
     except Exception:
         return JsonResponse({'error': 'review service unreachable'}, status=502)
+
 
 
 @require_POST
@@ -722,13 +934,16 @@ def submit_review(request, product_id):
         'body': request.POST.get('body', ''),
     }
 
-    # -------- key change: forward ALL images[] + legacy image --------
+    # forward ALL images[] + legacy image
     files = []
     for f in request.FILES.getlist('images'):
         files.append(('images', (f.name, f.read(), f.content_type or 'application/octet-stream')))
     if 'image' in request.FILES:  # keep old single file support
         f = request.FILES['image']
         files.append(('image', (f.name, f.read(), f.content_type or 'application/octet-stream')))
+    #videos[]
+    for v in request.FILES.getlist('videos'):
+        files.append(('videos', (v.name, v.read(), v.content_type or 'application/octet-stream')))
 
     try:
         r = requests.post(
@@ -768,13 +983,17 @@ def edit_review(request, review_id):
     if 'body' in request.POST:
         data['body'] = request.POST['body']
 
-    # -------- key change: forward ALL images[] + legacy image --------
+    # forward ALL images[] + legacy image
     files = []
     for f in request.FILES.getlist('images'):
         files.append(('images', (f.name, f.read(), f.content_type or 'application/octet-stream')))
     if 'image' in request.FILES:  # keep old single file support
         f = request.FILES['image']
         files.append(('image', (f.name, f.read(), f.content_type or 'application/octet-stream')))
+
+    # Videos[]
+    for v in request.FILES.getlist('videos'):
+        files.append(('videos', (v.name, v.read(), v.content_type or 'application/octet-stream')))
 
     try:
         r = requests.patch(
@@ -794,6 +1013,8 @@ def edit_review(request, review_id):
         body = {'raw': r.text}
 
     return JsonResponse(body, status=r.status_code, safe=isinstance(body, dict))
+
+
 
 
 @require_POST
@@ -848,6 +1069,7 @@ def _has_purchased(request, product_id) -> bool:
     except Exception:
         return False
     
+
 @require_POST
 def delete_review(request, review_id):
     if 'jwt' not in request.COOKIES:
@@ -897,6 +1119,7 @@ def review_gallery(request):
     imgs = data.get("image_urls") or []
     if not imgs and data.get("image_url"):
         imgs = [data["image_url"]]
+    vids = data.get("video_urls") or []
 
     # make any relative URLs absolute (e.g. "/media/…")
     base = review_url if review_url.endswith("/") else review_url + "/"
@@ -904,11 +1127,13 @@ def review_gallery(request):
         if not u:
             return u
         return u if u.startswith("http://") or u.startswith("https://") else urljoin(base, u.lstrip("/"))
-    imgs = [_abs((u or "").strip()) for u in imgs]
+    
+    media = ([{"type":"image", "url": _abs((u or "").strip())} for u in imgs] +
+         [{"type":"video", "url": _abs((u or "").strip())} for u in vids])
 
     context = {
-        "images": imgs,
-        "start_index": max(0, min(start, max(len(imgs) - 1, 0))),
+        "media": media,
+        "start_index": max(0, min(start, max(len(media) - 1, 0))),
         "title": data.get("title") or "",
         "body": data.get("body") or "",
         "rating": data.get("rating") or 0,
@@ -921,3 +1146,5 @@ def review_gallery(request):
     }
     # ensure text/html so your JS content-type check passes
     return render(request, "review_gallery.html", context, content_type="text/html; charset=utf-8")
+
+

@@ -1,0 +1,230 @@
+{# templates/review_enhancements.html #}
+<style>
+.fk-filters{margin:12px 0 8px}
+.fk-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fk-title{font-weight:780;margin-right:6px}
+.fk-sub{color:var(--muted);font-size:13px}
+
+/* wrapper so hover only when ON the box */
+.fk-dd{position:relative;display:inline-flex}
+
+/* trigger */
+.dd-trigger{
+  display:inline-flex;align-items:center;justify-content:space-between;gap:10px;
+  min-width:168px;height:44px;padding:0 14px;border-radius:10px;
+  background:var(--bg); color:var(--fg); border:1px solid var(--line);
+  cursor:pointer; font-weight:700;
+}
+.dd-trigger:hover{background:rgba(148,163,184,.12)}
+.dd-trigger .dd-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* abuse-style chevron + smooth motion */
+.dd-trigger .chev{
+  width:18px;height:18px;flex:0 0 auto;
+  fill:none; stroke:var(--muted); stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+  transition: transform .18s ease, stroke .18s ease;
+}
+.dd-trigger:hover .chev{ stroke:var(--fg); transform:translateY(2px); }
+.fk-dd.open .dd-trigger .chev{ stroke:var(--fg); transform:rotate(180deg) translateY(2px); }
+
+/* menu slides down/up smoothly like the abuse menu appears */
+.dd-menu{
+  position:absolute;left:0;top:calc(100% + 8px);
+  min-width:260px;max-width:320px;background:var(--bg);color:var(--fg);
+  border:1px solid var(--line);border-radius:12px;padding:6px;z-index:200;
+  display:block; opacity:0; transform:translateY(-6px);
+  box-shadow:0 16px 40px rgba(0,0,0,.18);
+  pointer-events:none; transition:opacity .18s ease, transform .18s ease;
+}
+.fk-dd.open .dd-menu{ opacity:1; transform:translateY(0); pointer-events:auto; }
+
+/* icon cell accepts inline SVGs */
+.dd-ic{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;opacity:.9}
+.dd-ic svg{width:18px;height:18px;display:block}
+
+/* menu */
+.dd-menu{
+  position:absolute;left:0;top:calc(100% + 8px);
+  min-width:260px;max-width:320px;background:var(--bg);color:var(--fg);
+  border:1px solid var(--line);border-radius:12px;padding:6px;z-index:200;
+  display:none;box-shadow:0 16px 40px rgba(0,0,0,.18);
+}
+.fk-dd.open .dd-menu{display:block}
+.dd-menu::before{
+  content:"";position:absolute;top:-7px;left:32px;border-width:0 7px 7px 7px;border-style:solid;
+  border-color:transparent transparent var(--bg) transparent;pointer-events:none;
+}
+.dd-menu::after{
+  content:"";position:absolute;top:-8px;left:31px;border-width:0 8px 8px 8px;border-style:solid;
+  border-color:transparent transparent var(--line) transparent;filter:blur(.25px);pointer-events:none;
+}
+
+/* items */
+.dd-item{
+  display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:10px;cursor:pointer;
+  font-weight:600;outline:2px solid transparent;
+}
+.dd-item:hover{background:rgba(148,163,184,.12);outline-color:var(--brand)}
+.dd-item.active{outline:2px solid var(--brand)} /* JS moves this as you hover */
+.dd-ic{width:18px;text-align:center;opacity:.9}
+.star{font-size:16px}
+
+/* buttons */
+/* buttons: reuse global .btn .primary/.ghost and add a shared spinner */
+.btn .lbl{vertical-align:middle}
+.btn .spin{
+  width:16px;height:16px;border-radius:50%;
+  border:2.5px solid currentColor;border-right-color:transparent;
+  display:none;margin-left:8px;vertical-align:middle;
+  animation:spin .65s linear infinite;
+}
+.btn.btn-loading{pointer-events:none;opacity:.85}
+.btn.btn-loading .spin{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+</style>
+
+<div class="fk-filters">
+  <div class="fk-row" style="margin-bottom:10px">
+    <div class="fk-title">Review Filters</div>
+  </div>
+
+  <div class="fk-row">
+
+    <!-- SORT -->
+    <div class="fk-dd" id="ddSortWrap">
+      <button type="button" class="dd-trigger" aria-haspopup="listbox" aria-expanded="false" id="sortTrigger">
+        <span class="dd-label" id="sortLabel">Newest first</span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="dd-menu" role="listbox" id="sortMenu">
+        <div class="dd-item" data-v="recent"><span class="dd-ic">🕓</span><span>Newest first</span></div>
+        <div class="dd-item" data-v="helpful"><span class="dd-ic">👍</span><span>Most helpful (likes)</span></div>
+        <div class="dd-item" data-v="rating_desc"><span class="dd-ic">⬇️</span><span>Rating: high → low</span></div>
+        <div class="dd-item" data-v="rating_asc"><span class="dd-ic">⬆️</span><span>Rating: low → high</span></div>
+      </div>
+    </div>
+
+    <!-- STARS -->
+    <div class="fk-dd" id="ddStarsWrap">
+      <button type="button" class="dd-trigger" aria-haspopup="listbox" aria-expanded="false" id="starsTrigger">
+        <span class="dd-label" id="starsLabel">All stars</span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="dd-menu" role="listbox" id="starsMenu">
+<div class="dd-item" data-v="">
+  <span class="dd-ic">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  </span>
+  <span>All stars</span>
+</div>        
+<div class="dd-item" data-v="5"><span class="dd-ic star">★</span><span>5</span></div>
+        <div class="dd-item" data-v="4"><span class="dd-ic star">★</span><span>4</span></div>
+        <div class="dd-item" data-v="3"><span class="dd-ic star">★</span><span>3</span></div>
+        <div class="dd-item" data-v="2"><span class="dd-ic star">★</span><span>2</span></div>
+        <div class="dd-item" data-v="1"><span class="dd-ic star">★</span><span>1</span></div>
+      </div>
+    </div>
+
+    <!-- APPLY / CLEAR -->
+    <button type="button" class="btn primary" id="applyBtn">
+  <span class="lbl">Apply</span><span class="spin" aria-hidden="true"></span>
+</button>
+<button type="button" class="btn ghost" id="clearBtn">
+  <span class="lbl">Clear</span><span class="spin" aria-hidden="true"></span>
+</button>
+
+  </div>
+</div>
+
+<input type="hidden" id="curSortVal"  value="{{ request.GET.sort|default:'recent' }}">
+<input type="hidden" id="curStarsVal" value="{{ request.GET.stars|default:'' }}">
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  const sortWrap = $('ddSortWrap'),  sortTrig = $('sortTrigger'),  sortMenu = $('sortMenu'),  sortLabel = $('sortLabel');
+  const starsWrap= $('ddStarsWrap'), starsTrig= $('starsTrigger'), starsMenu= $('starsMenu'), starsLabel= $('starsLabel');
+  const curSort  = $('curSortVal'), curStars = $('curStarsVal');
+  const applyBtn = $('applyBtn'),  clearBtn = $('clearBtn');
+
+  function setActive(menu, val){
+    menu.querySelectorAll('.dd-item').forEach(it => it.classList.toggle('active', String(it.dataset.v)===String(val)));
+  }
+  function seedLabels(){
+    const sv = (curSort.value || 'recent');
+    const st = (curStars.value || '');
+    const S = { recent:'Newest first', helpful:'Most helpful (likes)', rating_desc:'Rating: high → low', rating_asc:'Rating: low → high' };
+    sortLabel.textContent = S[sv] || 'Newest first'; setActive(sortMenu, sv);
+    starsLabel.textContent = st ? ('★ '+st) : 'All stars'; setActive(starsMenu, st);
+  }
+  seedLabels();
+
+  /* Dropdowns: open on hover ON the box, stay open; close on outside click/ESC; small leave delay */
+  function makeDropdown(wrap, trigger, menu){
+    let closeTimer = null;
+    const open  = ()=>{ clearTimeout(closeTimer); wrap.classList.add('open');  trigger.setAttribute('aria-expanded','true'); };
+    const close = ()=>{ clearTimeout(closeTimer); wrap.classList.remove('open'); trigger.setAttribute('aria-expanded','false'); };
+
+    trigger.addEventListener('mouseenter', open);
+    trigger.addEventListener('click', (e)=>{ e.preventDefault(); wrap.classList.toggle('open'); trigger.setAttribute('aria-expanded', wrap.classList.contains('open')); });
+
+    wrap.addEventListener('mouseenter', ()=>{ clearTimeout(closeTimer); open(); });
+    wrap.addEventListener('mouseleave', ()=>{ closeTimer = setTimeout(close, 180); });
+
+    document.addEventListener('click', e => { if(!wrap.contains(e.target)) close(); });
+    document.addEventListener('keydown', e => { if(e.key==='Escape') close(); });
+
+    /* move blue outline as you hover items */
+    menu.addEventListener('mouseover', e=>{
+      const item = e.target.closest('.dd-item'); if(item){ setActive(menu, item.dataset.v); }
+    });
+  }
+  makeDropdown(sortWrap, sortTrig, sortMenu);
+  makeDropdown(starsWrap, starsTrig, starsMenu);
+
+  /* select handlers */
+  sortMenu.addEventListener('click', e=>{
+    const it = e.target.closest('.dd-item'); if(!it) return;
+    curSort.value = it.dataset.v || 'recent'; seedLabels(); sortWrap.classList.remove('open');
+  });
+  starsMenu.addEventListener('click', e=>{
+    const it = e.target.closest('.dd-item'); if(!it) return;
+    curStars.value = it.dataset.v || ''; seedLabels(); starsWrap.classList.remove('open');
+  });
+
+  /* button loading keeps text visible; spinner shows to the right */
+function startNavLoading(btn){
+  btn.classList.add('btn-loading');
+  btn.setAttribute('aria-busy','true');
+  btn.disabled = true;              // prevent double-clicks
+  // keep spinner until navigation; no removal timer
+  window.addEventListener('beforeunload', ()=>{});  // no-op, just ensures we don't revert
+}
+
+  function buildUrl(){
+    const url = new URL(location.href), p = url.searchParams;
+    p.set('page','1');
+    p.set('sort', (curSort.value || 'recent'));
+    if(curStars.value){ p.set('stars', curStars.value); } else { p.delete('stars'); }
+    url.search = p.toString(); return url.toString();
+  }
+
+  applyBtn.addEventListener('click', ()=>{
+  startNavLoading(applyBtn);
+  location.assign(buildUrl());
+});
+
+clearBtn.addEventListener('click', ()=>{
+  startNavLoading(clearBtn);
+  const url = new URL(location.href), p = url.searchParams;
+  p.set('page','1'); p.set('sort','recent'); p.delete('stars');
+  url.search = p.toString();
+  location.assign(url.toString());
+});
+})();
+</script>

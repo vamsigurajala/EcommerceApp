@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <style>
-    /* --- your existing styles unchanged --- */
     body.light-mode { background:#fff; color:#222; }
     body.dark-mode  { background:#222; color:#fff; }
     header, nav, .card, .pagination a { transition: background .2s, color .2s; }
@@ -58,7 +57,6 @@
     .cart-badge{ position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; padding:0 6px; border-radius:9999px; background:#ff3b30; color:#fff; font-size:12px; font-weight:700; line-height:18px; text-align:center; box-shadow:0 0 0 2px #fff; }
     body.dark-mode .cart-badge{ box-shadow:0 0 0 2px #222; }
 
-    /* dialog backdrop + page scroll lock (used by gallery) */
     #rvDlg::backdrop{ background:rgba(0,0,0,.55); }
   </style>
 
@@ -86,7 +84,7 @@
     </button>
 
     <p>Hi {{ user.username }}, Welcome to</p>
-    <h1>Ecommerce Site</h1>
+    <h1>Novacart</h1>
 
     <nav class="icon-navbar">
       <a href="/api/paginate/?page=1" class="nav-icon-link"><i class="fa fa-home"></i><span class="icon-tooltip">Home</span></a>
@@ -147,20 +145,18 @@
   function lock(){ document.body.style.overflow = 'hidden'; }
   function unlock(){ document.body.style.overflow = ''; }
 
-  // NEW: robust positioning
   function placeCloseButton(){
     if (!dlg.open) return;
     const r = dlg.getBoundingClientRect();
     const btnW = closeFloat.offsetWidth || 42;
     const btnH = closeFloat.offsetHeight || 42;
 
-    // try just outside, fall back just inside if no room
     let left = r.right + 12;
     let top  = r.top + 12;
     if (left + btnW > window.innerWidth - 6) left = r.right - btnW - 12;
     if (top < 12) top = 12;
 
-    closeFloat.style.right = '';           // ensure we’re using 'left' placement
+    closeFloat.style.right = '';           
     closeFloat.style.left  = left + 'px';
     closeFloat.style.top   = top  + 'px';
     closeFloat.style.display = 'flex';
@@ -171,7 +167,6 @@
   }
   closeFloat.onclick = ()=> dlg.close();
 
-  // … your delegated click that opens the gallery …
   document.addEventListener('click', async (e) => {
     const GALLERY_URL = "{% url 'review_gallery' %}";
     const img = e.target.closest('.rv-images img');
@@ -207,7 +202,6 @@
       if (!dlg.open) dlg.showModal();
       lock();
 
-      // IMPORTANT: position after paint so it doesn’t stay at (0,0)
       requestAnimationFrame(placeCloseButton);
       setTimeout(placeCloseButton, 0);
       window.addEventListener('resize', placeCloseButton);
