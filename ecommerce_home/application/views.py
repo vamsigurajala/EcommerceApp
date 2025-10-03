@@ -11,11 +11,14 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 import requests
 from rest_framework.decorators import api_view
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 from rest_framework import views, status, generics
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 import json
 import jwt
 from datetime import datetime, timedelta  
-from register.settings import user_url, product_url, cart_url, order_url, review_url
+from register.settings import user_url, product_url, cart_url, order_url, review_url, payment_url
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt 
 from django.views.decorators.http import require_POST, require_GET, require_http_methods 
 from django.contrib import messages
@@ -26,11 +29,15 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from urllib.parse import urlencode
 from typing import List, Dict
+from django.urls import reverse
+import uuid as py_uuid
+import uuid
 
 
 def landing_page(request):
    return redirect("homepage")
 
+#LOGIN AND SIGNUP PAGE CODE
 
 class UserLoginAPIView(APIView):
     def get(self, request):
@@ -81,27 +88,28 @@ class UserLoginAPIView(APIView):
         return response
 
 
-
 class UserDetailsView(APIView):
-    def get(self, request):
+    permission_classes = []  
 
-        # Retrieve JWT token from cookies
-        token=request.COOKIES.get('jwt')
+    JWT_SECRET = 'secret'
+    JWT_ALGORITHM = 'HS256'
 
+    def get_user(self, token):
         if not token:
-            raise AuthenticationFailed('User not authenticated!')
-        
-        try:
-            payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Token has expired!')
-        
-        # Get user from database using user_id from JWT token
-        user = User.objects.filter(user_id=payload['user_id']).first()
-        serializer = UserSerializer(user)
-        user_id=serializer.data.get('user_id')
-        return Response(serializer.data)
-    
+            raise AuthenticationFailed('Unauthenticated')
+        payload = jwt.decode(token, self.JWT_SECRET, algorithms=[self.JWT_ALGORITHM])
+        return User.objects.get(pk=payload['user_id'])
+
+    def get(self, request):
+        user = self.get_user(request.COOKIES.get('jwt'))
+        data = UserSerializer(user).data
+        # Don’t leak password hash (write_only anyway), just return the fields we care about
+        return Response({
+            'user_id': data['user_id'],
+            'username': data['username'],
+            'email': data['email'],
+            'phone': data.get('phone')
+        })
 
 def forgot_password(request):
     User = get_user_model()
@@ -144,38 +152,46 @@ def forgot_password(request):
     return render(request, "forgot_password.html", ctx)
 
 
+# views.py  --- usersignup()
+from datetime import datetime, timedelta
+import jwt
+
 def usersignup(request):
-    if request.method=="GET":
-
+    if request.method == "GET":
         return render(request, "usersignup.html")
-    elif request.method=="POST":
-            
-            print(request.POST['name'])
-            if request.POST['user_role']=='buyer':
 
-                user=User(username= request.POST['name'], 
-                        email= request.POST['email'], 
-                        age=request.POST['age'],
-                        gender=request.POST['gender'],
-                        user_role_id = 1)
-                
-                if(request.POST['password']!="") and (request.POST['confirm_password']!="") and (request.POST['password'] == request.POST['confirm_password']):
+    elif request.method == "POST":
+        role = request.POST.get('user_role')
+        phone = request.POST.get('phone')  
 
-                    user.set_password(request.POST['password'])
-                    user.save()
-            else:
-                user=User(username= request.POST['name'], 
-                        email= request.POST['email'], 
-                        age=request.POST['age'],
-                        gender=request.POST['gender'],
-                        user_role_id = 2)
-                
-                if(request.POST['password']!="") and (request.POST['confirm_password']!="") and (request.POST['password'] == request.POST['confirm_password']):
+        # create user
+        user = User(
+            username=request.POST['name'],
+            email=request.POST['email'],
+            age=request.POST['age'],
+            gender=request.POST['gender'],
+            user_role_id = 1 if role == 'buyer' else 2,
+        )
+        if (request.POST.get('password') and
+            request.POST.get('confirm_password') and
+            request.POST['password'] == request.POST['confirm_password']):
+            user.set_password(request.POST['password'])
+        # set phone for both cases
+        user.phone = phone
+        user.save()
 
-                    user.set_password(request.POST['password'])
-                    user.save()
-            return render(request, "address.html")
-        
+        # *** IMPORTANT: auto-login by issuing the JWT like your login view ***
+        payload = {
+            'user_id': user.user_id,
+            'exp': datetime.utcnow() + timedelta(minutes=60),
+            'iat': datetime.utcnow(),
+        }
+        token = jwt.encode(payload, 'secret', algorithm='HS256')
+
+        resp = redirect('addingaddress')   # or whatever name maps to address.html
+        resp.set_cookie(key='jwt', value=token, httponly=True)
+        return resp
+
 
 
 class LogoutView(APIView):
@@ -194,7 +210,6 @@ class AddressView(APIView):
 
     def get_user_id(self, token):
         if not token:
-
             raise AuthenticationFailed('User not authenticated!')
         try:
             payload = jwt.decode(token, self.JWT_SECRET, algorithms=[self.JWT_ALGORITHM])
@@ -205,47 +220,99 @@ class AddressView(APIView):
     def get(self, request):
         token = request.COOKIES.get('jwt')
         user_id = self.get_user_id(token)
-        addresses = Address.objects.filter(user=user_id)
-        if addresses:
-
-            serializer = AddressSerializer(addresses, many=True)
-            return Response({'addresses': serializer.data})
-        else:
-            return Response({'message': 'User has no address'})
+        addresses = Address.objects.filter(user_id=user_id).order_by('-updated_at', '-created_at')
+        serializer = AddressSerializer(addresses, many=True)
+        return Response({'addresses': serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
         token = request.COOKIES.get('jwt')
         user_id = self.get_user_id(token)
-        address_serializer = AddressSerializer(data=request.data)
-        if address_serializer.is_valid():
+        #serializer = AddressSerializer(data=request.data)
+        serializer = AddressSerializer(data={**request.data, 'user': self.get_user_id(request.COOKIES.get('jwt'))})
+        if serializer.is_valid():
+            # set FK via *_id is fine
+            serializer.save(user_id=user_id)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            address_serializer.save(user_id=user_id)
-            return Response(address_serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(address_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request):
+        """
+        Update an address that belongs to the logged-in user.
+        Pass ?address_id=<id> in the query string.
+        """
+        token = request.COOKIES.get('jwt')
+        user_id = self.get_user_id(token)
+        addr_id = request.query_params.get('address_id')
+
+        if not addr_id:
+            return Response({'detail': 'address_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            addr = Address.objects.get(pk=addr_id)
+        except Address.DoesNotExist:
+            return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if addr.user_id != user_id:
+            raise PermissionDenied('Not your address')
+
+        serializer = AddressSerializer(addr, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()  # user_id stays same
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        token = request.COOKIES.get('jwt')
+        user_id = self.get_user_id(token)
+        addr_id = request.query_params.get('address_id')
+
+        if not addr_id:
+            return Response({'detail': 'address_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            addr = Address.objects.get(pk=addr_id)
+        except Address.DoesNotExist:
+            return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if addr.user_id != user_id:
+            raise PermissionDenied('Not your address')
+
+        addr.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+def _jwt_user_id(request):
+    # same secret/alg as elsewhere
+    token = request.COOKIES.get('jwt')
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        return payload.get('user_id')
+    except jwt.ExpiredSignatureError:
+        return None
 
 def useraddress(request):
-    # Get the user id from the response of the 'UserDetailsView' API
-    user_id = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES).json()['user_id']
-    
+    user_id = _jwt_user_id(request)
+    if not user_id:
+        # gentle UX instead of crashing
+        return render(request, 'address.html', {
+            'message': "Your session expired. Please log in again before adding an address."
+        })
     if request.method == "POST":
-        # Create a new Address object with the provided data
-        address_object = Address(user_id=user_id,
-                                 door_no=request.POST['door_no'],
-                                 street=request.POST['street'],
-                                 area=request.POST['area'],
-                                 city=request.POST['city'],
-                                 state=request.POST['state'],
-                                 pincode=request.POST['pincode'],
-                                 country=request.POST['country'])
-        address_object.save() # Save the object to the database 
-        return redirect('/api/login/')
-    
-    else:
-        # Render the 'address.html' template for GET requests
-        return render(request, 'address.html')
+        Address.objects.create(
+            user_id=user_id,
+            door_no=request.POST['door_no'],
+            street=request.POST['street'],
+            area=request.POST['area'],
+            city=request.POST['city'],
+            state=request.POST['state'],
+            pincode=request.POST['pincode'],
+            country=request.POST['country'],
+        )
+        return redirect('/api/login/')  # or wherever you want next
+    return render(request, 'address.html')
 
 
 
@@ -271,6 +338,7 @@ def order_address(request):
         return render(request,'orderaddress.html')
         
 
+# PRODUCTS CODE
 
 def products(request):
     response = requests.get(f'{product_url}/api/products/')
@@ -278,15 +346,13 @@ def products(request):
     products=json.loads(response.content)
     return render(request, 'allproducts.html', {'products': products})
 
-
-
-
 def product_info(request):
     response = requests.get(f'{product_url}/api/allproducts/')
     products=json.loads(response.content)
     return render(request, 'products.html',{ "products" :products})
 
 
+# HOMEPAGE CODE
 # View function for the homepage
 def homepage(request, page = None,searchproduct=None):
     # Get the page number from the GET parameters, default to 1 if not provided
@@ -321,8 +387,6 @@ def homepage(request, page = None,searchproduct=None):
         'prev_page': int(page)-1,
     }
     return render(request, 'allproducts.html', context)
-
-
 
 
 # View function for paginating products
@@ -386,7 +450,7 @@ class GetUserIdAPIView(views.APIView): #Get the UserId
         return Response( UserSerializer(user).data)
 
 
-
+# CART SERVICE CODE
 @require_POST
 def add_to_cart_ajax(request):
     if 'jwt' not in request.COOKIES:
@@ -452,9 +516,6 @@ def cart(request):
     return render(request, 'cart.html',{'user_id':user_id, 'cartitems':cartitems, 'cart_total':cart_total, 'message':None})    
         
 
-
-
-
 def add_quantity(request):
 
     if 'jwt' in request.COOKIES.keys():
@@ -470,8 +531,6 @@ def add_quantity(request):
 
     return redirect('/api/cart/')
 
-
-
 def reduce_quantity(request):
     if 'jwt' in request.COOKIES.keys():
 
@@ -483,9 +542,6 @@ def reduce_quantity(request):
     product_id =  request.GET['product_id']
     reposne = requests.post(f'{cart_url}/api/reducequantity/',data=request.GET, cookies=request.COOKIES).json()
     return redirect('/api/cart/')
-
-
-
 
 def delete_product(request):
     if 'jwt' in request.COOKIES.keys():
@@ -499,8 +555,6 @@ def delete_product(request):
     reposne = requests.post(f'{cart_url}/api/deleteproduct/',data=request.GET, cookies=request.COOKIES).json()
     return redirect('/api/cart/')
 
-
-
 def clear_cart(request):
 
     if 'jwt' in request.COOKIES.keys():
@@ -513,7 +567,6 @@ def clear_cart(request):
     return redirect('/api/cart/')
 
 
-
 def get_user_address(request):
     user_id=requests.get(f'{user_url}/api/userview/',cookies=request.COOKIES).json()['user_id']
 
@@ -523,7 +576,7 @@ def get_user_address(request):
     return render(request, 'address.html', context)
 
 
-
+"""
 def checkout(request):
     if request.method=='GET':
         if 'jwt' in request.COOKIES.keys():
@@ -553,7 +606,9 @@ def checkout(request):
         ]
         return render(request, "checkout.html" , {'orders_data': cart_items, 'addresses': address_response['addresses'], 'cart_total':cart_total})#, 'full_address' : full_address_response['addresses']})
     elif request.method=="POST":
-        if 'jwt' in request.COOKIES.keys():
+        return start_payment_from_checkout(request)
+
+    ''' if 'jwt' in request.COOKIES.keys():
 
             user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
         else:
@@ -595,7 +650,616 @@ def checkout(request):
 
         orders_data = json.dumps(orders_data)
         messages.success(request, "Order placed successfully!")
+        return redirect('/api/vieworders/?placed=1')'''
+    
+from django.contrib.messages import get_messages
+
+def _clear_messages(request):
+    # iterate once to consume anything pending
+    for _ in get_messages(request):
+        pass
+
+import uuid as py_uuid
+
+def start_payment_from_checkout(request):
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+
+    # address
+    address_response = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES).json()
+    addresses = address_response.get('addresses') or []
+    if not addresses:
+        messages.error(request, "No address on file. Please add an address.")
+        return redirect('/api/getaddress/')
+    address = addresses[0]
+
+    # cart
+    cart_items_response = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
+    cart_total = 0.0
+    for item in cart_items_response:
+        product_id = item["product_id"]
+        product = requests.get(f'{product_url}/api/productview/{product_id}/', data=item).json()
+        item['product'] = product
+        item['total_price'] = item['quantity'] * float(product['price'])
+        cart_total += item['total_price']
+
+    cart_items = [
+        {**cart_item, **requests.get(f'{product_url}/api/singleproduct/{cart_item["product_id"]}/', cookies=request.COOKIES).json()}
+        for cart_item in cart_items_response
+    ]
+
+    user_id = _get_current_user_id(request)
+    orders_data = {
+        'user_id': user_id,
+        'address': address,
+        'items': cart_items,
+    }
+
+    total_amount = round(cart_total, 2)
+    idemp = str(py_uuid.uuid4())
+
+    # 🔹 DEBUG STARTS HERE
+    intent_url = f"{payment_url.rstrip('/')}/payments/intents/"
+    payload = {
+        "order_id": 0,
+        "user_id": user_id,
+        "amount": total_amount,
+        "currency": "INR",
+        "provider": "razorpay",
+        "idempotency_key": idemp,
+        "metadata": {
+            "source": "cart_checkout",
+            "orders_data": orders_data
+        }
+    }
+    print("DEBUG >> POSTing to:", intent_url)
+    print("DEBUG >> Payload:", payload)
+    # 🔹 DEBUG ENDS HERE
+
+    try:
+        r = requests.post(intent_url, json=payload, timeout=10)
+
+        # 🔹 EXTRA DEBUG
+        print("DEBUG >> Response status:", r.status_code)
+        print("DEBUG >> Response body:", r.text)
+
+        if not r.ok:
+            messages.error(request, "Could not start payment. Please try again.")
+            return redirect('/api/paginate/')
+        payment_payload = r.json()
+    except Exception as e:
+        print("DEBUG >> Exception during payment POST:", str(e))
+        messages.error(request, "Payment service unreachable.")
+        return redirect('/api/paginate/')
+
+    request.session['__pending_order__'] = orders_data
+    request.session['__pending_payment__'] = payment_payload
+
+    return render(request, "payment.html", {
+        "amount": total_amount,
+        "currency": "INR",
+        "payment": payment_payload,
+        "order": orders_data,
+    })
+
+@csrf_exempt
+def payment_success(request):
+    #Called from payment.html after a successful (or mock) payment.
+    orders_data = request.session.get('__pending_order__')
+    payment = request.session.get('__pending_payment__')
+    if not orders_data or not payment:
+        _clear_messages(request)
+        messages.error(request, "No pending payment found.")
+        return redirect('/api/paginate/')
+
+    try:
+        order_resp = requests.post(
+            f'{order_url}/api/placeorder/',
+            data={"order": json.dumps(orders_data)},
+            cookies=request.COOKIES, timeout=12
+        )
+        if not order_resp.ok:
+            _clear_messages(request)
+            messages.error(request, "Order creation failed after payment. Contact support.")
+            return redirect('/api/paginate/')
+
+        # clear the cart best-effort
+        try:
+            requests.post(f'{cart_url}/api/clearcart/', data={}, cookies=request.COOKIES, timeout=8)
+        except Exception:
+            pass
+
+        # cleanup
+        request.session.pop('__pending_order__', None)
+        request.session.pop('__pending_payment__', None)
+
+        _clear_messages(request)
+        messages.success(request, "Payment successful! Order placed.")
         return redirect('/api/vieworders/?placed=1')
+    except Exception:
+        _clear_messages(request)
+        messages.error(request, "Unexpected error while finalizing order.")
+        return redirect('/api/paginate/')
+
+
+def payment_failure(request):
+    # make sure only ONE toast shows after this redirect
+    _clear_messages(request)
+    messages.error(request, "Payment cancelled. No money was taken.")
+    # choose where you want to land users after cancel:
+    return redirect('/api/paginate/') 
+"""
+
+# ---------- checkout sandbox helpers ----------
+
+USE_CHECKOUT_SANDBOX = True           # keep cart untouched while on checkout
+SESSION_KEY   = "__checkout_items__"  # {product_id(str): qty(int)}
+SESSION_CACHE = "__checkout_cache__"
+
+def _no_store(response):
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+
+def _fetch_product_for_checkout(request, pid: str) -> dict:
+    try:
+        product = requests.get(
+            f'{product_url}/api/productview/{pid}/',
+            cookies=request.COOKIES, timeout=8
+        ).json()
+    except Exception:
+        product = {}
+    if 'image' in product:
+        product['image'] = product['image'].replace('http://152.14.0.14', 'http://127.0.0.1')
+    return product
+
+
+def _seed_checkout_snapshot_from_cart(request, *, force: bool = False) -> None:
+    """
+    Seed/refresh the session snapshot from the REAL cart.
+
+    IMPORTANT change:
+    - We DO NOT reseed if a snapshot dict already exists in session
+      (even if it's empty). This lets the user clear the last product
+      without the list magically coming back on refresh.
+    """
+    snap_in_session = request.session.get(SESSION_KEY)
+
+    if not force:
+        # If a snapshot is already present (even empty), keep it.
+        if isinstance(snap_in_session, dict):
+            return
+
+    # Fetch current cart rows (be robust to {"message": "..."} empty payloads)
+    try:
+        raw = requests.get(
+            f'{cart_url}/api/cartitems/', cookies=request.COOKIES, timeout=8
+        ).json()
+        if isinstance(raw, list):
+            cart_rows = raw
+        else:
+            # service can return {"message": "cart empty"}; treat as empty list
+            cart_rows = []
+    except Exception:
+        cart_rows = []
+
+    snap: dict[str, int] = {}
+    for row in cart_rows:
+        pid = str(row.get('product_id') or '')
+        qty = int(row.get('quantity', 1) or 1)
+        if pid:
+            snap[pid] = snap.get(pid, 0) + max(1, qty)
+
+    request.session[SESSION_KEY] = snap
+    # refresh cache only when reseeding
+    request.session[SESSION_CACHE] = {}
+    request.session.modified = True
+
+
+def _normalize_snapshot_for_template(request):
+    snap  = request.session.get(SESSION_KEY, {}) or {}
+    cache = request.session.get(SESSION_CACHE, {}) or {}
+
+    items, total = [], 0.0
+    for pid, qty in snap.items():
+        p = cache.get(pid)
+        if not p:
+            p = _fetch_product_for_checkout(request, pid)
+            cache[pid] = p
+
+        price = float(p.get('price', 0) or 0)
+        items.append({
+            "product_id": pid,
+            "quantity": qty,
+            "price": price,
+            "product_name": p.get("product_name"),
+            "image": p.get("image") or "",
+            "product": p,
+            "total_price": qty * price,
+        })
+        total += qty * price
+
+    request.session[SESSION_CACHE] = cache
+    request.session.modified = True
+    return items, round(total, 2)
+# ---------- end helpers ----------
+
+from decimal import Decimal
+PLATFORM_FEE_RS = Decimal("5.00")
+
+from django.views.decorators.cache import never_cache
+
+PLATFORM_FEE_RS = 5.0  # keep as float
+
+@never_cache
+def checkout(request):
+    if request.method != 'GET':
+        return start_payment_from_checkout(request)
+
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+
+    # ---- defaults so they always exist ----
+    cart_items: list = []
+    cart_total: float = 0.0
+
+    # user
+    user = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
+    user_name  = user.get('username', 'Customer')
+    user_phone = user.get('phone') or '+91 xxxxxxxxxx'
+    user_email = user.get('email')
+
+    # addresses
+    try:
+        address_response = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES, timeout=8).json()
+        addresses = address_response.get('addresses', []) or []
+    except Exception:
+        addresses = []
+
+    # allow seed clear
+    if request.GET.get('seed'):
+        request.session.pop(SESSION_KEY, None)
+        request.session.pop(SESSION_CACHE, None)
+
+    # ---- snapshot vs live ----
+    if USE_CHECKOUT_SANDBOX:
+        _seed_checkout_snapshot_from_cart(request, force=(request.GET.get('seed') == '1'))
+        cart_items, cart_total = _normalize_snapshot_for_template(request)
+    else:
+        try:
+            cart_items_response = requests.get(
+                f'{cart_url}/api/cartitems/', cookies=request.COOKIES, timeout=8
+            ).json()
+            if not isinstance(cart_items_response, list):
+                cart_items_response = []
+        except Exception:
+            cart_items_response = []
+
+        cart_total = 0.0
+        for item in cart_items_response:
+            pid = item.get("product_id")
+            try:
+                product = requests.get(
+                    f'{product_url}/api/productview/{pid}/',
+                    cookies=request.COOKIES, timeout=8
+                ).json()
+            except Exception:
+                product = {}
+            if 'image' in product:
+                product['image'] = product['image'].replace('http://152.14.0.14', 'http://127.0.0.1')
+            item['product'] = product
+            price = float(product.get('price', 0) or 0)
+            item['total_price'] = int(item.get('quantity', 1)) * price
+            cart_total += item['total_price']
+        cart_items = cart_items_response
+
+    # ---- compute fees in BOTH cases (outside the branch) ----
+    shipping_fee  = 0.0 if cart_total == 0 else (0.0 if cart_total >= 1500 else 100.0)
+    platform_fee  = 0.0 if cart_total == 0 else PLATFORM_FEE_RS
+    total_payable = cart_total + shipping_fee + platform_fee
+
+    # ---- freeze snapshot for payment page ----
+    request.session['checkout_snapshot'] = {
+        "items": cart_items,
+        "item_count": len(cart_items),
+        "cart_total": float(cart_total),
+        "shipping_fee": float(shipping_fee),
+        "platform_fee": float(platform_fee),
+        "total_payable": float(total_payable),
+        "final_total": float(total_payable),
+    }
+    request.session.modified = True
+
+    # ---- render ----
+    resp = render(request, "checkout.html", {
+        'orders_data': cart_items,
+        'addresses': addresses,
+        'cart_total': cart_total,
+        'shipping_fee': shipping_fee,
+        'platform_fee': platform_fee,
+        'total_payable': total_payable,
+        'user_name': user_name,
+        'user_phone': user_phone,
+        'user_email': user_email,
+    })
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp["Pragma"] = "no-cache"
+    resp["Expires"] = "0"
+    return _no_store(resp)
+    
+
+
+def _redirect_back_to_summary():
+    return redirect(reverse('checkout'))
+
+@require_POST
+@never_cache
+def add_quantity_checkout(request):
+    if 'jwt' not in request.COOKIES:
+        return _no_store(redirect(f'{user_url}/api/login/'))
+
+    pid = str(request.POST.get('product_id') or '')
+    if USE_CHECKOUT_SANDBOX and pid:
+        _seed_checkout_snapshot_from_cart(request)  # safe: won’t reseed if dict exists
+        snap = request.session.get(SESSION_KEY, {}) or {}
+        snap[pid] = int(snap.get(pid, 0)) + 1
+        request.session[SESSION_KEY] = snap
+        request.session.modified = True
+    elif pid:
+        requests.post(
+            f'{cart_url}/api/addtocart/',
+            data={'product_id': pid},
+            cookies=request.COOKIES, timeout=8
+        )
+
+    return _no_store(_redirect_back_to_summary())
+
+@require_POST
+@never_cache
+def reduce_quantity_checkout(request):
+    if 'jwt' not in request.COOKIES:
+        return _no_store(redirect(f'{user_url}/api/login/'))
+
+    pid = str(request.POST.get('product_id') or '')
+    if USE_CHECKOUT_SANDBOX and pid:
+        _seed_checkout_snapshot_from_cart(request)
+        snap = request.session.get(SESSION_KEY, {}) or {}
+        if pid in snap and int(snap[pid]) > 1:
+            snap[pid] = int(snap[pid]) - 1
+            request.session[SESSION_KEY] = snap
+            request.session.modified = True
+        # if already 1, leave as 1 (your UI disables minus at 1)
+    elif pid:
+        requests.post(
+            f'{cart_url}/api/reducequantity/',
+            data={'product_id': pid},
+            cookies=request.COOKIES, timeout=8
+        )
+
+    return _no_store(_redirect_back_to_summary())
+
+@require_POST
+@never_cache
+def delete_product_checkout(request):
+    if 'jwt' not in request.COOKIES:
+        return _no_store(redirect(f'{user_url}/api/login/'))
+
+    pid = str(request.POST.get('product_id') or '')
+    if USE_CHECKOUT_SANDBOX and pid:
+        _seed_checkout_snapshot_from_cart(request)
+        snap = request.session.get(SESSION_KEY, {}) or {}
+        if pid in snap:
+            snap.pop(pid, None)
+            request.session[SESSION_KEY] = snap
+            request.session.modified = True
+        # also clear any cached product json for neatness
+        cache = request.session.get(SESSION_CACHE, {}) or {}
+        if pid in cache:
+            cache.pop(pid, None)
+            request.session[SESSION_CACHE] = cache
+    elif pid:
+        requests.post(
+            f'{cart_url}/api/deleteproduct/',
+            data={'product_id': pid},
+            cookies=request.COOKIES, timeout=8
+        )
+    return _no_store(_redirect_back_to_summary())
+
+
+
+def _get_current_user_id(request):
+    try:
+        data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
+        return data.get('user_id')
+    except Exception:
+        return None
+
+
+def _clear_messages(request):
+    from django.contrib.messages import get_messages
+    for _ in get_messages(request):
+        pass
+
+
+@require_POST
+def start_payment_from_checkout(request):
+    """
+    Start payment using the *exact* snapshot saved by checkout().
+    Snapshot is stored in request.session['checkout_snapshot'].
+    """
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+
+    # 1) Selected address
+    sel_addr_id = request.POST.get('address_id')
+    try:
+        address_response = requests.get(
+            f'{user_url}/api/getaddress/',
+            cookies=request.COOKIES,
+            timeout=8
+        ).json()
+        addresses = address_response.get('addresses', []) or []
+    except Exception:
+        addresses = []
+
+    if not addresses:
+        messages.error(request, "No address on file. Please add an address.")
+        return redirect('/api/getaddress/')
+
+    if sel_addr_id:
+        address = next(
+            (a for a in addresses if str(a.get('address_id')) == str(sel_addr_id)),
+            addresses[0]
+        )
+    else:
+        address = addresses[0]
+
+    # 2) Pull the frozen snapshot created by checkout()
+    snap = request.session.get('checkout_snapshot')
+    if not snap:
+        messages.error(request, "Session expired. Please open checkout again.")
+        return redirect('/api/checkout/')
+
+    # snapshot → plain floats only (no Decimal!)
+    items         = snap.get("items", [])
+    item_count    = int(snap.get("item_count", 0))
+    cart_total    = float(snap.get("cart_total", 0.0))
+    shipping_fee  = float(snap.get("shipping_fee", 0.0))
+    platform_fee  = float(snap.get("platform_fee", 0.0))
+    total_payable = float(snap.get("total_payable", 0.0))
+
+    user_id = _get_current_user_id(request)
+
+    # 3) Build the order payload to keep across the flow
+    orders_data = {
+        "user_id": user_id,
+        "address": address,
+        "items": items,
+        "summary": {
+            "item_count": item_count,
+            "cart_total": cart_total,
+            "shipping_fee": shipping_fee,
+            "platform_fee": platform_fee,
+            "total_payable": total_payable,
+        }
+    }
+
+    # Amount to charge = what the user saw
+    total_amount = round(total_payable, 2)
+    idemp = str(uuid.uuid4())
+
+    # 4) Create a payment intent with your gateway service
+    intent_url = f"{payment_url.rstrip('/')}/payments/intents/"
+    payload = {
+        "order_id": 0,
+        "user_id": user_id,
+        "amount": total_amount,         # float → JSON-safe
+        "currency": "INR",
+        "provider": "razorpay",
+        "idempotency_key": idemp,
+        "metadata": {
+            "source": "cart_checkout",
+            "orders_data": orders_data   # dict with only JSON-safe types
+        }
+    }
+    try:
+        r = requests.post(intent_url, json=payload, timeout=10)
+        if not r.ok:
+            messages.error(request, "Could not start payment. Please try again.")
+            return redirect('/api/paginate/')
+        payment_payload = r.json()
+    except Exception:
+        messages.error(request, "Payment service unreachable.")
+        return redirect('/api/paginate/')
+
+    # 5) Persist for success/failure handlers
+    request.session['__pending_order__'] = orders_data
+    request.session['__pending_payment__'] = payment_payload
+    request.session.modified = True
+
+    # 6) Render the payment page with the exact snapshot amounts
+    return render(request, "payment.html", {
+        "amount": total_amount,
+        "currency": "INR",
+        "payment": payment_payload,
+        "order": orders_data,
+
+        # right price card + buttons
+        "item_count": item_count,
+        "cart_total": cart_total,
+        "shipping_fee": shipping_fee,
+        "platform_fee": platform_fee,
+        "total_payable": total_payable,
+    })
+
+
+@csrf_exempt
+def payment_success(request):
+    """
+    Called by your payment return/handler when the payment is successful.
+    Uses the pending order saved in session.
+    """
+    orders_data = request.session.get('__pending_order__')
+    # --- ensure final total (cart + shipping + platform) is carried into the order ---
+    summary = (orders_data or {}).get("summary", {}) if orders_data else {}
+    final_total = float(summary.get("total_payable") or (
+        float(summary.get("cart_total") or 0) +
+        float(summary.get("shipping_fee") or 0) +
+        float(summary.get("platform_fee") or 0)
+    ))
+
+    # put it in both a summary field (for safety) and a top-level legacy key
+    if orders_data is not None:
+        summary["final_total"] = final_total
+        orders_data["summary"] = summary
+        orders_data["total_amount"] = final_total
+
+    if not orders_data:
+        _clear_messages(request)
+        messages.error(request, "No pending payment found.")
+        return redirect('/api/paginate/')
+
+    try:
+        # Place order in your Orders service
+        order_resp = requests.post(
+            f'{order_url}/api/placeorder/',
+            data={"order": json.dumps(orders_data)},
+            cookies=request.COOKIES,
+            timeout=12
+        )
+        if not order_resp.ok:
+            _clear_messages(request)
+            messages.error(request, "Order creation failed after payment. Contact support.")
+            return redirect('/api/paginate/')
+
+        # Best effort clear cart
+        try:
+            requests.post(f'{cart_url}/api/clearcart/', data={}, cookies=request.COOKIES, timeout=8)
+        except Exception:
+            pass
+
+        # Clean session state
+        request.session.pop('__pending_order__', None)
+        request.session.pop('__pending_payment__', None)
+        request.session.pop('checkout_snapshot', None)
+        request.session.modified = True
+
+        _clear_messages(request)
+        messages.success(request, "Payment successful! Order placed.")
+        return redirect('/api/vieworders/?placed=1')
+    except Exception:
+        _clear_messages(request)
+        messages.error(request, "Unexpected error while finalizing order.")
+        return redirect('/api/paginate/')
+
+
+
+def payment_failure(request):
+    _clear_messages(request)
+    messages.error(request, "Payment cancelled. No money was taken.")
+    return redirect('/api/paginate/')
 
 
 def _get_current_user_id(request):
@@ -621,28 +1285,78 @@ def _get_my_review_id(product_id, request):
         pass
     return None
 
-
 def vieworders(request):
     r = requests.get(f'{order_url}/api/placeorder/', cookies=request.COOKIES, timeout=10)
     if not r.ok:
         return render(request, "vieworder.html", {"order_data": []})
 
     order_data = r.json()
-    # If the service sent a JSON *string*, decode it
     if isinstance(order_data, str):
         try:
             order_data = json.loads(order_data)
         except json.JSONDecodeError:
             order_data = {}
 
-    for order in order_data.get('orderlist', []):     # for each item, attach product details and "my_review_id"
-        for item in order.get('order_items', []):
-            product_id = item.get("product_id")
-            if product_id is None:
+    for order in order_data.get('orderlist', []):
+        items = order.get('order_items', []) or []
+
+        # 1) cart_total from items (prefer item's own total_price; else qty * price)
+        cart_total = 0.0
+        for it in items:
+            try:
+                line_total = it.get('total_price')
+                if line_total is None:
+                    qty = float(it.get('quantity') or 1)
+                    # try multiple spots for unit price
+                    unit = it.get('price')
+                    if unit is None:
+                        unit = (it.get('product') or {}).get('price')
+                    unit = float(unit or 0)
+                    line_total = qty * unit
+                cart_total += float(line_total or 0)
+            except (TypeError, ValueError):
+                pass
+
+        # 2) fees (same rules you used in checkout)
+        shipping_fee = 0.0 if cart_total == 0 else (0.0 if cart_total >= 1500 else 100.0)
+        platform_fee = 0.0 if cart_total == 0 else float(PLATFORM_FEE_RS)  # import/read same const
+
+        # 3) prefer server-provided summary, else compute our own final total
+        summary = order.get('summary', {}) or {}
+        # if backend didn’t store final_total, compute it
+        final_total = summary.get('final_total')
+        if final_total is None:
+            final_total = summary.get('total_payable')
+
+        if final_total is None:
+            # Backend lost the fees — reconstruct deterministically
+            final_total = cart_total + shipping_fee + platform_fee
+
+        try:
+            final_total = float(final_total)
+        except (TypeError, ValueError):
+            final_total = cart_total + shipping_fee + platform_fee
+
+        # 4) keep a consistent shape for the template
+        summary.update({
+            "item_count": len(items),
+            "cart_total": float(cart_total),
+            "shipping_fee": float(shipping_fee),
+            "platform_fee": float(platform_fee),
+            "total_payable": float(cart_total + shipping_fee + platform_fee),
+            "final_total": float(final_total),
+        })
+        order['summary'] = summary
+        order['total_amount'] = float(final_total)  # canonical total for the UI
+
+        # 5) (your existing enrichment)
+        for item in items:
+            pid = item.get("product_id")
+            if pid is None:
                 continue
-            try:             # product name + image (as you already did)
+            try:
                 product_data = requests.get(
-                    f'{product_url}/api/productview/{product_id}/',
+                    f'{product_url}/api/productview/{pid}/',
                     cookies=request.COOKIES, timeout=8
                 ).json()
                 item['product_name'] = product_data.get('product_name')
@@ -651,13 +1365,12 @@ def vieworders(request):
             except Exception:
                 item.setdefault('product_name', 'Unknown product')
                 item.setdefault('image', '')
-            item['my_review_id'] = _get_my_review_id(product_id, request)
+            item['my_review_id'] = _get_my_review_id(pid, request)
+
     return render(request, "vieworder.html", {"order_data": order_data.get('orderlist', [])})
 
 
-
-from django.urls import reverse
-
+#REVIEW SERVICE CODE 
 
 PAGE_SIZE = 3  
 

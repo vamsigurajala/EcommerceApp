@@ -1,426 +1,2937 @@
-{% extends 'changemode.html' %}
-{% block extra_style %}
-<link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
-<style>
-    body {
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 16px;
-        background: #f5f5f5;
-    }
-    body.dark-mode {
-        background: #181818;
-        color: #fff;
-    }
-    .fixed-back-btn {
-        position: fixed;
-        left: 30px;
-        top: 40px;
-        z-index: 1000;
-        background-color: #333;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        padding: 8px 16px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-    }
-    .fixed-back-btn:hover { background: #555; }
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Novacart • Checkout</title>
 
-    .checkout-container {
-        max-width: 700px;
-        max-height: calc(120vh - 60px);
-        margin: 12px auto 0 auto;
-        padding: 38px 28px 38px 28px;
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 0 22px rgba(0, 0, 0, 0.13);
-        position: relative;
-        overflow: hidden;
+  <style>
+    :root{
+      --brand:#2874f0;
+      --header-h:64px;
+      --gutter:24px;
+      --sidebar-w:360px;
+      --card-radius:12px;
+
+      --text:#1f2937;
+      --muted:#6b7280;
+      --surface:#ffffff;
+      --surface-2:#f1f5f9;
+      --border:#e5e7eb;
+      --cta:#ff6a00;
+      --shadow:0 6px 16px rgba(2,6,23,.08);
+
+      color-scheme: light dark;
     }
-    body.dark-mode .checkout-container {
-        background: #232323;
-        color: #fff;
+    @media (prefers-color-scheme: dark){
+      :root{
+        --text:#e5e7eb; --muted:#9ca3af;
+        --surface:#0b1220; --surface-2:#0a0f1a;
+        --border:#1f2937; --shadow:0 6px 16px rgba(0,0,0,.45);
+      }
     }
-    h1 {
-        text-align: center;
-        font-size: 2.4rem;
-        margin-bottom: 18px;
-        font-weight: 700;
-        color: #24262b;
+    html[data-theme="light"]{
+      --text:#1f2937; --muted:#6b7280;
+      --surface:#ffffff; --surface-2:#f1f5f9;
+      --border:#e5e7eb; --shadow:0 6px 16px rgba(2,6,23,.08);
     }
-    body.dark-mode h1 {
-        color: #fff;
-    }
-    .checkout-table-scroll {
-        flex: 1;
-        max-height: 270px;
-        overflow-y: auto;
-        margin-bottom: 20px;
-        border-radius: 7px;
-        box-shadow: 0 0 3px #eaeaea;
-        scrollbar-width: none;
-    }
-    
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background: none;
-    }
-    th, td {
-        text-align: left;
-        padding: 16px 10px;
-    }
-    th {
-        background: #24262b;
-        color: #fff;
-        font-weight: 600;
-        font-size: 17px;
-    }
-    body.dark-mode th {
-        background: #232323;
-        color: #fff;
-    }
-    tr:nth-child(even) {
-        background: #f8f8fa;
-    }
-    body.dark-mode tr:nth-child(even) {
-        background: #2b2b2b;
-    }
-    td {
-        font-size: 16px;
-        font-weight: 500;
-        vertical-align: middle;
-        color: #24262b;
-    }
-    body.dark-mode td {
-        color: #fff;
-    }
-    img {
-        width: 70px;
-        height: 70px;
-        border-radius: 6px;
-        object-fit: contain;
-        background: #f6f6f9;
-        display: block;
-        margin: auto;
-        border: 1px solid #eaeaea;
-    }
-    .order-datetime {
-        text-align: center;
-    }
-    .total-row td {
-        border: none;
-        background: none;
-        padding: 18px 0 0 0;
-    }
-    .total-label-box {
-        display: inline-block;
-        background: #eef3fb;
-        color: #273755;
-        padding: 8px 23px 8px 23px;
-        border-radius: 7px;
-        font-weight: 700;
-        font-size: 20px;
-        margin-right: 8px;
-        min-width: 110px;
-        text-align: center;
-    }
-    .total-value-box {
-        display: inline-block;
-        background: #eef3fb;
-        color: #3556b7;
-        padding: 8px 23px 8px 23px;
-        border-radius: 7px;
-        font-weight: 700;
-        font-size: 20px;
-        min-width: 110px;
-        text-align: center;
-    }
-    body.dark-mode .total-label-box,
-    body.dark-mode .total-value-box {
-        background: #181e22;
-        color: #9bbcff;
-    }
-    .checkout-table-scroll thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #24262b; /* same as your th background */
-  color: #fff;
-}
-/* Dark mode header color match */
-body.dark-mode .checkout-table-scroll thead th {
-  background: #232323;
-  color: #fff;
-}
-    .btn-placeorder {
-        border: none;
-        background-color: green;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        padding: 7px 28px;
-        border-radius: 7px;
-        cursor: pointer;
-        margin-top: 20px;
-    }
-    .btn-placeorder:hover {
-        background-color: #175c1e;
-    }
-    #address-container {
-        margin-top: 2px;
-    max-height: calc(100vh - 400px); 
-    font-weight: bold;
-    display: flex;
-    flex-direction: column;
-    }
-    label {
-        display: block;
-        margin: 8px 0;
-        font-weight: bold;
-    }
-    .address-details {
-        font-size: 14px;
-        margin-left: 20px;
-        font-weight: bold;
-    }
-    .address-details span {
-        display: block;
+    html[data-theme="dark"]{
+      --text:#e5e7eb; --muted:#9ca3af;
+      --surface:#0b1220; --surface-2:#0a0f1a;
+      --border:#1f2937; --shadow:0 6px 16px rgba(0,0,0,.45);
     }
 
-.addresses-scroll {
-  max-height: 90px; /* reduced height so button stays visible */
-    overflow: auto;
-    border: 1px solid #eaeaea;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin-top: 8px;
-    background: inherit;
-
-    /* Hide scrollbar until hover */
-    scrollbar-width: none; /* Firefox */
-}
-.addresses-scroll:hover { scrollbar-width: thin; }
-.addresses-scroll::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-}
-.addresses-scroll:hover::-webkit-scrollbar {
-    width: 6px;
-}
-.addresses-scroll:hover::-webkit-scrollbar-thumb {
-    background-color: #ccc;
-    border-radius: 3px;
-}
-.action-row {
-    margin-top: auto;
-    position: sticky;
-    bottom: 0;
-    background: inherit;
-    padding-top: 10px;
-    display: flex;
-    justify-content: flex-end;
-}
-
-@media (max-width: 900px) {
-    .checkout-container { 
-        max-width: 97vw; 
-        padding: 1px 2vw 1px 2vw; 
+    *,*::before,*::after{ box-sizing:border-box; }
+    html{ scroll-behavior:smooth; }
+    body{
+      margin:0;
+      background:var(--surface-2);
+      color:var(--text);
+      font:500 15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
     }
-    .fixed-back-btn { left: 10px; top: 16px; }
-    table, th, td { font-size: 13px; }
-    h1 { font-size: 24px; }
-    .total-label-box, .total-value-box { font-size: 16px;}
-}
-/* Toast (bottom-right) */
-.toast {
-  position: fixed;
-  right: 22px;
-  bottom: 22px;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  background: #232323;
-  color: #fff;
-  padding: 12px 16px;
-  border-radius: 10px;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.25);
-  z-index: 2000;
-  font-weight: 600;
-}
-.toast.show { display: inline-flex; }
+    a{ color:var(--brand); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
 
-/* Spinner next to text */
-.toast .spinner {
-  width: 18px; height: 18px;
-  border: 2px solid rgba(255,255,255,0.25);
-  border-top-color: #fff;
+    /* Logout link should never underline (match Flipkart) */
+#link-logout,
+#link-logout:hover,
+#link-logout:active{
+  text-decoration: none;
+}
+
+/* (Optional but good a11y) show a clean focus ring instead of underline */
+#link-logout:focus-visible{
+  outline: 2px solid rgba(40,116,240,.55);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+    /* Top bar */
+    .topbar{
+      position:sticky; top:0; z-index:10;
+      height:var(--header-h);
+      display:flex; align-items:center;
+      padding:0 16px;
+      background:var(--brand);
+      color:#fff; box-shadow:0 1px 0 rgba(0,0,0,.1);
+    }
+    .brand{ font-weight:900; font-size:22px; letter-spacing:.2px; }
+    .plus{ font-weight:700; margin-left:8px; opacity:.95 }
+    .spacer{ flex:1; }
+    .theme-toggle{
+      width:36px; height:36px; border-radius:999px;
+      display:grid; place-items:center; border:1px solid rgba(255,255,255,.35);
+      background:transparent; cursor:pointer; color:#fff;
+    }
+
+    /* Layout */
+    .checkout{
+      display:grid; grid-template-columns:minmax(0,1fr) var(--sidebar-w);
+      gap:var(--gutter); max-width:1200px; margin:0 auto; padding:16px 16px 64px;
+    }
+    /* When there are no items: make it a single centered column like Flipkart */
+    .checkout.is-empty{ grid-template-columns: 1fr; justify-content: center; justify-items: center;  }
+    .checkout.is-empty > div{width: 100%; max-width: 880px; justify-self: center;margin-inline: auto;place-self: start center;}
+    .checkout.is-empty .trust-strip{ grid-column: 1; justify-self: center; max-width: 880px;width: 100%;}
+
+
+    /* Step shells & spacing */
+    .step-card{ border-radius:var(--card-radius); scroll-margin-top:calc(var(--header-h) + 12px); }
+    .step-card + .step-card{ margin-top:16px; }
+    .step-card + .mini-row{ margin-top:12px; }
+    .mini-row + .addnew-panel{ margin-top:12px; }
+    .addnew-panel + .step-card{ margin-top:16px; }
+
+    /* Header grid (title + change button + collapsed summary under title) */
+    .step-header{
+      cursor: default;
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr) auto;
+      grid-template-rows:56px; 
+      align-items:center; gap:10px 12px;
+      min-height:56px; padding:8px 18px;
+      background:var(--surface); color:var(--text);
+      border:1px solid var(--border);
+      border-radius:var(--card-radius);
+      box-shadow:var(--shadow);
+      transition: background .15s ease, color .15s ease;
+    }
+    .step-card.is-open .step-header{
+      grid-template-rows:56px;
+      background:var(--brand); color:#fff;
+      border-bottom:none;
+      border-top-left-radius:var(--card-radius);
+      border-top-right-radius:var(--card-radius);
+      border-bottom-left-radius:0;
+      border-bottom-right-radius:0;
+    }
+    .step-index{
+      grid-row:1; grid-column:1;
+      display:inline-grid; place-items:center; width:26px; height:26px;
+      border-radius:6px; background:#e5e7eb; color:#1e293b; font-weight:700;
+    }
+    .step-header h2,.step-index,.step-header .step-secondary{align-self:center;}
+    .step-card.is-open .step-index{ background:#fff; color:#1e40af; }
+    .step-header h2{
+      grid-row:1; grid-column:2; margin:0; font-size:16px; letter-spacing:.2px;
+      display:flex; align-items:center; gap:8px;
+    }
+
+    /* Collapsed summary lines – under title, never under CHANGE (avoid overlap) */
+    .step-collapsed{
+      display:none; grid-row:2; grid-column:2;   /* <== stay in middle column only */
+      font-size:14px; padding-right:16px;
+    }
+    .step-collapsed b{ font-weight:900; }
+    .step-card:not(.is-open) .step-collapsed{ display:block; }
+
+    /* Done tick beside title, only when collapsed (never on open) */
+    .step-done{
+      font-weight:900; color:#22c55e; display:none;
+    }
+    .step-card.is-done:not(.is-open) .step-done{ display:inline; }
+
+    /* CHANGE buttons – visible only when collapsed, perfectly centered vertically */
+    .step-header .step-secondary{
+      cursor: pointer;
+      grid-row:1; grid-column:3;
+      cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+      height:32px; padding:0 14px; border-radius:8px;
+      font-weight:800; border:1px solid var(--border);
+      background:var(--surface-2); color:var(--text);
+      margin-left:auto; align-self:center;
+    }
+    .step-card.is-open .step-header .step-secondary{ display:none; }
+
+    /* Bodies */
+    .step-body{
+      max-height:0; overflow:hidden; padding:0; pointer-events:none;
+      background:var(--surface);
+      border-left:1px solid var(--border); border-right:1px solid var(--border);
+      border-bottom-left-radius:var(--card-radius); border-bottom-right-radius:var(--card-radius);
+      transition:max-height .22s ease, padding .18s ease;
+      will-change:max-height;
+    }
+    .addr-list.has-inline{ overflow:visible; }
+    /* Login content */
+    .step-card.is-open .step-body{ max-height:none;overflow:visible; padding:16px; pointer-events:auto; border-bottom:1px solid var(--border);}
+    .step-card__box{ box-shadow:var(--shadow); border-radius:var(--card-radius); overflow:hidden; }
+    .step-card__content{ padding:18px; background:var(--surface); border:1px solid var(--border); border-top:none; border-bottom-left-radius:var(--card-radius); border-bottom-right-radius:var(--card-radius); }
+    #step-login:not(.is-open) .step-card__content{ display:none; }
+    .label{color:var(--muted); font-weight:600; margin-bottom:4px}
+    .value{font-weight:700; color:var(--text)}
+
+    /* Flipkart-like two columns: left (name/phone/logout/button) + right (advantages) */
+    .login-grid{
+      display:grid; grid-template-columns:minmax(0,1fr) 1fr; gap:24px; align-items:start;
+    }
+    @media (max-width: 900px){ .login-grid{grid-template-columns:1fr} }
+    .login-left .row{display:grid; grid-template-columns:96px 1fr; gap:18px; align-items:center;}
+    .login-left .row + .row{margin-top:10px}
+    .login-actions{ display:flex; gap:18px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+    .benefits{display:grid; gap:10px; margin-top:0}
+    .benefit{display:flex; align-items:center; gap:10px; color:var(--text)}
+    .icon{font-size:18px}
+    .note{margin-top:14px;color:var(--muted);font-size:13px;white-space: nowrap;text-overflow: ellipsis;display: block;}
+
+    /* Buttons / fields */
+    .btn{ border-radius:6px; border:1px solid transparent; padding:12px 18px; font-weight:800; cursor:pointer; }
+    .btn-lg{padding:14px 22px; font-size:16px}
+    .btn-primary{background:var(--cta); color:#111}
+    .btn-primary:hover{filter:brightness(0.98)}
+    .btn-secondary{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
+
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    .field label{ color:var(--muted); font-weight:700; }
+    .field input{ height:44px; padding:0 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); }
+    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
+    .form-actions{ display:flex; gap:12px; margin-top:12px; }
+
+    /* Address list */
+    .addr-list{ display:grid; gap:0; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--surface); }
+    .addr-item{
+      display:grid; grid-template-columns:36px 1fr auto; gap:10px; align-items:start;
+      padding:14px 16px; border-bottom:1px solid var(--border);
+      cursor:pointer; user-select:none;
+    }
+    .addr-item:last-child{ border-bottom:none; }
+    .addr-radio{ margin-top:4px; cursor:pointer; }
+    .addr-name{ font-weight:800; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .addr-phone{ font-weight:700; }
+    .addr-chip{
+      font-size:12px; font-weight:800; padding:2px 6px;
+      border:1px solid var(--border); border-radius:999px; color:var(--muted);
+    }
+    .addr-edit{ color:var(--brand); background:none; border:0; font-weight:800; cursor:pointer; visibility:hidden; }
+    .addr-item.is-selected .addr-edit{ visibility:visible; }
+    .addr-address{ margin:6px 0 0 0; color:var(--text); opacity:.95; }
+    .addr-actions{ margin:8px 0 0 0; display:none; }
+    .addr-item.is-selected .addr-actions{ display:block; }
+    .deliver-btn{ margin-top:6px; height:44px; padding:0 18px; border:0; border-radius:6px; font-weight:800; background:var(--cta); color:#111; cursor:pointer; }
+    .addr-item *{ cursor:inherit; }
+    .addr-edit, .addr-actions *{ cursor:pointer !important; }
+
+    /* + Add new address row */
+    .mini-row{
+      height:48px; display:flex; align-items:center; gap:10px; padding:0 16px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--card-radius); box-shadow:var(--shadow);
+      font-weight:500; color:var(--brand); cursor:pointer; user-select:none;
+    }
+    .mini-row .plus{ width:auto; height:auto; border:none; background:none; padding:0; font-weight:700; line-height:1; }
+
+    /* Add new / Edit panels */
+    .addnew-panel, .edit-panel{
+      display:none; background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--card-radius); box-shadow:var(--shadow); padding:16px; width:100%;
+      margin-top:12px;
+    }
+    /* Inline editor replacing a single row */
+.addr-form.inline-edit{padding:14px;border:1px solid var(--border);border-radius:8px;background:#fff;}
+html[data-theme="dark"] .addr-form.inline-edit{background:#0f172a;border-color:#1f2937;}
+.addr-form.inline-edit .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.addr-form.inline-edit .actions{display:flex;gap:10px;margin-top:12px;}
+/* inline edit panel (inside a row) */
+.inline-edit{margin:12px 0 6px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);}
+.inline-edit .field input{width:100%;}
+.inline-edit .form-actions{margin-top:12px;}
+
+
+    /* Price card */
+    .price-card{
+      position:sticky; top:calc(var(--header-h) + 16px); align-self:start;
+      width:var(--sidebar-w); background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--card-radius); box-shadow:var(--shadow);
+      max-height:calc(100vh - var(--header-h) - 32px); overflow:auto;
+    }
+    .price-card .card-body{ padding:16px 20px 10px; }
+    .price-card .card-body,.price-card .row{position:relative;overflow:visible;}
+    .price-card h3{ margin:0 0 12px; font-size:16px; letter-spacing:.3px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .row{display:flex; justify-content:space-between; gap:12px; padding:10px 0; }
+    .muted{ color:var(--muted); }
+    .total{ border-top:1px solid var(--border); margin-top: 6px; padding: 14px 0;font-weight: 900; }
+    .save{  color:#1a8f3d; font-weight:900; margin-top:12px; padding-top:12px;border-top:1px solid var(--border);}
+    .price-card .card-foot{ padding:14px 20px 16px; border-top:1px solid var(--border); }
+    .trust{ font-size:12px; color:var(--muted); margin:0; }
+    .checkout .trust-strip{ grid-column: 2; margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+    .checkout .trust-strip::before{ content: '🛡️';font-size: 14px; line-height: 1; opacity: .9;}
+
+    /* Summary items */
+    .summary-item{display:grid; grid-template-columns:112px 1fr; grid-auto-rows:auto; column-gap:14px; row-gap:8px; padding:18px 0; border-bottom:1px solid var(--border);}
+    /* image – NO box/background */
+    .summary-item img{
+      width:112px; height:112px; object-fit:contain; border:none; background:transparent; border-radius:0;
+      grid-row:1 / span 3;
+    }
+    .summary-item .name{ font-weight:600; }
+    .summary-item .meta{ color:var(--muted); font-size:13px; margin-top:2px; }
+    /* price sits under name, with breathing space (not above +/-) */
+    .summary-item .price{ font-weight:900; margin:8px 0 6px; }
+
+    /* keep dividers only between items, not after the last one */
+    #step-summary .summary-item:last-child{border-bottom: none; padding-bottom: 0;margin-bottom: 0;     }
+
+    /* Qty bar under details */
+    .qty-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+    .qty-btn{
+      width:28px; height:28px; border-radius:8px;
+      background:#fff; border:1px solid #cbd5e1; color:#111; cursor:pointer;
+      display:inline-grid; place-items:center; font-weight:900; line-height:1; box-shadow: var(--shadow);
+    }
+    html[data-theme="dark"] .qty-btn{ background:#0b1220; color:#e5e7eb; border-color:#374151; }
+    .qty-num{ min-width:28px; text-align:center; font-weight:800; }
+    .qty-btn[disabled]{ opacity:.45; cursor:not-allowed; }
+
+    /* confirmation panel (collapses with summary) */
+    .confirm-panel{
+      margin-top:14px; background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; box-shadow:var(--shadow); padding:14px 16px;
+    }
+    .confirm-panel .note{ margin:0 0 10px; color:var(--muted); }
+    .confirm-actions{ display:flex; gap:12px; }
+    .empty-hint{ background:#fff8d6; border:1px solid #f3e29e; color:#7a5a00; padding:12px 14px; border-radius:8px; }
+
+    /* Small stroke around each section box */
+.step-card{
+  position: relative;               /* needed for the pseudo element */
+  border-radius: var(--card-radius);
+}
+.step-card::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius: inherit;
+  pointer-events:none;
+  /* light mode stroke */
+  box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+}
+
+/* darker, crisper stroke in dark mode */
+@media (prefers-color-scheme: dark){
+  .step-card::after{
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+  }
+}
+/* if you force dark via data-theme */
+html[data-theme="dark"] .step-card::after{
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+}
+
+/* make sure children are above the stroke */
+.step-card > *{ position: relative; }
+/* ---------- Global custom radios (white, larger, brand dot) ---------- */
+:root{ --radio-size: 20px; }
+
+input[type="radio"]{
+  /* remove native look and draw our own */
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: var(--radio-size);
+  height: var(--radio-size);
   border-radius: 50%;
-  animation: spin 0.9s linear infinite;
+  border: 2px solid #cbd5e1;       /* light gray ring */
+  background: #fff;                 /* << keep button white */
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Optional: backdrop to dim page while waiting */
-.wait-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.12);
-  backdrop-filter: blur(0.5px);
-  z-index: 1500;
+/* the inner dot */
+input[type="radio"]::after{
+  content: "";
+  width: calc(var(--radio-size) * 0.5);
+  height: calc(var(--radio-size) * 0.5);
+  border-radius: 50%;
+  background: var(--brand);         /* brand color when checked */
+  transform: scale(0);
+  transition: transform .12s ease;
+}
+
+input[type="radio"]:checked{
+  border-color: rgba(40,116,240,.8);
+}
+input[type="radio"]:checked::after{
+  transform: scale(1);
+}
+
+/* focus ring for a11y */
+input[type="radio"]:focus-visible{
+  outline: 2px solid rgba(40,116,240,.55);
+  outline-offset: 2px;
+}
+
+/* Dark mode: keep the pill white but soften the border */
+html[data-theme="dark"] input[type="radio"]{
+  background:#fff;                  /* stays white as you asked */
+  border-color:#475569;
+}
+
+
+
+/* ---------- Per-area sizing ---------- */
+/* Address list radios (slightly larger than default if you want) */
+.addr-list{ --radio-size: 20px; }
+/* Edit/Add forms radios: a bit bigger as requested */
+.edit-panel, .addnew-panel{ --radio-size: 22px; }
+.inline-edit, .inline-add{ --radio-size: 20px; }
+/* If you want the inline radios inside address rows also bigger */
+.addr-radio{ --radio-size: 20px; }
+/* Hand cursor on radio options in edit/add forms */
+.edit-panel label,
+.addnew-panel label,
+.edit-panel input[type="radio"],
+.addnew-panel input[type="radio"]{
+  cursor: pointer;
+  user-select: none;   /* optional: avoids accidental text selection */
+}
+
+/* === Signup-like focus styles for checkout inputs === */
+.field input{transition: background .2s, color .2s, border .2s;}
+.field input:focus{outline: none;border: 1.5px solid #0077cc;background: #eaf4fd;}
+html[data-theme="dark"] 
+.field input{background-color: #444;color: #fff;border: 1px solid #383b41}
+html[data-theme="dark"]
+.field input:focus{background: #23282f;border: 1.5px solid #00aaff;}
+
+/* Inline error bar (same tone as signup) */
+.form-error{color: red;text-align: center;margin: 8px 0 12px;font-size: 15px;width: 100%;}
+
+form.edit-panel, form.addnew-panel { display:none; }
+
+#toast-root{position:fixed;right:16px;top:16px;z-index:9999;display:grid;gap:8px;pointer-events:none}
+.toast{pointer-events:auto;min-width:260px;max-width:360px;padding:12px 14px;border-radius:10px;box-shadow:0 6px 16px rgba(2,6,23,.18);background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;font-weight:600;animation:toast-in .2s ease-out}
+.toast--error{background:#fef2f2;color:#7f1d1d;border-color:#fecaca}
+.toast__msg{margin:0}
+.toast__close{border:0;background:transparent;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 4px;border-radius:6px}
+.toast__close:focus-visible{outline:2px solid rgba(40,116,240,.55)}
+@keyframes toast-in {from { transform: translateY(-12px); opacity: 0; } to   { transform: translateY(0);     opacity: 1; }}
+@keyframes toast-out {to { transform: translateY(-8px); opacity: 0; }}
+.toast{border-left: 4px solid #10b981;}
+.toast--error{border-left-color: #ef4444;}
+html[data-theme="dark"] .toast{background:#082d27;color:#86efac;border-color:#134e4a;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+html[data-theme="dark"] .toast--error{background:#3f0a0a;color:#fecaca;border-color:#7f1d1d}
+
+/* ===== Top-center, wider, sharp edges, smooth top->down ===== */
+#snack-root{position:fixed;top:0;left:0;right:0;z-index:10000;pointer-events:none;padding-top:16px}
+.snack-wrap{position:relative;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center}
+.snack{pointer-events:auto;display:inline-flex;align-items:center;gap:14px;min-width:680px;max-width:min(900px,94vw); min-width: unset; width: fit-content; max-width: calc(100vw - 32px); white-space: nowrap; padding:16px 22px;border-radius:0;background:#0b0f19;color:#e5e7eb;box-shadow:0 14px 36px rgba(0,0,0,.45);will-change:transform,opacity;animation:snack-in .26s cubic-bezier(.16,1,.3,1);font-weight:700;letter-spacing:.1px;font-size:16px}
+.snack__badge{width:22px;height:22px;border-radius:999px;background:#22c55e;color:#0b0f19;display:grid;place-items:center;font-size:14px;font-weight:900;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
+.snack__msg{margin:0}
+.snack__close{margin-left:12px;border:0;background:transparent;color:inherit;font-size:18px;line-height:1;cursor:pointer}
+@keyframes snack-in{from{transform:translate3d(0,-18px,0);opacity:0}to{transform:translate3d(0,0,0);opacity:1}}
+@keyframes snack-out{to{transform:translate3d(0,-10px,0);opacity:0}}
+.price-card .ship-note{margin-top:-6px;font-size:13px;color:#16a34a;font-weight:700}
+html[data-theme="dark"] .price-card .ship-note{color:#22c55e}
+
+.remove-btn{background:transparent;border:0;padding:0;margin-left:12px;color:#010101;font-weight:800;text-transform:none;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1;}
+.remove-btn:hover{color:#ef4444;}
+.remove-btn:focus-visible{outline:2px solid rgba(239,68,68,.45);outline-offset:2px;border-radius:6px;}
+html[data-theme="dark"] .remove-btn{color:#d7cccc;}
+html[data-theme="dark"] .remove-btn:hover{color:#f87171;}
+/* optional spacing bump for the row */
+.qty-row{display:flex;align-items:center;gap:10px;margin-top:6px;}
+html[data-theme="dark"] .remove-btn{color:#cbd5e1;}
+
+
+.summary-item{display:grid;grid-template-columns:112px 1fr;grid-template-rows:auto auto;column-gap:16px;row-gap:8px;padding:18px 0;border-bottom:1px solid var(--border);}
+.summary-item img{grid-column:1;grid-row:1;width:112px;height:112px;object-fit:contain;border:0;background:transparent;border-radius:0;}
+.summary-item .details{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;gap:6px;}
+.summary-item .price-row{display:flex;align-items:center;gap:18px;margin:4px 0 8px;}
+.summary-item .price{display:block;margin:2px 0 2px;font-weight:900;}
+.summary-item .qty-row{grid-column:1;grid-row:2;justify-self:center;display:flex;align-items:center;gap:8px;margin-top:4px;}
+.remove-form{grid-column:2;grid-row:2;align-self:center;margin-top:0;}
+.remove-btn{background:transparent;border:0;padding:0;margin:0;color:var(--text);font-weight:800;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;line-height:1;}
+.remove-btn:hover{text-decoration:none;color:#ef4444;}
+.remove-btn:focus-visible{outline:2px solid rgba(239,68,68,.45);outline-offset:2px;border-radius:6px;}
+
+
+/* place the chip at the top-right of the label text */
+.price-card .row .muted{position:relative;padding-right:22px;}
+.price-card .row .muted .iwrap{position:absolute;top:-2px;right:0;margin-left:0;}
+
+
+.addr-item.is-hidden{display:none;}
+.inline-edit{display:grid;grid-template-columns:36px 1fr;align-items:start;gap:10px;padding:14px 16px;margin:0;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.inline-edit .inline-radio{display:flex;align-items:flex-start;padding-top:2px;}
+.inline-edit .inline-box{display:block;}
+.inline-edit .inline-title{font-weight:800;color:var(--muted);margin:0 0 8px 0;}
+/* dark tweaks so it doesn’t blend with the card */
+html[data-theme="dark"] .inline-edit{background:#0b1220;border-color:#1f2937;}
+
+
+/* when the wrapper is followed by the next step, keep the bigger gap */
+
+/* let the address list grow when an inline editor is open */
+.addr-list.has-inline { overflow: visible; }
+
+/* give the inline form a bit more breathing room */
+/* Inline edit should sit flush like any addr row */
+.addr-list > .inline-edit{
+  margin: 0;                          /* no gap above/below */
+  padding: 14px 16px;                 /* same padding as rows */
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;                   /* no bubbles inside the list */
+}
+
+/* keep borders seamless at the ends of the list */
+.addr-list > .inline-edit:first-child{ border-top: none; }
+.addr-list > .inline-edit:last-child { border-bottom: none; }
+
+/* (optional) while editing, let the list clip neatly */
+.addr-list{ overflow: hidden; }
+
+/* (optional) if you still feel cramped, raise the open body cap a bit */
+.step-card.is-open .step-body { max-height: 1600px; } /* was 1200px */
+
+/* one consistent vertical rhythm */
+:root { --stack: 12px; }          /* set 12px (use 16px if you prefer larger) */
+
+/* step-to-step gap */
+.step-card + .step-card { margin-top: var(--stack); }
+
+/* spacer between Address and Summary */
+#addrow-wrap { 
+  margin: var(--stack) 0;                 /* when +Add area is open/visible */
+}
+#addrow-wrap:not(.is-open){
+  height: var(--stack);                   /* when closed, act as a spacer */
+  margin: 0;                              /* avoid double spacing */
+}
+
+/* belt-and-suspenders: ensure a gap even if the wrapper is empty */
+#step-address + #addrow-wrap + #step-summary{
+  margin-top: var(--stack);
+}
+
+/* When DELIVERY is open, leave a larger, guaranteed gap before ORDER SUMMARY */
+#step-address.is-open + #addrow-wrap{
+  margin-top: var(--stack);
+  margin-bottom: var(--stack);
+}
+
+:root { --stack: 12px; }
+.step-card + .step-card { margin-top: var(--stack); }
+
+
+/* when DELIVERY is open, keep the buffer generous */
+#step-address.is-open + #addrow-wrap{
+  margin-top: var(--stack);
+  margin-bottom: var(--stack);
+}
+
+/* safety: even if the wrapper is empty/hidden, keep a gap before SUMMARY */
+#step-address.is-open + #addrow-wrap[style*="display:none"] + #step-summary,
+#step-address.is-open + #addrow-wrap:empty + #step-summary{
+  margin-top: calc(var(--stack) + 12px);
+}
+
+
+/* absolute safety: even if the wrapper is empty/hidden, keep the gap */
+#step-address.is-open + #addrow-wrap[style*="display:none"] + #step-summary,
+#step-address.is-open + #addrow-wrap:empty + #step-summary{
+  margin-top: calc(var(--stack) + 12px);
+}
+
+/* When the DELIVERY section (#step-address) is open, show it */
+#step-address.is-open + #addrow-wrap{ display:block; }
+
+.step-card.hide-collapsed .step-collapsed{
+  display:none !important;   /* hide the 2nd line under the title */
+}
+
+.step-card:not(.is-open) .step-header{
+  grid-template-rows: 56px;   /* center row */
+  align-items: center;         /* vertical centering */
+}
+
+
+/* Hide the DELIVERY "CHANGE" button while LOGIN is open */
+#step-login.is-open ~ #step-address .step-header .step-secondary{
+  display: none !important;
+}
+
+
+/* keep the next section spacing consistent (if any follows) */
+#summary-confirm-wrap + .step-card {
+  margin-top: var(--stack);
+}
+
+/* --- Pro inline validation (Flipkart-like) --- */
+.field.invalid input {
+  border: 1.5px solid #ef4444 !important;
+  background: #fef2f2 !important;
+}
+.field .err {
   display: none;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #dc2626;          /* red */
+  line-height: 1.2;
 }
-.wait-backdrop.show { display: block; }
+.field.invalid .err { display: block; }
 
-/* Success variant (if you ever switch to AJAX later) */
-.toast.success { background: #0a7b34; }
+/* dark mode tweak so it’s still readable */
+html[data-theme="dark"] .field.invalid input {
+  background: #2b1b1b !important;
+  border-color: #ef4444 !important;
+}
+html[data-theme="dark"] .field .err { color: #fda4a4; }
+
+/* ——— FINAL OVERRIDES: force radios to be white circle + blue dot ——— */
+.addr-type label{
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  background:transparent !important;
+}
+
+/* Kill any “selected pill” effect on the label */
+.addr-type label:has(input:checked){
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+/* Hard-force the radio look (even if some earlier CSS fights it) */
+.addr-type input[type="radio"]{
+  -webkit-appearance:none !important;
+  appearance:none !important;
+
+  width:22px !important;           /* size you want */
+  height:22px !important;
+  border-radius:50% !important;
+  border:2px solid #cbd5e1 !important;
+  background:#fff !important;
+
+  display:inline-grid !important;
+  place-items:center !important;
+  padding:0 !important;
+  margin:0 8px 0 0 !important;
+  box-shadow:none !important;
+  vertical-align:middle !important;
+  transition:border-color .15s ease !important;
+}
+
+/* The blue inner dot */
+.addr-type input[type="radio"]::after{
+  content:"";
+  width:11px;                      /* half of 22px */
+  height:11px;
+  border-radius:50%;
+  background:var(--brand);
+  transform:scale(0);
+  transition:transform .12s ease;
+}
+
+/* Blue ring when checked */
+.addr-type input[type="radio"]:checked{
+  border-color:rgba(40,116,240,.85) !important;
+}
+.addr-type input[type="radio"]:checked::after{
+  transform:scale(1);
+}
+
+/* Accessible focus ring (not a big blue pill) */
+.addr-type input[type="radio"]:focus-visible{
+  outline:2px solid rgba(40,116,240,.55);
+  outline-offset:2px;
+}
+
+/* Keep white in dark mode too */
+html[data-theme="dark"] .addr-type input[type="radio"]{
+  background:#fff !important;
+  border-color:#475569 !important;
+}
+.addr-type-heading{
+  color: var(--text);
+  font-weight: 800;
+  margin-bottom: 6px;          /* space under the heading */
+}
+
+.addr-type{
+  display: flex;
+  gap: 24px;                   /* space between the two options */
+  align-items: center;
+  flex-wrap: wrap;
+}
+.addr-type-wrap { margin-top: 10px;  margin-bottom: 12px; } 
+
+
+/* Ensure good gap before the Save/Cancel buttons in both forms */
+.inline-edit .form-actions,
+.inline-add  .form-actions{
+  margin-top: 30px;      /* tweak 16–24px as you like */
+}
+
+/* --- Compact header spacing like Flipkart --- */
+/* Default: let headers size to content instead of a fixed 56px row */
+.step-header{
+  grid-template-rows: auto;           /* no forced 56px row */
+}
+
+/* When a step is COLLAPSED, make it tight (title + one small line) */
+.step-card:not(.is-open) .step-header{
+  min-height: auto;
+  padding: 10px 18px 12px;            /* tighter vertical padding */
+  grid-template-rows: auto auto;      /* title + collapsed line */
+  row-gap: 2px;                       /* tiny gap between them */
+}
+
+/* The summary line sits right under the title, no extra margin */
+.step-card:not(.is-open) .step-collapsed{
+  display: block;
+  grid-row: 2;
+  margin-top: 0;
+  font-size: 14px;
+}
+
+/* Keep the “open” header tall/brand-colored as before */
+.step-card.is-open .step-header{
+  grid-template-rows: 56px;
+}
+
+/* IMPORTANT: Only hide collapsed lines while LOGIN is open */
+#step-login.is-open ~ #step-address .step-collapsed,
+#step-login.is-open ~ #step-summary .step-collapsed{
+  display: none !important;
+}
+
+/* --- Flipkart-like info tooltip --- */
+.iwrap{position: relative; display: inline-flex; align-items: center; margin-left: 6px;}
+
+.iicon{ display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px;cursor: pointer; font-size: 12px; font-weight: 800; line-height: 1;
+  background: #eef2f7; color: #0b1220; border: 1px solid rgba(0,0,0,.08);}
+
+/* The bubble */
+.ttbox{position: absolute; left: 50%; top: 100%; transform: translate(-50%, 10px); min-width: 220px; max-width: 320px; padding: 12px 14px; border-radius: 10px;
+  background: #0b0f19;color: #e5e7eb; box-shadow: 0 12px 30px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.06); opacity: 0; visibility: hidden; pointer-events: none;transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
+  transition-delay: .14s; will-change: opacity, transform; white-space: normal; line-height: 1.35;z-index: 60;}
+
+/* the little arrow pointing at the icon */
+.ttbox::after{content:"";position: absolute; top: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px; background: inherit; border-left: 1px solid rgba(255,255,255,.06); border-top: 1px solid rgba(255,255,255,.06);}
+
+/* show on hover or focus, and KEEP showing if you move onto the bubble */
+.iwrap:hover .ttbox,
+.iwrap:focus-within .ttbox,
+.ttbox:hover{
+  opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 14px); transition-delay: 0s;}
+
+/* smaller, cleaner icon */
+.iicon{width: 14px; height: 14px; font-size: 10px; cursor: pointer;}
+
+/* keep tooltip open while moving from the icon to the bubble:
+   this creates an invisible 'bridge' under the icon */
+.iwrap{ position: relative; }
+.iwrap::before{content:""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); width: 26px; height: 12px; pointer-events: auto;}
+
+/* make tooltip white in dark theme so it doesn't blend in */
+html[data-theme="dark"] .ttbox{background: #ffffff; color: #0b1220; border: 1px solid rgba(0,0,0,.12); box-shadow: 0 16px 36px rgba(0,0,0,.5);}
+
+/* Make the i-icon subtle in dark mode */
+html[data-theme="dark"] .iicon{ background: rgba(255,255,255,.06); color: #94a3b8; border-color: rgba(255,255,255,.12); box-shadow: none; opacity: .75;}
+
+/* Only brighten a bit on hover/focus 
+html[data-theme="dark"] .iicon:hover,
+html[data-theme="dark"] .iicon:focus-visible{background: rgba(255,255,255,.12); color: #cbd5e1; border-color: rgba(255,255,255,.2); opacity: .95;} */
+
+/* Extra nudge: even quieter inside the price card by default */
+.price-card .iicon{ opacity:.7 }
+.price-card .iicon:hover,
+.price-card .iicon:focus-visible{ opacity:.95 }
+
+/* Put email + button on one row */
+.confirm-panel{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+
+.confirm-panel .note{ margin:0; flex:1; }
+.confirm-panel .confirm-actions{ margin-left:auto; }
+
+.btn-pay{ padding:10px 16px; font-size:14px; border-radius:8px;
+}
+@media (max-width:700px){
+  .confirm-panel{ flex-direction:column; align-items:flex-start; }
+  .confirm-actions{ margin-left:0; }
+}
+/* lay out email + button on one row, like Flipkart */
+.confirm-panel{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.confirm-panel .note{ margin:0; flex:1; }
+.confirm-panel .confirm-actions{ margin-left:auto; }
+
+/* smaller button */
+.confirm-panel .btn-lg{ padding:10px 16px; font-size:14px; border-radius:8px; }
+
+@media (max-width:700px){
+  .confirm-panel{ flex-direction:column; align-items:flex-start; }
+  .confirm-panel .confirm-actions{ margin-left:0; }
+}
+
+/* simple confirmation card (no step header) */
+.confirm-wrap{ margin-top:12px; }
+.hidden{ display:none !important; }
+
+.confirm-card{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--card-radius); box-shadow:var(--shadow);
+  padding:14px 16px;
+}
+
+.confirm-card .note{ margin:0; color:var(--muted); }
+.confirm-card .btn-lg{ padding:10px 16px; font-size:14px; border-radius:8px; }
+@media (max-width:700px){
+  .confirm-card{ flex-direction:column; align-items:flex-start; }
+}
+
+#summary-confirm-wrap{
+  display:block;
+  margin-top: var(--stack, 12px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+
+#step-address:not(.is-open) > .step-body,
+.step-card:not(.is-open) > .step-body{
+  padding: 0 !important;
+  max-height: 0 !important;
+  pointer-events: none !important;
+  border-top: none;  /* optional: removes the tiny seam */
+}
+
+/* keep the usual gap even when the +Add wrapper is closed/empty */
+#addrow-wrap:not(.is-open){
+  height: var(--stack);   /* acts like a spacer */
+  margin: 0;              /* so it doesn't double up with the step margins */
+}
+/* always ensure a gap before Order Summary */
+#step-address + #addrow-wrap + #step-summary{
+  margin-top: var(--stack);
+}
+/* ---- Uniform, fixed spacing between steps ---- */
+:root { --step-gap: 12px; }              /* keep your preferred gap */
+.step-card + .step-card{ margin-top: var(--step-gap) !important; }
+
+/* Make the Add-row wrapper non-spacing so it never affects gaps */
+#addrow-wrap{
+  margin: 0 !important;
+  padding: 0 !important;
+  display: contents;                     /* wrapper disappears as a box */
+}
+
+/* Ensure SUMMARY always gets the same gap after DELIVERY */
+#step-address ~ #step-summary{
+  margin-top: var(--step-gap) !important;
+}
+
+
+/* Let the gap come from #addrow-wrap only (avoid double-counting) */
+#step-summary{ 
+  margin-top: 0 !important; 
+}
+
+/* Optional: when the add-row wrapper is "closed", still keep the same space */
+#addrow-wrap:not(.is-open){
+  display: flow-root;
+  height: auto;                       /* no fake height spacer */
+  margin-top: var(--stack);
+  margin-bottom: var(--stack);
+}
+
+/* Neutralize any earlier “+ next step” spacing for the summary card */
+.addnew-panel + #step-summary,
+.mini-row + #step-summary{
+  margin-top: 0 !important;
+}
+
+/* Confirmation bar: stable layout */
+#confirm-wrap{ 
+  display:block;            /* always a block when visible */
+  width:100%;
+  margin-top:12px;
+}
+#confirm-wrap.hidden{ 
+  display:none !important;  /* hide completely when empty cart */
+}
+
+/* (ensures consistent look when visible) */
+#confirm-wrap .confirm-card{
+  display:flex; 
+  align-items:center; 
+  justify-content:space-between; 
+  gap:12px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:14px 16px;
+}
+#confirm-wrap .confirm-card .note{ margin:0; font-size: 17px; line-height: 1.4; }
+#confirm-wrap .btn-lg{ padding:10px 16px; font-size:14px; border-radius:8px; }
+
+@media (max-width:700px){
+  #confirm-wrap .confirm-card{ flex-direction:column; align-items:flex-start; }
+}
+
+/* Hide the confirm bar whenever the cart has no .summary-item rows */
+#step-summary:not(:has(.summary-item)) + #confirm-wrap {
+  display: none !important;
+}
+
+/* If there could be other elements between them, use general sibling: */
+#step-summary:not(:has(.summary-item)) ~ #confirm-wrap {
+  display: none !important;
+}
+
+/* --- small blocking modal for empty-cart guard --- */
+.modal-backdrop{
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: grid; place-items: center; z-index: 10050;
+}
+.modal-card{
+  width: min(520px, 92vw);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.modal-card h4{ margin: 0 0 8px; font-size: 18px; }
+.modal-card p{ margin: 0 0 14px; color: var(--muted); }
+.modal-actions{ display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions .btn{ padding: 10px 14px; border-radius: 8px; }
+
+/* --- error variant for the small modal --- */
+.modal-card.error{
+  border-color:#fecaca;               /* light red border */
+}
+.modal-card .modal-title{
+  display:flex; align-items:center; gap:10px;
+  margin:0 0 8px;
+}
+.modal-card.error .modal-title h4{
+  margin:0; font-size:18px; color:#b91c1c;   /* red title */
+  font-weight:900;
+}
+.modal-card .badge-err{
+  width:28px; height:28px; border-radius:999px;
+  display:grid; place-items:center;
+  background:#fee2e2; color:#b91c1c;         /* pale red bg, deep red icon */
+  font-weight:900; line-height:1; font-size:16px;
+}
+.modal-card.error p{
+  margin:0 0 14px;
+  padding:10px 12px;
+  border-radius:8px;
+  background:#fef2f2;                       /* gentle red strip for the text */
+  border:1px solid #fecaca;
+  color:#7f1d1d;
+}
+
+/* dark theme tweaks */
+html[data-theme="dark"] .modal-card.error{
+  border-color:#7f1d1d;
+}
+html[data-theme="dark"] .modal-card .badge-err{
+  background:rgba(239,68,68,.18); color:#fca5a5;
+}
+html[data-theme="dark"] .modal-card.error p{
+  background:rgba(127,29,29,.25); border-color:#7f1d1d; color:#fecaca;
+}
+.modal-card .badge-err{ display:none !important; }
+
+
+/* === Uniform section spacing (single source of truth) === */
+:root { --step-gap: 12px; }                  /* change to 16 if you want bigger */
+
+.step-card { margin-top: 0; }
+.step-card + .step-card { margin-top: var(--step-gap) !important; }
+
+/* The “+ Add new address” wrapper sits between DELIVERY and SUMMARY */
+#addrow-wrap {
+  display: flow-root;                         /* avoids margin collapsing */
+  margin: var(--step-gap) 0 !important;       /* owns the gap below DELIVERY */
+}
+
+/* SUMMARY itself contributes no extra gap above (let addrow-wrap own it) */
+#step-address + #addrow-wrap + #step-summary {
+  margin-top: 0 !important;
+}
+
+/* Hide the confirm bar whenever the ORDER SUMMARY step is not open */
+#step-summary:not(.is-open) + #confirm-wrap {
+  display: none !important;
+}
+
+.modal-card .modal-title{
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+.modal-card .modal-title > h4{
+  margin: 0 auto !important;   /* take the middle */
+  width: 100%;                  /* ensures true centering */
+  text-align: center !important;
+}
+/* --- Title color override --- */
+.modal-card .modal-title > h4 {
+  justify-content:center;text-align:center;color: #111 !important;          /* light theme: black */
+}
+html[data-theme="dark"] .modal-card .modal-title > h4 {
+  justify-content:center;text-align:center;color: #fff !important;           /* dark theme: white */
+}
+
+/* --- Remove the thin red outline on the OUTER card --- */
+.modal-card,
+.modal-card.error {
+  border: 0 !important;             /* no border at all */
+  box-shadow: 0 12px 40px rgba(0,0,0,.16) !important; /* soft shadow only */
+}
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .modal-card.error {
+  box-shadow: 0 12px 40px rgba(0,0,0,.6) !important;
+}
+
+/* Actions row centered */
+.modal-card .modal-actions{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin-top:12px;
+}
+
+/* Go to cart: no underline ever */
+.btn-brand,
+.btn-brand:hover,
+.btn-brand:focus{
+  text-decoration:none;
+}
+.btn-brand{
+  background:var(--brand);
+  color:#fff;
+  border:1px solid transparent;
+  border-radius:8px;
+  padding:10px 14px;
+  font-weight:800;
+}
+
+/* “X” outside the card with a bit more gap */
+.modal-card{ position:relative; }
+.modal-close{
+  cursor: pointer;
+  position:absolute;
+  top:0;                      /* flush with card’s top */
+  right:-36px;                /* push outside to the right */
+  width:28px; height:28px;
+  display:grid; place-items:center;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.12);
+  background:#fff;
+  color:#111;
+  box-shadow:0 4px 10px rgba(0,0,0,.12);
+}
+html[data-theme="dark"] .modal-close{
+  background:#0b1220;
+  color:#e5e7eb;
+  border-color:#1f2937;
+}
+html[data-theme="dark"] .modal-close{
+  background:#040911; color:#e5e7eb; border-color:#1f2937;
+}
+
+.step-card.is-disabled .step-body { display: none; }
+.step-card.is-disabled .step-done { display: none; }
+/* Keep CHANGE clickable even when the step is “disabled” */
+.step-card.is-disabled .step-secondary{
+  pointer-events:auto;
+  opacity:1;
+  cursor:pointer;
+}
+/* trust strip directly under the price card, same right column */
+
+
+/* wrapper keeps the card and foot together and sticky */
+.price-wrap{
+  position: sticky;
+  top: calc(var(--header-h) + 16px);
+  align-self: start;
+  width: var(--sidebar-w);
+}
+
+/* the card itself */
+.price-card{
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  max-height: calc(100vh - var(--header-h) - 32px);
+  overflow: auto;
+}
+.price-card .card-body{ padding:16px 20px 12px; }
+
+/* FULL-WIDTH divider under the heading */
+.price-card .card-head{
+  margin:0 0 12px;
+  padding-bottom:12px;
+  font-size:16px; letter-spacing:.3px;
+  border-bottom:1px solid var(--border);
+}
+
+.price-card .total{
+  border-bottom:1px solid var(--border); /* keep only one line */
+  padding:14px;       /* balanced spacing */
+  margin-top:6px;
+}
+
+.price-card .save{ color:#1a8f3d; font-weight:900; margin-top:10px;border-top: 0 !important; padding-top: 10px; }
+.price-card .sep.last{ display: none !important; }
+
+/* Price card footer (shield + copy) */
+.price-foot{ display:flex; align-items:flex-start;gap:10px;margin-top:12px; padding:12px 16px; border-radius:12px; background:#fff; border:1px solid rgba(0,0,0,.08);}
+
+/* Add/replace these */
+.price-foot{ --shield-size: 56px; }             /* <— tweak this number any time */
+.price-foot .shield-img{
+  width: var(--shield-size);
+  height: var(--shield-size);
+}
+
+/* Optional: even bigger on wide screens */
+@media (min-width: 2000px){
+  .price-foot{ --shield-size: 80px; }
+}
+
+/* Nudge text if needed after growing the icon */
+.price-foot .foot-copy{ margin-top: 4px; }
+
+/* Dark theme */
+html[data-theme="dark"] .price-foot{
+  background:#0b0f19;
+  border-color:rgba(255,255,255,.12);
+}
+html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
+
+
+/* === Inline EDIT: keep it inside the address card, tidy, responsive === */
+
+/* 1) Make the editor look like a row inside the list */
+#step-address .addr-list > .inline-edit{
+  margin: 0;                       /* no bubbles around */
+  padding: 14px 16px;              /* same as rows */
+  border: 0;                       /* remove outer border */
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;                /* no floating card look */
+  max-width: 100%;
+}
+
+/* 2) Ensure the list clips neatly, but allows the inline editor to show */
+#step-address .addr-list{ overflow: hidden; border-radius: 10px; }
+#step-address .addr-list.has-inline{ overflow: visible; } /* only while editing */
+
+/* 3) Two-column form grid that collapses nicely */
+#step-address .inline-edit .grid-2{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 900px){
+  #step-address .inline-edit .grid-2{ grid-template-columns: 1fr; }
+}
+
+/* 4) Radio + label row wraps instead of stretching wide */
+#step-address .inline-edit .addr-type{
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;                 /* allow wrap */
+  align-items: center;
+}
+#step-address .inline-edit .addr-type label{
+  white-space: nowrap;             /* keep each option on one line */
+}
+
+/* 5) Keep the whole editor from causing horizontal scrollbars */
+#step-address .inline-edit, 
+#step-address .inline-edit * { max-width: 100%; box-sizing: border-box; }
+
+/* 6) The “inline editor replaces a row” look */
+#step-address .addr-item.is-hidden{ display: none; } /* you already have this, ensure it wins */
+
+/* 7) Step body shouldn’t clip the editor */
+#step-address.is-open .step-body{
+  overflow: visible;               /* allow tooltips/validation to show */
+  max-height: none;                /* don’t squeeze the editor */
+}
+
+/* — nav loader (covers flicker during full page POST/redirect) — */
+#nav-loading{
+  position: fixed; inset: 0;
+  display: none;               /* toggled via .is-on */
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.35);
+  z-index: 99999;
+  -webkit-backdrop-filter: blur(1px);
+  backdrop-filter: blur(1px);
+}
+#nav-loading.is-on{ display: flex; }
+
+#nav-loading .nav-spin{
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.55);
+  border-top-color: #fff;
+  animation: nav-spin .7s linear infinite;
+}
+@keyframes nav-spin{ to { transform: rotate(360deg); } }
+
+
+/* --- Price card: keep rows single-line + aligned --- */
+.price-card .row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.price-card .row > span,
+.price-card .row > strong{
+  white-space: nowrap;                 /* prevent wrap */
+}
+
+/* Make the Total row match the other rows’ spacing */
+.price-card .row.total{
+  font-size: 16px;
+  padding:14px 0;                     
+  margin-top:6px;
+  border-top:1px solid var(--border);
+}
+
+.price-card .row.total > span{ font-weight:700; }
+.price-card .row.total > strong{
+  font-size: 16px;
+  margin-left:auto;                    /* push ₹ to the right */
+  font-weight:900;
+}
+
+/* Optional: if width is tight, truncate the left label cleanly */
+.price-card .row > span{
+  text-overflow:ellipsis;
+}
+
+/* Base minus button look (keeps your current sizing) */
+.minus-btn{
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease, opacity .15s ease;
+}
+
+/* Hand cursor on hover when it’s usable */
+.minus-btn:hover:not(:disabled):not([aria-disabled="true"]){
+  cursor: pointer;                 /* hand */
+  filter: brightness(1.02);
+}
+
+/* Strictly disabled: red + blocked cursor */
+.minus-btn:disabled,
+.minus-btn[aria-disabled="true"]{
+  cursor: not-allowed;             /* blocked icon */
+  opacity: 1;                      /* keep readable; remove if you want it faded */
+}
+
+/* Optional: hover state while disabled (keeps blocked cursor & red look) */
+.minus-btn:disabled:hover,
+.minus-btn[aria-disabled="true"]:hover{
+  cursor: not-allowed;
+}
+
+
 
 </style>
-{% endblock %}
+</head>
+<body>
+  <header class="topbar" role="banner">
+    <div class="brand">Novacart</div>
+    <div class="spacer"></div>
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme" title="Theme: auto">🌙</button>
+  </header>
 
-{% block content %}
-<button class="btn-back fixed-back-btn" onclick="location.href='/api/cart/'">Get Back</button>
-<div class="checkout-container">
-    <h1>Orders</h1>
-    <form action="/api/vieworders/" method="post">
-        {% csrf_token %}
-        <div class="checkout-table-scroll">
-        <table>
-            <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Product Name</th>
-                    <th>Created At</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in orders_data %}
-                <tr>
-                    <td><img src="{{ order.image }}" alt="{{ order.product_name }}"></td>
-                    <td>{{ order.product_name }}</td>
-                    <td><div class="order-datetime" data-datetime="{{ order.created_at|escape }}"></div></td>
-                    <td>{{ order.quantity }}</td>
-                    <td>{{ order.price }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="3"></td>
-                    <td>
-                        <span class="total-label-box">Total:</span>
-                    </td>
-                    <td>
-                        <span class="total-value-box">Rs.{{ cart_total }}</span>
-                    </td>
-                </tr>
-            </tfoot>
-        </table>
-        </div>
-
-        <div id="address-container">
-    {% if addresses %}
-        <p>Choose an address:</p>
-
-        <!-- Inner scrollable container -->
-        <div class="addresses-scroll">
-            {% for address in addresses %}
-            <label>
-                <div class="address-details">
-                    <input type="radio" name="address_id" value="{{ address.address_id }}">
-                    {{ address.door_no }}, {{ address.street }}, {{ address.area }}, {{ address.city }}, {{address.state}}, {{address.pincode}}, {{ address.country }}
-                </div>
-            </label>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <div id="address-error" style="color: red; font-size: 16px; margin-bottom: 10px; display:none;"></div>
-
+<main class="checkout{% if not orders_data %} is-empty{% endif %}" role="main">
     <div>
-        <button type="submit" formmethod="post" class="btn-placeorder" formaction='/api/checkout/'>Place Order</button>
-    </div>
-</div>
-<!-- lightweight backdrop + toast -->
-<div id="wait-backdrop" class="wait-backdrop"></div>
-<div id="placing-toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
-  <!-- SVG status icon -->
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 3a9 9 0 100 18 9 9 0 000-18Z" stroke="currentColor" stroke-width="2"/>
-    <path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
-  </svg>
-  <span>Placing your order…</span>
-  <span class="spinner" aria-hidden="true"></span>
-</div>
+      <!-- STEP 1: LOGIN -->
+      <section id="step-login" class="step-card" aria-label="Login">
+        <div class="step-card__box">
+          <header class="step-header" id="hdr-login">
+            <div class="step-index">1</div>
+            <h2 class="step-card__title">LOGIN <span class="step-done" id="tick-login">✓</span></h2>
+
+            <!-- collapsed summary -->
+            <div id="login-collapsed" class="step-collapsed">
+              <b id="col-name">{{ user_name|default:"Customer" }}</b> <span id="col-phone">{{ user_phone|default:"+91 xxxxxxxxxx" }}</span>
+            </div>
+
+            <button id="btn-change-login" type="button" class="step-secondary">CHANGE</button>
+          </header>
+
+          <div class="step-card__content">
+            <div id="login-expanded" class="login-grid">
+              <!-- LEFT -->
+              <div class="login-two-col">
+                  <!-- left column rows: now inline -->
+                  <div class="info-row">
+                    <span class="label">Name</span>
+                    <span class="value" id="login-name">{{ user_name|default:"Customer" }}</span>
+                  </div>
+
+                  <div class="info-row">
+                    <span class="label">Phone</span>
+                    <span class="value" id="login-phone">{{ user_phone|default:"+91 xxxxxxxxxx" }}</span>
+                  </div>
+                <div class="login-actions">
+                  <a id="link-logout" href="{% url 'loginuser'%}" style="color:var(--brand)">Logout &amp; Sign in to another account</a>
+                  <button id="btn-continue-login" type="button" class="btn btn-primary btn-lg">CONTINUE CHECKOUT</button>
+                </div>
+
+                <p class="note">Please note that upon clicking "Logout" you will lose all items in cart and will be redirected to home.</p>
+              </div>
+
+              <!-- RIGHT – advantages -->
+              <div class="benefits" id="benefits">
+                <div class="benefit-title">Advantages of our secure login</div>
+                <div class="benefit"><span class="icon">🚚</span> Easily Track Orders, Hassle free Returns</div>
+                <div class="benefit"><span class="icon">🔔</span> Get Relevant Alerts and Recommendation</div>
+                <div class="benefit"><span class="icon">⭐</span> Wishlist, Reviews, Ratings and more.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: DELIVERY ADDRESS -->
+      <section id="step-address" class="step-card" aria-labelledby="h-address" data-mode="collapsed">
+        <header class="step-header" id="hdr-address">
+          <div class="step-index">2</div>
+          <h2 id="h-address">DELIVERY ADDRESS <span class="step-done" id="tick-address">✓</span></h2>
+
+          <!-- collapsed summary (stays under title, never under CHANGE) -->
+          <div id="addr-collapsed" class="step-collapsed">
+            <b id="addr-col-name"></b>
+            <span id="addr-col-line"></span>
+            <b id="addr-col-pin"></b>
+          </div>
+
+          <button id="btn-address-change" class="step-secondary">CHANGE</button>
+        </header>
+
+        <div id="address-body" class="step-body">
+          <div id="addrList" class="addr-list"></div>
+
+            <!-- Inline edit template (cloned when you click EDIT) -->
+            <template id="tpl-inline-edit">
+              <form class="inline-edit" validate>
+                <!-- left column: radio like other rows -->
+                <div class="inline-radio">
+                  <input class="addr-radio" type="radio" name="addr" />
+                </div>
+
+                <!-- right column: form -->
+                <div class="inline-box">
+                  <div class="inline-title">EDIT ADDRESS</div>
+
+                  <div class="grid-2">
+                    <div class="field"><label>Name</label><input name="name" required /></div>
+                    <div class="field"><label>Phone</label><input name="phone" required /></div>
+                  </div>
+
+                  <div class="grid-2" style="margin-top:12px">
+                    <div class="field"><label>Pincode</label><input name="pincode" required /></div>
+                    <div class="field"><label>Area</label><input name="area" required /></div>
+                  </div>
+
+                  <div class="grid-2" style="margin-top:12px">
+                    <div class="field"><label>Door No</label><input name="door_no" required /></div>
+                    <div class="field"><label>Street</label><input name="street" required /></div>
+                  </div>
+
+                  <div class="grid-2" style="margin-top:12px">
+                    <div class="field"><label>City</label><input name="city" required /></div>
+                    <div class="field"><label>State</label><input name="state" required /></div>
+                  </div>
+
+                  <div class="grid-2" style="margin-top:12px">
+                    <div class="field"><label>Landmark (optional)</label><input name="landmark" /></div>
+                    <div class="field"><label>Alternate Phone (optional)</label><input name="altphone" /></div>
+                  </div>
+
+                  <div class="field" style="margin-top:12px" data-field="tag" ></div>
+                  <label class="addr-type-heading">Address Type</label>
+                  <div class="addr-type" style="margin-top:12px">
+                    <label><input type="radio" name="tag" value="HOME" checked>Home (All Day Delivery)</label>
+                    <label><input type="radio" name="tag" value="WORK">Work (Delivery Between 10AM - 5PM)</label>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-secondary js-cancel-edit" type="button">Cancel</button>
+                  </div>
+                </div>
+              </form>
+            </template>
+          </section>
+
+      <!-- + Add a new address (row + mount just below) -->
+      <div id="addrow-wrap">
+        <div id="addrow-card" class="mini-row" style="display:none;">
+          <span class="plus">+</span> <span>Add a new address</span>
+        </div>
+        <!-- form mounts here when user clicks +Add -->
+        <div id="add-mount" style="display:none; margin-top:12px;"></div>
+      </div>
+
+          <!-- Inline ADD template (cloned when you click “+ Add a new address”) -->
+      <template id="tpl-inline-add">
+        <form class="inline-edit inline-add" validate>
+          <div class="inline-radio">
+            <input class="addr-radio" type="radio" name="addr" />
+          </div>
+          <div class="inline-box">
+            <div class="inline-title">ADD NEW ADDRESS</div>
+
+            <div class="grid-2">
+              <div class="field"><label>Name</label><input name="name" required /></div>
+              <div class="field"><label>Phone</label><input name="phone" required /></div>
+            </div>
+
+            <div class="grid-2" style="margin-top:12px">
+              <div class="field"><label>Pincode</label><input name="pincode" required /></div>
+              <div class="field"><label>Area</label><input name="area" required /></div>
+            </div>
+
+            <div class="grid-2" style="margin-top:12px">
+              <div class="field"><label>Door No</label><input name="door_no" required /></div>
+              <div class="field"><label>Street</label><input name="street" required /></div>
+            </div>
+
+            <div class="grid-2" style="margin-top:12px">
+              <div class="field"><label>City</label><input name="city" required /></div>
+              <div class="field"><label>State</label><input name="state" required /></div>
+            </div>
+
+            <div class="grid-2" style="margin-top:12px" data-field="tag" >
+              <div class="field"><label>Landmark (optional)</label><input name="landmark" /></div>
+              <div class="field"><label>Alternate Phone (optional)</label><input name="altphone" /></div>
+            </div>
+           
+            <div class="field"  style="margin-top:12px"></div>
+            <label class="addr-type-heading">Address Type</label>
+            <div class="addr-type" style="margin-top:12px">
+              <label><input type="radio" name="tag" value="HOME" checked>Home (All Day Delivery)</label>
+              <label><input type="radio" name="tag" value="WORK">Work (Delivery Between 10AM - 5PM)</label>
+            </div>
+            
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Save &amp; deliver here</button>
+              <button class="btn btn-secondary js-cancel-add" type="button">Cancel</button>
+            </div>
+          </div>
+        </form>
+      </template>
+
+ <!-- STEP 3: ORDER SUMMARY -->
+<section id="step-summary" class="step-card" aria-labelledby="h-summary">
+  <header class="step-header" id="hdr-summary">
+    <div class="step-index">3</div>
+    <h2 id="h-summary">ORDER SUMMARY <span class="step-done" id="tick-summary">✓</span></h2>
+  </header>
+
+  <div class="step-body">
+    {% if orders_data %}
+      {% for item in orders_data %}
+        <div class="summary-item" id="item-{% firstof item.product_id item.product.product_id "" %}">
+          <img
+            src="{% firstof item.image item.product.image '' %}"
+            alt="{% firstof item.product_name item.product.product_name 'Product' %}"
+          />
+
+          <div class="details">
+            <div class="name">{% firstof item.product_name item.product.product_name %}</div>
+
+            <div class="price-row">
+              <span class="price" data-unit="{% firstof item.price item.product.price '0.00' %}">
+                ₹ {% firstof item.total_price item.price item.product.price "0.00" %}
+              </span>
+            </div>
+          </div>
+
+          <!-- Quantity controls under image -->
+          <div class="qty-row">
+            <form action="{% url 'reducequantity_checkout' %}" method="post" class="minus-form">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
+              <button type="submit" aria-label="Decrease" class="qty-btn minus-btn">–</button>
+            </form>
+
+            <span class="qty-num">{{ item.quantity|default:"1" }}</span>
+
+            <form action="{% url 'addquantity_checkout' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
+              <button type="submit" aria-label="Increase" class="qty-btn">+</button>
+            </form>
+          </div>
+
+          <form action="{% url 'deleteproduct_checkout' %}" method="post" class="remove-form">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
+            <button type="submit" class="remove-btn">REMOVE</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-hint">Your checkout has no items.</div>
+    {% endif %}
+  </div>
+</section>
+
+<!--order confirmation-->
+<div id="confirm-wrap" class="confirm-wrap hidden">
+  <div class="confirm-card">
+    <p class="note">
+      Order confirmation will be sent to
+      <strong>{{ user_email|default:"your registered email address" }}</strong>.
+    </p>
+
+    <form id="paymentForm" action="{% url 'start_payment' %}" method="post" style="margin:0;">
+  {% csrf_token %}
+  <input type="hidden" name="address_id" value="{{ addresses.0.address_id }}">
+  <input type="hidden" name="item_count"    value="{{ orders_data|length|default:'0' }}">
+  <input type="hidden" name="cart_total"    value="{{ cart_total|floatformat:0 }}">
+  <input type="hidden" name="shipping_fee"  value="{{ shipping_fee|floatformat:0 }}">
+  <input type="hidden" name="platform_fee"  value="{{ platform_fee|floatformat:0 }}">
+  <input type="hidden" name="total_payable" value="{{ total_payable|floatformat:0 }}">
+
+  <button type="submit" class="btn btn-primary btn-lg">
+    CONTINUE TO PAYMENT
+  </button>
 </form>
+
+  </div>
 </div>
+</div>
+
+
+{% load static %}
+
+{% if orders_data %}
+<!-- RIGHT: Price details (card + outside foot) -->
+<div class="price-wrap" aria-label="Price details">
+  <aside class="price-card" role="complementary">
+    <div class="card-body">
+      <h3 class="card-head">PRICE DETAILS</h3>
+
+      <div class="sep"></div>
+
+      <!-- Price row + tooltip -->
+      <div class="row price">
+        <span class="muted">
+          Price ({{ orders_data|length|default:"0" }} item)
+          <span class="iwrap">
+            <span class="iicon" aria-hidden="true">i</span>
+            <span class="ttbox">
+              The total of item prices in your bag. Taxes are included where applicable.
+            </span>
+          </span>
+        </span>
+        <strong>₹ {{ cart_total|floatformat:0 }}</strong>
+      </div>
+
+      <!-- Delivery row + tooltip -->
+      <div class="row ship">
+        <span class="muted">
+          Delivery charge
+          <span class="iwrap">
+            <span class="iicon" aria-hidden="true">i</span>
+            <span class="ttbox">
+            ₹100 on orders below ₹1500, Otherwise free. It's Auto-applied.
+            </span>
+          </span>
+        </span>
+        {% if shipping_fee == 0 %}
+          <strong>₹ 0</strong>
+        {% else %}
+          <strong>₹ {{ shipping_fee|floatformat:0 }}</strong>
+        {% endif %}
+      </div>
+      <!-- Platform fee row -->
+<div class="row fee">
+  <span class="muted">
+    Platform fee
+    <span class="iwrap">
+      <span class="iicon" aria-hidden="true">i</span>
+      <span class="ttbox">
+        A small ₹5 platform fee to help us operate secure checkout infrastructure.
+      </span>
+    </span>
+  </span>
+  <strong>₹ {{ platform_fee|floatformat:0 }}</strong>
+</div>
+
+
+      <div class="sep"></div>
+
+      <!-- Total -->
+      <div class="row total">
+        <span>Total Payable</span>
+        <strong>₹ {{ total_payable|floatformat:0 }}</strong>
+      </div>
+
+      <!-- ONE divider after total (not two) -->
+      <div class="sep last"></div>
+
+      <!-- Savings -->
+      <div class="save">Your Total Savings on this order ₹0</div>
+    </div>
+  </aside>
+
+  <!-- OUTSIDE the card, aligned with it -->
+  {% load static %}
+    <p class="price-foot">
+      <img src="{% static 'images/shield.png' %}" alt="" class="shield-img">
+      <span class="foot-copy">Safe and Secure Payments. Easy returns. 100% Authentic products.</span>
+    </p>
+</div>
+{% endif %}
+
+</main>
+<div id="snack-root" aria-live="polite" aria-atomic="true"></div>
+
+<div id="nav-loading" aria-hidden="true">
+  <div class="nav-spin"></div>
+</div>
+
+{# safely output addresses for JS #}
+{% if addresses %}
+  {{ addresses|json_script:"addresses-json" }}
+{% else %}
+  <script id="addresses-json" type="application/json">[]</script>
+{% endif %}
+
+
 <script>
-document.querySelectorAll('.order-datetime').forEach(function(el) {
-    let now = new Date();
-    var opts = { month: 'long', day: 'numeric', year: 'numeric' };
-    var dateStr = now.toLocaleDateString('en-US', opts);
-    var timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    el.innerHTML = dateStr + "<br><span style='display:block;text-align:center;font-size:14px;'>" + timeStr + "</span>";
+    // ---- fetch helper for Django APIs ----
+function getCookie(name){
+  const m = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+async function api(method, url, body){
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      // Django needs this for POST/PUT/DELETE
+      'X-CSRFToken': getCookie('csrftoken') || ''
+    },
+    credentials: 'same-origin' // send cookies (jwt, csrftoken) to same host
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+
+  const res = await fetch(url, opts);
+  // try JSON; if it fails, surface the text as the error message
+  let data;
+  try { data = await res.json(); } catch { data = await res.text(); }
+  if (!res.ok) {
+    const msg = (data && data.detail) || (typeof data === 'string' ? data : res.statusText);
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+    (function(){
+  const KEY='nc_theme';
+  const root=document.documentElement;
+  const btn=document.getElementById('themeToggle');
+
+  function apply(mode){
+    const m = (mode==='dark') ? 'dark' : 'light';     // clamp to 2 modes
+    root.setAttribute('data-theme', m);
+    localStorage.setItem(KEY, m);
+    btn && (btn.textContent = m==='dark' ? '🌞' : '🌙');
+    btn && (btn.title      = `Theme: ${m}`);
+  }
+
+  apply(localStorage.getItem(KEY) || 'light');         // default = light
+  btn?.addEventListener('click', ()=> {
+    apply(root.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+  });
+    })();
+  </script>
+
+  <script>
+    /* ===== Utilities ===== */
+    const HEADER_OFFSET=72;
+    function gentleScrollInto(el){
+      const rect = el.getBoundingClientRect();
+      const off = rect.top < 72 || rect.top > (innerHeight - 120);
+      if (off){
+        el.scrollIntoView({behavior:'smooth',block:'start'});
+        setTimeout(()=>window.scrollBy({top:-HEADER_OFFSET,left:0,behavior:'smooth'}),40);
+      }
+    }
+    function joinParts(arr){ return arr.filter(v => v && String(v).trim()).join(', '); }
+    function toTitle(s){
+      return (s||'').replace(/\b([A-Za-z][A-Za-z']*)\b/g, (word) => {
+        if (/^[A-Z0-9]{2,}$/.test(word)) return word;          
+        if (/^[a-z]/.test(word)) return word[0].toUpperCase()+word.slice(1); 
+      return word;                                           // leave MixedCase / ProperNames as typed
+    });
+  }  
+    function withPlus91(ph){ ph=String(ph||'').trim(); if(!ph) return '+91 xxxxxxxxxx'; return ph.startsWith('+91')?ph:('+91 '+ph); }
+
+    /* ADD THIS: returns true if there are no items in Order Summary */
+function isCartEmpty(){
+  return !document.querySelector('#step-summary .summary-item');
+}
+    /* ===== Empty-cart guard ===== */
+function isCartEmpty(){
+  return !document.querySelector('#step-summary .summary-item');
+}
+
+function showBlocker(arg){
+  const opts = (typeof arg === 'string') ? { message: arg } : (arg || {});
+  const {
+  title   = "Can't Proceed",message = "Your cart is empty. Please add items to continue checkout.", type = "error"} = opts;
+  const isErr = (type === 'error');
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-backdrop';
+  const cartUrl = "/api/cart/";   
+  wrap.innerHTML = `
+  <div class="modal-card${isErr ? ' error' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+    <button class="modal-close" aria-label="Close">×</button>
+    <div class="modal-title">
+      <h4>${title}</h4>
+    </div>
+    <p>${message}</p>
+    <div class="modal-actions">
+      <a class="btn-brand" href="${cartUrl}">Go to cart</a>
+    </div>
+  </div>`;
+
+  document.body.appendChild(wrap);
+  const close = () => wrap.remove();
+  wrap.querySelector('.modal-close').addEventListener('click', close);
+  wrap.querySelector('.modal-card').addEventListener('click', (e) => e.stopPropagation());
+}
+
+
+/* Keep address header UI correct when cart becomes empty/non-empty */
+function applyCartEmptyStateToAddress(){
+  const empty = isCartEmpty(); // Toggle the disabling class on the DELIVERY section
+  addrSec.classList.toggle('is-disabled', empty);  // Tick (done state) only when cart has items AND an address is selected
+  const done = !empty && !!selectedId && !loginStep.classList.contains('is-open');
+  addrSec.classList.toggle('is-done', done);   // Collapsed header text: clear when empty; otherwise refresh
+  if (empty){
+    addrColName.textContent = '';
+    addrColLine.textContent = '';
+    addrColPin.textContent  = '';
+  }else{
+    updateAddrCollapsed();
+  }
+}
+
+
+
+    // ==== Inline form validation (Flipkart-like) ====
+const RE = {
+  // allow letters, spaces, dots, hyphens, apostrophes (no digits or symbols like $%^)
+  name:  /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  city:  /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  state: /^[A-Za-z][A-Za-z .'-]{1,49}$/,
+  area:  /^[A-Za-z0-9][A-Za-z0-9 .,'-]{1,59}$/,     // locality/area can have numbers
+  street:/^[A-Za-z0-9][A-Za-z0-9 .,'/-]{1,79}$/,   // allow / - , . and spaces
+  door:  /^[A-Za-z0-9#/-]{1,20}$/,                 // house/door no
+  phone: /^\d{10}$/,                                // India 10-digit mobile
+  pin:   /^\d{6}$/,   
+  landmark:/^[A-Za-z0-9][A-Za-z0-9 .,'/-]{1,59}$/,                                
+  altphone: /^\d{10}$/
+};
+
+function msgFor(name){
+  switch(name){
+    case 'name':    return 'Please enter a valid name (letters only).';
+    case 'phone':   return 'Enter a 10-digit mobile number.';
+    case 'pincode': return 'Enter a valid 6-digit pincode.';
+    case 'area':    return 'Locality can’t contain special symbols.';
+    case 'street':  return 'Street can use letters, numbers, / - , .';
+    case 'city':    return 'City must be letters only.';
+    case 'state':   return 'State must be letters only.';
+    case 'door_no': return 'Door No can use letters/numbers/#/-/ /.';
+    case 'altphone': return 'Alternate phone must be a 10-digit number.';
+    case 'landmark': return 'Landmark can use letters, numbers, spaces, , . \' / -';
+    default:        return 'Please fill out this field.';
+  }
+}
+
+// clamp & sanitize numeric-only fields
+function digitsOnly(el, max){
+  el.value = el.value.replace(/\D+/g, '').slice(0, max);
+  if (name === 'altphone') digitsOnly(input, 10);
+
+}
+
+// returns true if field is valid (and shows error if not)
+function validateField(input){
+  const wrap = input.closest('.field') || input.parentElement;
+  if (!wrap) return true;
+
+  // ensure we have an <div class="err">
+  let err = wrap.querySelector('.err');
+  if (!err) {
+    err = document.createElement('div');
+    err.className = 'err';
+    wrap.appendChild(err);
+  }
+
+  const name = input.name;
+  const val  = (input.value || '').trim();
+
+  // required fields (your templates already add "required", we mirror it)
+  const required = input.hasAttribute('required');
+
+  // special per-field normalizers
+  if (name === 'phone') digitsOnly(input, 10);
+  if (name === 'pincode') digitsOnly(input, 6);
+
+  // decide the rule
+  let ok = true;
+  switch(name){
+    case 'name':    ok = RE.name.test(val);  break;
+    case 'phone':   ok = RE.phone.test(val); break;
+    case 'pincode': ok = RE.pin.test(val);   break;
+    case 'area':    ok = RE.area.test(val);  break;
+    case 'street':  ok = RE.street.test(val);break;
+    case 'city':    ok = RE.city.test(val);  break;
+    case 'state':   ok = RE.state.test(val); break;
+    case 'door_no': ok = RE.door.test(val);  break;
+    case 'altphone': ok = !val || RE.altphone.test(val); break;
+    case 'landmark': ok = !val || RE.landmark.test(val); break;
+    default:        ok = required ? !!val : true;
+  }
+
+  // UI
+  if (!ok){
+    wrap.classList.add('invalid');
+    err.textContent = msgFor(name);
+  }else{
+    wrap.classList.remove('invalid');
+    err.textContent = '';
+  }
+  return ok;
+}
+
+// attach to one inline form (add or edit)
+function attachValidation(form){
+  // helpful HTML hints
+  const map = {
+    phone:   { inputmode: 'numeric', maxlength: 10, autocomplete: 'tel' },
+    pincode: { inputmode: 'numeric', maxlength: 6,  autocomplete: 'postal-code' },
+    name:    { autocomplete: 'name' },
+    city:    { autocomplete: 'address-level2' },
+    state:   { autocomplete: 'address-level1' },
+    area:    { autocomplete: 'address-line2' },
+    street:  { autocomplete: 'address-line1' },
+    door_no: { autocomplete: 'off' },
+    altphone: { inputmode: 'numeric', maxlength: 10, autocomplete: 'tel' },
+    landmark: { maxlength: 60, autocomplete: 'off' }
+  };
+  Object.keys(map).forEach(n=>{
+    const el = form.querySelector(`[name="${n}"]`);
+    if (!el) return;
+    Object.entries(map[n]).forEach(([k,v])=> el.setAttribute(k, v));
+  });
+
+  // validate on blur + while typing
+  form.querySelectorAll('input').forEach(input=>{
+    input.addEventListener('blur',  ()=> validateField(input));
+    input.addEventListener('input', ()=> validateField(input));
+  });
+
+  // expose a helper for submit handlers
+  form.validateAll = function(){
+    let ok = true, firstBad = null;
+    form.querySelectorAll('input[required], input[name="phone"], input[name="pincode"],input[name="altphone"], input[name="landmark"]').forEach(input=>{
+      const v = validateField(input);
+      if (!v && !firstBad) firstBad = input;
+      ok = ok && v;
+    });
+    if (!ok && firstBad){
+      firstBad.focus();
+      // make sure user sees it
+      firstBad.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    return ok;
+  };
+}
+
+function setGroupError(form, name, msg){
+  const wrap = form.querySelector(`[data-field="${name}"]`);
+  if (!wrap) return;
+  wrap.classList.add('invalid');
+  let err = wrap.querySelector('.err');
+  if (!err){
+    err = document.createElement('div');
+    err.className = 'err';
+    wrap.appendChild(err);
+  }
+  err.textContent = msg;
+}
+
+function clearGroupError(form, name){
+  const wrap = form.querySelector(`[data-field="${name}"]`);
+  if (!wrap) return;
+  wrap.classList.remove('invalid');
+  const err = wrap.querySelector('.err');
+  if (err) err.textContent = '';
+}
+// clear the "Address Type" group error once user picks Home/Work
+document.addEventListener('change', (e)=>{
+  const r = e.target.closest('input[type="radio"][name="tag"]');
+  if (!r) return;
+  const form = r.closest('form');
+  if (!form) return;
+  clearGroupError(form, 'tag');
 });
 
-document.querySelector('form').onsubmit = function(e) {
-    var checked = document.querySelector('input[name="address_id"]:checked');
-    var errorDiv = document.getElementById('address-error');
-    if (!checked) {
-        errorDiv.textContent = "Please select an address before placing your order.";
-        errorDiv.style.display = "block";
-        e.preventDefault();
-        return false;
-    } else {
-        errorDiv.textContent = "";
-        errorDiv.style.display = "none";
+
+    /* ===== Refs ===== */
+    const loginStep = document.getElementById('step-login');
+    const btnContinueLogin = document.getElementById('btn-continue-login');
+    const btnChangeLogin = document.getElementById('btn-change-login');
+
+    const colName = document.getElementById('col-name');
+    const colPhone = document.getElementById('col-phone');
+
+    const addrSec = document.getElementById('step-address');
+    const addrBody = document.getElementById('address-body');
+    const btnHdrChange = document.getElementById('btn-address-change');
+    const addrListEl = document.getElementById('addrList');
+
+    const tickLogin = document.getElementById('tick-login');
+    const tickAddress = document.getElementById('tick-address');
+
+    const editPanel = document.getElementById('edit-panel');
+    const addRowCard = document.getElementById('addrow-card');
+    const addPanel = document.getElementById('addnew-panel');
+    const addMount = document.getElementById('add-mount');
+    const inlineAddTpl = document.getElementById('tpl-inline-add');
+
+    const summaryStep = document.getElementById('step-summary');
+    const paymentStep = document.getElementById('step-payment');
+
+    const paymentForm = document.getElementById('paymentForm');
+    const confirmWrap = document.getElementById('confirm-wrap');
+    const addressIdField = document.getElementById('addressIdField');
+
+    // collapsed address header refs
+    const addrColName = document.getElementById('addr-col-name');
+    const addrColLine = document.getElementById('addr-col-line');
+    const addrColPin  = document.getElementById('addr-col-pin');
+
+    function placeLoginCollapsed(){
+      const nm = document.getElementById('login-name')?.textContent || 'Customer';
+      const phRaw = document.getElementById('login-phone')?.textContent || '+91 xxxxxxxxxx';
+      colName.textContent  = toTitle(nm);
+      colPhone.textContent = withPlus91(phRaw);
     }
-};
-(function(){
-  const form = document.querySelector('form');
-  const btn  = document.querySelector('.btn-placeorder');
-  const toast = document.getElementById('placing-toast');
-  const backdrop = document.getElementById('wait-backdrop');
+    placeLoginCollapsed();
 
-  if (!form || !btn) return;
+    /* ===== Completion flags ===== */
+    let loginDone = true;
+    let addressDone = false;
+    /* ===== Address data ===== */
 
-  form.addEventListener('submit', function(e){
-    // Require address selection (your existing logic)
-    const checked = document.querySelector('input[name="address_id"]:checked');
-    const errorDiv = document.getElementById('address-error');
-    if (!checked) {
-      errorDiv.textContent = "Please select an address before placing your order.";
-      errorDiv.style.display = "block";
-      e.preventDefault();
-      return;
-    } else {
-      errorDiv.textContent = "";
-      errorDiv.style.display = "none";
+    /* Optional fallbacks used when an address has empty name/phone */
+    /* ===== Address data ===== */
+    const USER_NAME  = "{{ user_name|default:''|escapejs }}";
+    const USER_PHONE = "{{ user_phone|default:''|escapejs }}";
+
+    const addresses = (() => {
+      const el = document.getElementById('addresses-json');
+      if (!el) return [];
+      try { return JSON.parse(el.textContent); } catch { return []; }
+    })().map(a => ({
+      id: String(a.address_id ?? ''),
+      name: a.name || USER_NAME,
+      phone: a.phone || USER_PHONE,
+      door: a.door_no || '',
+      street: a.street || '',
+      area: a.area || '',
+      city: a.city || '',
+      state: a.state || '',
+      pin: a.pincode || '',
+      type: a.tag || 'HOME'
+    }));
+
+    addresses.forEach(a => {
+      a.line = joinParts([a.door, a.street, a.area, a.city, a.state]);
+    });
+
+    let selectedId = addresses[0]?.id || null;
+    if (addressIdField) addressIdField.value = selectedId;
+    addressDone = !!selectedId;    // add/remove the “done” class so the green ✓ appears when a step is collapsed
+    loginStep.classList.add('is-done');             // always done (logged-in)
+    if (addressDone) addrSec.classList.add('is-done');
+
+    let editingId = null;
+    let userChangedSelection = false;
+    let lastSelectedBeforeAdd = null;
+{
+  const saved = loadDone();
+  if (saved.selectedId && addresses.some(a => a.id === saved.selectedId)) {
+    selectedId = saved.selectedId;
+    addressIdField && (addressIdField.value = selectedId);
+  }
+  if (saved.login) {
+    loginDone = true;
+    loginStep.classList.add('is-done');
+  }
+  if (saved.address) {
+    addressDone = true;
+    addrSec.classList.add('is-done');
+  }
+  updateAddrCollapsed();
+}
+
+
+    /* ===== Persist open step across refresh (clear on ?seed=1) ===== */
+    const STEP_KEY = 'nc_step';
+    const SUMMARY_GATE_KEY = 'nc_can_summary';  
+    let canOpenSummary = false;           
+    try{
+      canOpenSummary = (localStorage.getItem(SUMMARY_GATE_KEY) === '1'); 
+    } catch(_) {}
+    function persistStep(step){ try{ localStorage.setItem(STEP_KEY, step||''); }catch(e){} }
+    function readStep(){ try{ return localStorage.getItem(STEP_KEY) || ''; }catch(e){ return '' } }
+    // NEW — persist "done" (ticks) + selected address
+    const DONE_KEY = 'nc_done';
+    function saveDone(){
+      try{
+        localStorage.setItem(DONE_KEY, JSON.stringify({
+          login:   !!loginDone,
+          address: !!addressDone,
+          selectedId
+        }));
+      }catch(_){}
+    }
+    function loadDone(){
+      try{ return JSON.parse(localStorage.getItem(DONE_KEY) || '{}'); }
+      catch(_){ return {}; }
     }
 
-    // UX feedback while waiting for the POST navigation
-    btn.disabled = true;
-    const original = btn.textContent;
-    btn.textContent = 'Placing…';
+      // --- compatibility shims (we replaced the side edit panel with inline edit)
+    if (typeof window.hideEditPanel !== 'function') { window.hideEditPanel = function(){}; }
+    if (typeof window.openEditPanel !== 'function') { window.openEditPanel = function(){}; }
+    function hideAddPanel(){ cancelInlineAdd(); }
 
-    // Show toast + backdrop (use a tiny delay so instant responses don’t flash)
-    const showDelay = setTimeout(()=>{
-      toast.classList.add('show');
-      backdrop.classList.add('show');
-    }, 250);
+    /* ===== One-at-a-time open behavior ===== */
+  function setOpen(step){
+  const valid = new Set(['login','address','summary','payment']);
+  if (!valid.has(step)) step = 'address';
+  if (step === 'summary' && !canOpenSummary) step = 'address';
 
-    // Safety: if the form is prevented elsewhere, revert UI
-    setTimeout(()=>{
-      if (!document.hidden) { // still on this page
-        clearTimeout(showDelay);
-        btn.disabled = false;
-        btn.textContent = original;
-        toast.classList.remove('show');
-        backdrop.classList.remove('show');
+  // If the target is already open, do nothing
+  const target =
+    step === 'login'   ? loginStep   :
+    step === 'address' ? addrSec     :
+    /* summary | payment share the same UI */ summaryStep;
+
+  const currentOpen = document.querySelector('.step-card.is-open');
+  if (currentOpen === target) return;
+
+  // ---- 1) Close whatever is open FIRST (same frame) ----
+  loginStep.classList.remove('is-open');
+  addrSec.classList.remove('is-open');
+  summaryStep.classList.remove('is-open');
+
+  confirmWrap?.classList.add('hidden');
+  paymentStep?.classList.remove('is-open');
+  addRowCard.style.display = 'none';
+  ['maxHeight','padding','pointerEvents'].forEach(p => addrBody.style[p] = '');
+  cancelInlineAdd();
+  hideEditPanel();
+
+  // keep header states consistent while closed
+  addrSec.classList.toggle('hide-collapsed', step === 'login');
+  addrSec.classList.toggle('is-done', addressDone && step !== 'login');
+
+  // ---- 2) Then open the target AFTER a tiny delay (matches your CSS .18s) ----
+  const OPEN_DELAY = 180; // ms; keep in sync with your CSS transitions
+  setTimeout(() => {
+    if (step === 'login') {
+      loginStep.classList.add('is-open');
+    } else if (step === 'address') {
+      addrSec.classList.add('is-open');
+      addRowCard.style.display = 'flex';
+    } else { // 'summary' or 'payment'
+      summaryStep.classList.add('is-open');
+    }
+
+    persistStep(step);
+    window.updateConfirmVisibility && window.updateConfirmVisibility();
+    applyCartEmptyStateToAddress();
+
+    if (step === 'login')      gentleScrollInto(loginStep);
+    else if (step === 'address') gentleScrollInto(addrSec);
+    else                        gentleScrollInto(summaryStep);
+  }, OPEN_DELAY);
+}
+
+    function openReviewAndPayment(){
+    loginStep.classList.remove('is-open');          // close login & delivery
+    addrSec.classList.remove('is-open');
+    summaryStep.classList.add('is-open');             // open summary and show the confirm card
+    confirmWrap?.classList.remove('hidden');
+    persistStep('summary');           // remember: treat this state as "summary" from now on
+    gentleScrollInto(summaryStep);
+  }
+
+
+    /* ===== Collapsed address header updater (Title Case + two-line friendly) ===== */
+    function updateAddrCollapsed(){
+      const sel = addresses.find(a=>a.id===selectedId);
+      if(!sel){ addrColName.textContent=''; addrColLine.textContent=''; addrColPin.textContent=''; return; }
+      addrColName.textContent = toTitle(sel.name || '');
+      const composed = joinParts([sel.door, sel.street, sel.area, sel.city, sel.state]);
+      addrColLine.textContent = composed ? (toTitle(composed) + ' - ') : '';
+      addrColPin.textContent  = sel.pin || '';
+    }
+
+    /* ===== Render address list ===== */
+    function renderAddressList(){
+      const list = [...addresses];
+
+      if (selectedId){
+        list.sort((a,b)=>{
+          if(!userChangedSelection){
+            if(a.id===selectedId && b.id!==selectedId) return -1;
+            if(b.id===selectedId && a.id!==selectedId) return 1;
+          }else{
+            if(a.id===selectedId && b.id!==selectedId) return 1;
+            if(b.id===selectedId && a.id!==selectedId) return -1;
+          }
+          return 0;
+        });
       }
-    }, 20000); // auto-recover after 20s if something blocks navigation
-  }, { capture: true });
+
+      addrListEl.innerHTML = '';
+
+      if (!list.length){
+        addrListEl.innerHTML = '<div class="muted" style="padding:8px 2px;">We couldn’t find a saved delivery address for your account. Please add a new address to continue.</div>';
+        addRowCard.style.display='flex';
+        updateAddrCollapsed();
+        return;
+      }
+
+      list.forEach(a=>{
+        const row = document.createElement('div');
+        row.className='addr-item';
+        row.dataset.id=a.id;
+        if(a.id===selectedId) row.classList.add('is-selected');
+
+        const radio = document.createElement('input');
+        radio.type='radio'; radio.name='addr'; radio.className='addr-radio';
+        radio.value=a.id; radio.checked=(a.id===selectedId);
+
+        const main = document.createElement('div');
+
+        const name = document.createElement('div');
+        name.className='addr-name';
+        const nm = document.createElement('span');
+        nm.textContent = toTitle(a.name || '');
+        const ph = document.createElement('span'); ph.className='addr-phone'; ph.textContent=a.phone || '';
+        name.appendChild(nm); name.appendChild(ph);
+
+        if(a.type){
+          const chip = document.createElement('span');
+          chip.className='addr-chip'; chip.textContent=a.type;
+          name.appendChild(chip);
+        }
+
+        const line = document.createElement('div');
+        line.className='addr-address';
+        const composed = joinParts([a.door, a.street, a.area, a.city, a.state]);
+        line.textContent = (composed ? toTitle(composed) : '') + (a.pin ? `, ${a.pin}` : '');
+        main.appendChild(name); main.appendChild(line);
+
+        const edit = document.createElement('button');
+        edit.className='addr-edit'; edit.textContent='EDIT';
+        edit.addEventListener('click', (ev)=>{ev.stopPropagation();startInlineEdit(row, a);
+        });
+
+        const actions = document.createElement('div');
+        actions.className='addr-actions';
+        const deliver = document.createElement('button');
+        deliver.className='deliver-btn'; deliver.textContent='DELIVER HERE';
+        deliver.addEventListener('click', (ev)=>{
+          ev.stopPropagation();
+          if (isCartEmpty()){
+            showBlocker({type:'error',title:"Can't Proceed",message:'Your cart is empty. Add items before adding a delivery address.'});
+            return;
+           }
+          addressDone = true;
+          addrSec.classList.add('is-done');          /* class controls tick */
+          addressIdField && (addressIdField.value = selectedId);
+          saveDone();
+          canOpenSummary = true;
+          try{ localStorage.setItem(SUMMARY_GATE_KEY, '1'); }catch(e){}
+          openReviewAndPayment();
+      });
+        actions.appendChild(deliver);
+        main.appendChild(actions);
+
+        function choose(){
+          if (selectedId !== a.id) {
+            userChangedSelection = true;
+            cancelInlineEdit()
+            cancelInlineAdd();
+            selectedId = a.id;
+            addressIdField && (addressIdField.value = selectedId);
+            updateAddrCollapsed();
+            renderAddressList();
+            canOpenSummary = false;
+            try{ localStorage.setItem(SUMMARY_GATE_KEY, '0'); }catch(_){}
+          }
+        }
+        row.addEventListener('click', (e)=>{
+          const isAction = e.target.closest('.addr-edit') || e.target.closest('.addr-actions');
+          if(isAction) return;
+          choose();
+        });
+        radio.addEventListener('change', choose);
+
+        row.appendChild(radio);
+        row.appendChild(main);
+        row.appendChild(edit);
+        addrListEl.appendChild(row);
+      });
+
+      // fallback to first address phone if server phone masked/missing
+      const serverPhone = "{{ user_phone|default:'+91 xxxxxxxxxx' }}";
+      if ((!serverPhone || serverPhone.indexOf('xxxxxxxxxx') !== -1) && addresses[0]?.phone){
+        const phEl = document.getElementById('login-phone');
+        if (phEl) phEl.textContent = addresses[0].phone;
+        colPhone.textContent = withPlus91(addresses[0].phone);
+      }
+
+      updateAddrCollapsed();
+    }
+
+    /* ===== Edit panel ===== */
+    /* ===== Inline Edit (row → form in-place) ===== */
+    // ===== Inline edit helpers =====
+const inlineTpl  = document.getElementById('tpl-inline-edit');
+let currentEdit  = null;   // { li, form }
+
+function cancelInlineEdit(){
+  if(!currentEdit) return;
+  currentEdit.form.remove();
+  currentEdit.li.classList.remove('is-hidden');
+  currentEdit = null;
+  addrListEl.classList.remove('has-inline');
+}
+
+function startInlineEdit(li, a){
+        cancelInlineEdit(); 
+        cancelInlineAdd();
+
+  const form = inlineTpl.content.firstElementChild.cloneNode(true);
+  form.dataset.addressId = a.id;
+
+  // prefill from object
+  form.querySelector('input[name="addr"]').value = a.id;
+  form.querySelector('input[name="addr"]').checked = true;
+
+  form.querySelector('[name="name"]').value     = a.name || '';
+  form.querySelector('[name="phone"]').value    = a.phone || '';
+  form.querySelector('[name="pincode"]').value  = a.pin   || '';
+  form.querySelector('[name="area"]').value     = a.area  || '';
+  form.querySelector('[name="city"]').value     = a.city  || '';
+  form.querySelector('[name="state"]').value    = a.state || '';
+  form.querySelector('[name="door_no"]').value  = a.door  || '';
+  form.querySelector('[name="street"]').value   = a.street|| '';
+  form.querySelector('[name="landmark"]').value = a.landmark || '';
+  form.querySelector('[name="altphone"]').value = a.alt_phone || '';
+
+  {
+  const tag = (a.type || '').toUpperCase();      
+  form.querySelectorAll('input[name="tag"]').forEach(r => {
+    r.checked = (tag && r.value === tag);
+  });
+}
+
+  attachValidation(form);
+  // mount and hide original row
+  li.classList.add('is-hidden');
+  li.after(form);
+  currentEdit = { li, form };
+  addrListEl.classList.add('has-inline');
+  gentleScrollInto(form);
+}
+
+// inline form: cancel + submit
+addrBody.addEventListener('click', (e)=>{
+  if(e.target.closest('.js-cancel-edit')) cancelInlineEdit();
+});
+
+
+addrBody.addEventListener('submit', async (e)=>{
+  const form = e.target.closest('form.inline-edit:not(.inline-add)');
+  if(!form) return;
+  e.preventDefault();
+  if (form.validateAll && !form.validateAll()) 
+  return;
+  const id = form.dataset.addressId;
+  const fd = new FormData(form);
+
+  const tagSel = getTagSel(form);
+  if (!tagSel){
+    setGroupError(form, 'tag', 'Please choose Home or Work.');
+    form.querySelector('.addr-type')?.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  clearGroupError(form, 'tag');
+
+  const payload = {
+    name:    (fd.get('name')||'').trim(),
+    phone:   (fd.get('phone')||'').trim(),
+    pincode: (fd.get('pincode')||'').trim(),
+    area:    (fd.get('area')||'').trim(),
+    city:    (fd.get('city')||'').trim(),
+    state:   (fd.get('state')||'').trim(),
+    door_no: (fd.get('door_no')||'').trim(),
+    street:  (fd.get('street')||'').trim(),
+    landmark: (fd.get('landmark')||'').trim() || null,
+    alt_phone:(fd.get('altphone')||'').trim() || null,
+    tag: tagSel.toUpperCase()
+  };
+
+
+  try{
+    const res = await api('PUT', `/api/getaddress/?address_id=${encodeURIComponent(id)}`, payload);
+
+    // update local cache
+    const idx = addresses.findIndex(x=>x.id===id);
+    if(idx>-1){
+      const a = addresses[idx];
+      Object.assign(a, {
+        name:  res.name ?? payload.name ?? a.name,
+        phone: res.phone ?? payload.phone ?? a.phone,
+        pin:   res.pincode ?? payload.pincode ?? a.pin,
+        area:  res.area ?? payload.area ?? a.area,
+        city:  res.city ?? payload.city ?? a.city,
+        state: res.state ?? payload.state ?? a.state,
+        door:  res.door_no ?? payload.door_no ?? a.door,
+        street:res.street ?? payload.street ?? a.street,
+        landmark: res.landmark ?? payload.landmark ?? a.landmark,
+        alt_phone:res.alt_phone ?? payload.alt_phone ?? a.alt_phone,
+        type:  res.tag    ?? payload.tag 
+      });
+      a.line = [a.door,a.street,a.area,a.city,a.state].filter(Boolean).join(', ');
+    }
+
+    cancelInlineEdit();
+    updateAddrCollapsed();
+    renderAddressList();
+    gentleScrollInto(addrSec);
+    showSnack('Address updated successfully.', { timeout: 2200 });
+  }catch(_){
+    showSnack({ message:'Failed to update address. Please try again.', type:'error', timeout: 2200 });
+  }
+});
+
+function getTagSel(form){
+  const r = form.querySelector('input[name="tag"]:checked');
+  return r ? r.value : null;   // "HOME" | "WORK" | null
+}
+
+
+addrBody.addEventListener('blur', (e)=>{
+  const el = e.target;
+  if(!el.closest('form.inline-edit')) return;
+  if(!['name','area','city','state','street'].includes(el.name)) return;
+  const v = (el.value || '').trim();
+  if(!v) return;
+  // leave ALL-CAPS untouched
+  el.value = (v === v.toUpperCase()) ? v : toTitle(v);
+}, true);
+
+    
+let currentAdd = null;   // { form }
+
+function startInlineAdd(){
+  cancelInlineEdit(); // only one editor at a time
+  cancelInlineAdd();  // only one adder at a time
+
+  lastSelectedBeforeAdd = selectedId;
+// 1) Clear any existing selection in the list
+  selectedId = null;
+  addressIdField && (addressIdField.value = '');
+  addrListEl.querySelectorAll('.addr-item').forEach(li => {
+    li.classList.remove('is-selected');
+    const r = li.querySelector('input[type="radio"][name="addr"]');
+    if (r) r.checked = false;
+  });
+
+  const form = inlineAddTpl.content.firstElementChild.cloneNode(true);
+
+  // ⬇️ DO NOT preselect any radios in the new form
+  const rowRadio = form.querySelector('input.addr-radio');
+  if (rowRadio) rowRadio.checked = true;
+
+  form.querySelectorAll('input[name="tag"]').forEach(r => { r.checked = false; });
+
+  // keep the row radio grouped like others
+  const addRadio = form.querySelector('input[type="radio"]');
+  if (addRadio) addRadio.name = 'addr';
+
+  // mount it
+  addRowCard.style.display = 'none';
+  addMount.innerHTML = '';
+  attachValidation(form);
+  addMount.appendChild(form);
+  addMount.style.display = 'block';
+  document.getElementById('addrow-wrap')?.classList.add('is-open');
+  currentAdd = { form };
+}
+
+function cancelInlineAdd(keepNew = false){
+  if(!currentAdd) return;
+  addMount.innerHTML = '';
+  addMount.style.display = 'none';
+  addRowCard.style.display = 'flex';
+  document.getElementById('addrow-wrap')?.classList.remove('is-open'); 
+  currentAdd = null;
+
+  // Only restore the previous selection when we CANCEL.
+  if (!keepNew && lastSelectedBeforeAdd && addresses.some(a => a.id === lastSelectedBeforeAdd)) {
+    selectedId = lastSelectedBeforeAdd;
+    addressIdField && (addressIdField.value = selectedId);
+    updateAddrCollapsed();
+    renderAddressList();
+    saveDone?.();
+  }
+  lastSelectedBeforeAdd = null;
+}
+
+
+const addWrap = document.getElementById('addrow-wrap');
+// Cancel button inside inline add
+addWrap.addEventListener('click', (e)=>{
+  if(e.target.closest('.js-cancel-add')) cancelInlineAdd();
+});
+
+// Submit inline add -> POST /api/getaddress/
+addWrap.addEventListener('submit', async (e)=>{
+  const form = e.target.closest('form.inline-add');
+  if(!form) return;document.getElementById('addrow-wrap')?.classList.remove('is-open');
+  e.preventDefault();
+  if (isCartEmpty()){
+    showBlocker({type:'error',
+      title:"Can't Proceed",message:'Your cart is empty. Add items before adding a delivery address.'});
+    return;
+  }
+  if (form.validateAll && !form.validateAll()) return;
+    const fd = new FormData(form);
+
+  const tagSel = getTagSel(form);
+  if (!tagSel){
+    setGroupError(form, 'tag', 'Please choose Home or Work.');
+    form.querySelector('.addr-type')?.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+  clearGroupError(form, 'tag');
+
+  const payload = {
+    name:  (fd.get('name')||'').trim(),
+    phone: (fd.get('phone')||'').trim(),
+    door_no: (fd.get('door_no')||'').trim(),
+    street: (fd.get('street')||'').trim(),
+    area:   (fd.get('area')||'').trim(),
+    city:   (fd.get('city')||'').trim(),
+    state:  (fd.get('state')||'').trim(),
+    pincode:(fd.get('pincode')||'').trim(),
+    country:'India',
+    landmark: (fd.get('landmark')||'').trim() || null,
+    alt_phone:(fd.get('altphone')||'').trim() || null,
+    tag: tagSel.toUpperCase()
+  };
+
+
+  try{
+    const res = await api('POST', '/api/getaddress/', payload);
+
+    const id = res.address_id || ('a' + (addresses.length+1));
+    const addr = {
+      id,
+      name:  res.name   ?? payload.name,
+      phone: res.phone  ?? payload.phone,
+      door:  res.door_no?? payload.door_no,
+      street:res.street ?? payload.street,
+      area:  res.area   ?? payload.area,
+      city:  res.city   ?? payload.city,
+      state: res.state  ?? payload.state,
+      pin:   res.pincode?? payload.pincode,
+      type:  res.tag    ?? payload.tag 
+    };
+    addr.line = [addr.door,addr.street,addr.area,addr.city,addr.state].filter(Boolean).join(', ');
+    addresses.push(addr);
+    selectedId = id;
+    userChangedSelection = false;                  
+    addressDone = true;
+    addrSec.classList.add('is-done');
+    addressIdField && (addressIdField.value = selectedId);
+    saveDone?.();
+
+    cancelInlineAdd(true);
+
+    updateAddrCollapsed();
+    renderAddressList();
+    gentleScrollInto(addrSec);                     
+    setOpen('summary');   
+
+    showSnack('New address added and selected.', { timeout: 2500 });
+  }catch(_){
+    showSnack({ message:'Failed to add address. Please try again.', type:'error', timeout: 2500 });
+  }
+});
+
+    // show/hide + Add a new address row when address step is open
+    const observer = new MutationObserver(()=>{ addRowCard.style.display = addrSec.classList.contains('is-open') ? 'flex' : 'none'; });
+    observer.observe(addrSec, {attributes:true, attributeFilter:['class']});
+    addRowCard.addEventListener('click', ()=>{
+  if (isCartEmpty()){
+    showBlocker({type:'error',title:"Can't Proceed",message:'Your cart is empty. Add items before adding a delivery address.'});
+    return;
+  }
+  startInlineAdd();
+});
+
+
+
+    /* ===== Initial open logic ===== */
+(function(){
+  const usp = new URLSearchParams(location.search);
+  if (usp.get('seed') === '1') { try{ localStorage.removeItem(STEP_KEY); }catch(e){} }
+
+  window.addEventListener('pageshow', (e)=>{ if (e.persisted) location.reload(); });
+
+  const openParam  = usp.get('open');          
+  const remembered = readStep();               
+  if (openParam && ['login','address','summary','payment'].includes(openParam)) {
+  if (openParam === 'payment') openReviewAndPayment();
+  else setOpen(openParam);
+} else if (remembered === 'payment') {
+  openReviewAndPayment();       
+} else if (remembered) {
+  setOpen(remembered);
+} else {
+  setOpen('address');
+}
+  // Start with all CLOSED
+  loginStep.classList.remove('is-open');
+  addrSec.classList.remove('is-open');
+  summaryStep.classList.remove('is-open');
+  addrBody.style.maxHeight='0'; addrBody.style.padding='0'; addrBody.style.pointerEvents='none';
+
+  // Decide which section to open
+  const wantSummary = (openParam === 'summary');
+  if (wantSummary && canOpenSummary) {
+    setOpen('summary');
+  } else if (remembered && (remembered !== 'summary' || canOpenSummary)) {
+    setOpen(remembered);
+  } else {
+    setOpen('address');
+  }
+
+
+  // update per-item totals + disable minus @ qty 1
+// update totals; disable "–" at qty=1; remember to return to Summary after submits
+document.querySelectorAll('.summary-item').forEach(row=>{
+  const unit = parseFloat(row.querySelector('.price')?.dataset?.unit || '0');
+  const qty  = parseInt((row.querySelector('.qty-num')?.textContent || '1').trim(), 10);
+
+  // recompute total text
+  if(!isNaN(unit) && !isNaN(qty)){
+    const p = row.querySelector('.price');
+    if(p){ p.textContent = '₹ ' + (unit * qty).toLocaleString('en-IN'); }
+  }
+
+  const minusBtn  = row.querySelector('.minus-btn');
+  const minusForm = row.querySelector('.minus-form');
+  const plusForm  = row.querySelector('form:not(.minus-form):has(button:not(.minus-btn))'); // your + form
+  const removeForm= row.querySelector('.remove-form');
+
+  if (minusBtn && minusForm){
+    if (qty <= 1){
+      // hard-disable at qty=1
+      minusBtn.setAttribute('disabled','disabled');
+      minusForm.addEventListener('submit', (ev)=>ev.preventDefault(), { once:true });
+    } else {
+      minusBtn.removeAttribute('disabled');
+      minusForm.addEventListener('submit', ()=>{
+        localStorage.setItem('nc_step','summary');
+        localStorage.setItem('nc_can_summary','1');
+      }, { once:true });
+    }
+  }
+
+  // also remember the step for + and REMOVE submits
+  [plusForm, removeForm].forEach(f=>{
+    if(!f) return;
+    f.addEventListener('submit', ()=>{
+      localStorage.setItem('nc_step','summary');
+      localStorage.setItem('nc_can_summary','1');
+    }, { once:true });
+  });
+});
+
+// ---- Strict minus@1 enforcement (runs now and on any DOM/text change) ----
+function enforceMinQty() {
+  document.querySelectorAll('#step-summary .summary-item').forEach(row => {
+    const qty   = parseInt((row.querySelector('.qty-num')?.textContent || '1').trim(), 10) || 1;
+    const minus = row.querySelector('.minus-btn');
+    const mform = row.querySelector('.minus-form');
+
+    if (!minus) return;
+
+    if (qty <= 1) {
+      minus.setAttribute('disabled', '');
+      minus.classList.add('is-disabled');
+      if (mform) {
+        // block any accidental form submit at 1
+        mform.addEventListener('submit', (ev) => ev.preventDefault(), { once: true });
+      }
+    } else {
+      minus.removeAttribute('disabled');
+      minus.classList.remove('is-disabled');
+    }
+  });
+}
+
+// run once now
+enforceMinQty();
+
+// keep it enforced whenever the Summary DOM (or qty text) changes
+const _sum = document.getElementById('step-summary');
+if (_sum) {
+  const obs = new MutationObserver(enforceMinQty);
+  obs.observe(_sum, { subtree: true, childList: true, characterData: true });
+}
+
+  placeLoginCollapsed();
+  applyCartEmptyStateToAddress();
+
+})();
+
+
+    renderAddressList();
+    applyCartEmptyStateToAddress();
+
+    /* ===== Wiring ===== */
+    btnContinueLogin?.addEventListener('click', ()=>{
+      loginDone = true;
+      loginStep.classList.add('is-done'); 
+      saveDone();       
+      setOpen('address');
+    });
+      btnChangeLogin?.addEventListener('click', (e)=>{
+        if (isCartEmpty()){
+          e.preventDefault();
+          showBlocker({type:'error',title:"Can't Proceed",message:'Your cart is empty. Add items before adding a delivery address.'});
+        return;
+    }
+      setOpen('login');  
+      });
+      
+      btnHdrChange?.addEventListener('click', (e)=>{
+        if (isCartEmpty()){
+          e.preventDefault();
+          showBlocker({type:'error',title:"Can't Proceed",message:'Your cart is empty. Add items before adding a delivery address.'});
+          return;
+          }
+  setOpen('address');
+});
+    // Ensure payment form has selected address
+    paymentForm?.addEventListener('submit', (e)=>{
+      if(!selectedId){
+        e.preventDefault();
+        alert('Please select an address first.');
+        setOpen('address');
+        return;
+      }
+      addressIdField.value = selectedId;
+    });
+    // Keep user on Summary/Payment after + / – / REMOVE (these do full-page POSTs)
+    document.querySelectorAll('#step-summary form').forEach(f=>{
+      f.addEventListener('submit', ()=>{
+        localStorage.setItem('nc_step','summary');   // or 'summary' if you prefer
+        localStorage.setItem('nc_can_summary','1');  // allow opening summary/payment
+      });
+    });
+
+
+
+   function showSnack(arg, maybeOpts){
+  // Support both: showSnack('text', {..}) and showSnack({message:'text', type:'error', ...})
+  let message = '';
+  let opts = {};
+  if (typeof arg === 'string') {
+    message = arg;
+    opts = maybeOpts || {};
+  } else if (arg && typeof arg === 'object') {
+    message = String(arg.message || '');
+    opts = arg;
+  }
+
+  const { type = 'ok', timeout = 2500, close = false } = opts;
+
+  let root = document.getElementById('snack-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'snack-root';
+    document.body.appendChild(root);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'snack-wrap';
+  wrap.innerHTML = `
+    <div class="snack ${type === 'error' ? 'snack--err' : 'snack--ok'}">
+      <span class="snack__badge">${type === 'error' ? '!' : '✓'}</span>
+      <p class="snack__msg">${message}</p>
+      ${close ? '<button class="snack__close" aria-label="Close">✕</button>' : ''}
+    </div>
+  `;
+
+  const el = wrap.firstElementChild;
+  root.prepend(wrap);
+
+  const destroy = () => {
+    el.style.animation = 'snack-out .2s ease-in forwards';
+    setTimeout(() => wrap.remove(), 180);
+  };
+
+  if (close) el.querySelector('.snack__close')?.addEventListener('click', destroy);
+  const id = setTimeout(destroy, timeout);
+  el.addEventListener('mouseenter', () => clearTimeout(id));
+  el.addEventListener('mouseleave', () => setTimeout(destroy, 1000));
+   }
+
+
+/* Optional: keep old calls working */
+function showToast({ message, type = 'success', timeout = 2500 }) {
+  showSnack(message, { type: type === 'error' ? 'error' : 'ok', timeout, close: false });
+}
+
+(function () {
+  // Try modern Navigation Timing; fall back to the deprecated API
+  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+  var isReload = nav ? (nav.type === 'reload') : (performance.navigation && performance.navigation.type === 1);
+
+  if (isReload) {
+    var url = new URL(location.href);
+    if (!url.searchParams.has('seed')) {
+      url.searchParams.set('seed', '1');
+      // Hit the server with ?seed=1 so it rebuilds the snapshot from the real cart
+      location.replace(url.pathname + '?' + url.searchParams.toString());
+      return; // stop; the rest of the scripts will run on the next load
+    }
+  }
+})();
+ (function () {
+  const CART_URL = "{% url 'cart' %}";
+
+  // Normalize the current entry to plain /api/checkout/ (no ?open=, no #hash)
+  if (location.search || location.hash) {
+    history.replaceState(null, "", location.pathname);
+  }
+
+  // First Back -> go straight to Cart
+  window.addEventListener("popstate", function () {
+    location.replace(CART_URL);
+  });
+
+  // If browser restores this page from bfcache, reload so removed items don't flash
+  window.addEventListener("pageshow", function (e) {
+    if (e.persisted) location.reload();
+  });
+})();
+document.addEventListener('DOMContentLoaded', function () {
+  const wrap = document.getElementById('confirm-wrap');
+  if (!wrap) return;
+
+  // If there is at least one summary item, keep the confirmation visible.
+  // Otherwise, hide it (adds .hidden which sets display:none)
+  const hasItems = !!document.querySelector('#step-summary .summary-item');
+  wrap.classList.toggle('hidden', !hasItems);
+});
+(function () {
+  const wrap    = document.getElementById('confirm-wrap');
+  const summary = document.getElementById('step-summary');
+  if (!wrap || !summary) return;
+
+  // Show only when: summary has items AND the step is open
+  function updateConfirmVisibility() {
+    const hasItems = !!summary.querySelector('.summary-item');
+    const isOpen   = summary.classList.contains('is-open');
+    wrap.classList.toggle('hidden', !(hasItems && isOpen));
+  }
+
+  // 1) Run once
+  updateConfirmVisibility();
+
+  // 2) Watch for DOM changes under summary (qty/remove etc.)
+  const obs = new MutationObserver(updateConfirmVisibility);
+  obs.observe(summary, { childList: true, subtree: true });
+
+  // 3) Re-check after common UI actions
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.deliver-btn, .minus-btn, .qty-btn, .remove-btn, [data-action="deliver-here"]')) {
+      setTimeout(updateConfirmVisibility, 0);
+    }
+  });
+
+  // Expose so setOpen() can call it after toggling sections
+  window.updateConfirmVisibility = updateConfirmVisibility;
+})();
+
+(function () {
+  const summary = document.getElementById('step-summary');
+  if (!summary) return;
+
+  const priceMountSel = '.price-wrap';
+  let globalLoader = window.globalLoader || document.getElementById('global-loader');
+  if (!globalLoader) {
+    globalLoader = document.createElement('div');
+    globalLoader.id = 'global-loader';
+    globalLoader.setAttribute('aria-hidden','true');
+    globalLoader.style.cssText =
+  'position:fixed;inset:0;display:none;align-items:center;justify-content:center;' +
+  'background:rgba(0,0,0,.45);z-index:9999';  // <— no backdrop-filter
+
+    const dot = document.createElement('div');
+    dot.style.cssText =
+      'width:84px;height:84px;border-radius:50%;'+
+      'border:8px solid #ffffff; border-top-color:#2b6de9;'+
+      'animation:glspin .5s linear infinite';   // faster spin
+    globalLoader.appendChild(dot);
+    document.body.appendChild(globalLoader);
+    const kf = document.createElement('style');
+    kf.textContent = '@keyframes glspin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(kf);
+  }
+  window.globalLoader = globalLoader;
+
+  // NEW: no summary “mask”, no per-button spinner, no disabling
+  summary.addEventListener('submit', async (e) => {
+    const form = e.target.closest('#step-summary form');
+    if (!form) return;
+    e.preventDefault();
+
+    // center loader only
+    document.body.classList.add('is-busy');
+    globalLoader.style.display = 'flex';
+
+    try {
+      try {
+        localStorage.setItem('nc_step','summary');
+        localStorage.setItem('nc_can_summary','1');
+      } catch {}
+
+      const fd   = new FormData(form);
+      const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [,''])[1];
+      const res  = await fetch(form.action, {
+        method: form.method || 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'fetch', 'X-CSRFToken': csrf },
+        credentials: 'same-origin'
+      });
+
+      const html = await res.text();
+      if (!html || !/^<!doctype|<html/i.test(html)) {
+        form.submit(); // fallback
+        return;
+      }
+
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      // swap summary body
+      const newBody = doc.querySelector('#step-summary .step-body');
+      const curBody = summary.querySelector('.step-body');
+      if (newBody && curBody) curBody.innerHTML = newBody.innerHTML;
+
+      // swap price column
+      const newPriceWrap = doc.querySelector(priceMountSel);
+      const curPriceWrap = document.querySelector(priceMountSel);
+      if (newPriceWrap && curPriceWrap) curPriceWrap.replaceWith(newPriceWrap);
+      else if (!newPriceWrap && curPriceWrap) curPriceWrap.remove();
+      else if (newPriceWrap && !curPriceWrap) {
+        const grid = document.querySelector('.checkout');
+        if (grid) grid.appendChild(newPriceWrap);
+      }
+
+      // layout state
+      const hasItems = !!summary.querySelector('.summary-item');
+      const mainGrid = document.querySelector('main.checkout');
+      if (mainGrid) mainGrid.classList.toggle('is-empty', !hasItems);
+      summary.classList.add('is-open');
+
+      // helpers (if defined)
+      if (typeof rewireSummaryRowBehavior === 'function') rewireSummaryRowBehavior();
+      if (typeof window.updateConfirmVisibility === 'function') window.updateConfirmVisibility();
+      if (typeof applyCartEmptyStateToAddress === 'function') applyCartEmptyStateToAddress();
+      if (typeof enforceMinQty === 'function') enforceMinQty();
+
+    } catch (err) {
+      form.submit();
+      return;
+    } finally {
+      globalLoader.style.display = 'none';
+      document.body.classList.remove('is-busy');
+    }
+  });
 })();
 </script>
-{% endblock %}
+</body>
+</html>

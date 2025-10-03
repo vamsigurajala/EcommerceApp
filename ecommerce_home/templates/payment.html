@@ -1,0 +1,2474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Novacart Payments</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Inter font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ===================== THEME TOKENS ===================== */
+:root{
+  --brand:#4f46e5;
+  --cta:#fbbf24;
+  --ink:#0f172a;
+  --ink-soft:#64748b;
+  --paper:#ffffff;
+  --bg:#f6f7f9;
+  --line:#e5e7eb;
+  --success-50:#eefaf0;
+  --success-200:#cfe9cf;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06);
+  --max:1360px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --header-h: 64px;
+  --stepbar-h: 56px;
+}
+html.dark{
+  --ink:#e5e7eb;
+  --ink-soft:#94a3b8;
+  --paper:#0b1220;
+  --bg:#050a16;
+  --line:#1f2937;
+  --success-50:#052e1a;
+  --success-200:#14532d;
+}
+
+/* ===================== BASE ===================== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink); background:var(--bg);
+}
+
+/* ===================== HEADER ===================== */
+header{position:static;top:0;z-index:40;background:#0f172a;color:#fff}
+html.dark header{background:#0b1220}
+.header-inner{max-width:var(--max);margin:0 auto;display:flex;align-items:center;gap:14px;padding:12px 16px}
+.brand{font-weight:800;letter-spacing:.2px;font-size:22px}
+.crumb{margin-left:6px;font-weight:700;opacity:.92}
+.spacer{flex:1}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);cursor:pointer}
+.icon-btn svg{width:20px;height:20px;fill:#fff}
+
+header{ display:none; }
+
+/* Optional: show it back on ultra-wide screens */
+@media (min-width:1400px){
+  header{ display:block; }
+}
+
+/* ===================== ONE OUTER CONTAINER  ===================== */
+.page{
+  max-width: var(--max);
+  margin: 16px auto 48px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;                 
+  box-shadow: var(--shadow);
+  padding: 12px 16px 16px;
+}
+
+/* Top bar INSIDE the same container */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding: 6px 0 12px;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 12px !important;}
+
+.top-left{display:flex;align-items:center;gap:10px;font-weight:800}
+.back-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px;
+  border:1px solid var(--line); border-radius:999px;
+  background:#fff; color:#334155; text-decoration:none;
+}
+.back-btn:hover{ background:#f8fafc; }
+html.dark .back-btn{ background:#0f172a; border-color:#1f2937; color:#cbd5e1; }
+
+/* Back button: white fill, black border, black arrow */
+.back-btn{
+  background:#fff !important;
+  color:#000 !important;             /* arrow uses currentColor */
+  border:2px solid #000 !important;  /* crisp black ring */
+  box-shadow:none !important;
+}
+.back-btn:hover{ background:#fff !important; }
+.back-btn:focus-visible{
+  outline:2px solid #000;
+  outline-offset:2px;
+}
+
+/* keep same look in dark mode too */
+html.dark .back-btn{
+  background:#fff !important;
+  color:#000 !important;
+  border-color:#000 !important;
+}
+
+.top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.secure-pill{font-weight:700;font-size:14px;background:#eef3ff;border:1px solid #dfe7ff;padding:6px 10px;border-radius:999px}
+html.dark .secure-pill{background:#0f172a;border-color:#1f2937;color:#cbd5e1}
+.btn-verify{background:#2a55e5;color:#fff;padding:0 16px}
+.btn{height:48px;border:none;border-radius:10px;font-weight:800;font-size:15px;cursor:pointer}
+
+
+/* ===================== LAYOUT ===================== */
+/* Columns that are allowed to shrink inside the page */
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
+  gap:20px;
+  margin-top:12px;
+}
+
+/* Also let grid children shrink (important for long rows/buttons) */
+.grid > *{ min-width:0; }
+@media (max-width:1276px){
+  .grid{ grid-template-columns:1fr; }
+}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* ===================== SECTION / ACCORDION ===================== */
+.section+.section{margin-top:12px}
+.section .head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.section .head h3{margin:0;font-size:16px;font-weight:700}
+.chev{transition:transform .25s var(--ease);opacity:.8}
+.section.open .chev{transform:rotate(180deg)}
+.section .body{padding:16px 18px 18px;display:grid;gap:10px}
+.input,.select{height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:15px;background:#fff;outline:none}
+html.dark .input, html.dark .select{background:#0f172a;color:#e5e7eb;border-color:#1f2937}
+.btn-pay{background:var(--cta);color:#111}
+.btn-ghost{background:#f3f4f6;color:#111}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:60}
+.modal-backdrop.show{display:flex}
+.step{display:flex;gap:12px;align-items:flex-start}
+.appicon.logo{width:28px;height:28px;object-fit:contain;border-radius:6px}
+.upi-help{color:var(--brand);font-weight:800;text-decoration:none}
+.upi-help:hover{text-decoration:underline}
+/* Replace the old .step flex rule with this */
+.step{
+  display: grid;
+  grid-template-columns: 28px 1fr;  /* icon | content */
+  column-gap: 12px;
+  align-items: start;               /* align to the title's top */
+}
+
+/* Make sure the icon matches the title row */
+.step .logo{
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  align-self: start;                /* pin to top of the content block */
+  margin-top: -2px;                  /* tiny nudge for perfect alignment */
+}
+
+/* Tidy the heading spacing so the icon lines up cleanly */
+.step h5{
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+/* CSS slide container */
+.collapsible{overflow:hidden;max-height:0;transition:max-height .35s var(--ease)}
+.collapsible.open{max-height:1000px}
+
+/* RIGHT COLUMN */
+.price-col{display:flex;flex-direction:column;gap:10px}
+
+/* Desktop: outer wrapper should be invisible */
+.price-card{
+  position: sticky;
+  top: 12px;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Keep the card look on narrow screens (your existing rule is fine) */
+@media (max-width:1276px){
+  .price-card{
+    position: static;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 12px;
+  }
+}
+
+
+
+/* Totals panel (Novacart-like) */
+.totals-panel{
+  background:#eef2ff;              
+  border:1px solid #dfe7ff;
+  border-radius:12px;
+  overflow:hidden;
+}
+.totals-body{max-height:0;overflow:hidden;padding:0 16px;transition:max-height .3s var(--ease), padding .3s var(--ease);}
+.totals-panel.is-open .totals-body{ padding:12px 16px 0;}
+.totals-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-size:14px}
+.totals-sep{height:1px;background:#e2e8f0;margin:8px 0 0}
+.totals-toggle{
+  width:100%;display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;background:transparent;border:none;border-top:1px solid #e2e8f0;cursor:pointer;
+  color:#4f46e5;font-size:16px;font-weight:400;
+}
+.total-left,.total-right{display:inline-flex;align-items:center;gap:8px;line-height:1}
+.caret{
+  width:9px;                   /* bigger arrow */
+  height:9px;
+  border-right:2.25px solid currentColor;
+  border-bottom:2.25px solid currentColor;
+  display:inline-block;
+  vertical-align:-1px;          /* nudge so it sits on the text line */
+  transform:rotate(45deg);      /* “closed” = down */
+  transition:transform .2s var(--ease);
+}
+
+/* “open” = up */
+#totalsToggle[aria-expanded="true"] .caret{
+  transform:rotate(-135deg);
+}
+.amount-val{font-weight:600;font-size:18px}
+
+/* Hide both chevrons by default */
+#totalsToggle .total-left .caret,
+#totalsToggle .total-right .caret{
+  display:none;
+  margin-left:8px; 
+  gap:6px;                 
+  white-space:nowrap;      
+  line-height:1;  
+  width: 6px;
+  height: 6px;  
+}
+@media (min-width:1277px){#totalsToggle .total-right .caret{ display:inline-block; }}
+@media (max-width:1276px){#totalsToggle .total-left .caret{ display:inline-block; }}
+
+
+/* tighter gap + perfect baseline alignment */
+.totals-toggle .total-left{
+  display:inline-flex;
+  align-items:center;      /* aligns arrow to text cap height */
+  gap:2px;                 /* reduce the space */
+  line-height:1;
+}
+
+/* chevron that looks larger WITHOUT changing its layout size */
+.totals-toggle .caret{
+  display:inline-block;
+  width:12px;              /* keep the layout box small */
+  height:12px;
+  border-right:2.5px solid currentColor;  /* thicker stroke => bigger look */
+  border-bottom:2.5px solid currentColor;
+  transform: rotate(45deg) scale(1.25);   /* scales visually only */
+  transform-origin:center;                /* keeps it centered */
+  vertical-align:middle;                  /* baseline alignment with text */
+}
+
+/* rotated state (open) – keep the same “visual” size */
+#totalsToggle[aria-expanded="true"] .caret{
+  transform: rotate(-135deg) scale(1.25);
+}
+
+/* ===================== DISCOUNT BUTTON ===================== */
+.line-callout{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;border:1px solid var(--success-200);background:var(--success-50);cursor:pointer;box-shadow:var(--shadow)}
+.line-callout:active{transform:translateY(1px)}
+.chip{display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1;padding:6px 8px;border:1px solid var(--line);border-radius:999px;margin-left:6px;background:#fff}
+html.dark .chip{background:#0f172a}
+
+/* ===================== MODAL (Offers + Banks) ===================== */
+.modal{width:min(720px,92vw);max-height:84vh;overflow:auto;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.modal header{position:sticky;top:0;background:inherit;border-bottom:1px solid var(--line);padding:14px 16px;border-top-left-radius:16px;border-top-right-radius:16px}
+.modal h4{margin:0;font-size:16px}
+.m-body{padding:14px 16px;display:grid;gap:12px}
+.offer{border:1px solid var(--line);border-radius:12px;padding:12px 12px;display:grid;gap:6px}
+.offer .title{font-weight:700}
+.offer .desc{color:var(--ink-soft);font-size:13px}
+.m-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line)}
+.btn-secondary{background:#eef2ff;border:1px solid #dbeafe;color:#111;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--brand);border:1px solid var(--brand);color:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
+
+/* offers tabs */
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{appearance:none;border:none;outline:none}
+.tab+label{
+  padding:8px 12px;border-radius:999px;font-weight:700;font-size:13px;background:#f1f5f9;color:#0f172a;cursor:pointer;display:inline-flex;gap:6px;align-items:center
+}
+.tab:checked+label{background:var(--brand);color:#fff}
+
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#0f766e}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{scrollbar-width:none;-ms-overflow-style:none}
+
+/* Payment section icons */
+.section[data-icon] .head h3{display:flex;align-items:center;gap:10px}
+.section[data-icon] .head h3::before{content:"";width:22px;height:22px;background-size:contain;background-repeat:no-repeat;background-position:center}
+.section[data-icon="upi"]  .head h3::before  { background-image:url("/static/images/upi.png"); }
+.section[data-icon="card"] .head h3::before  { background-image:url("/static/images/card.png"); }
+.section[data-icon="bank"] .head h3::before  { background-image:url("/static/images/bank.png"); }
+.section[data-icon="cash"] .head h3::before  { background-image:url("/static/images/cash.png"); }
+.section[data-icon="gift"] .head h3::before  { background-image:url("/static/images/giftcard.png"); }
+.section[data-icon="emi"]  .head h3::before  { background-image:url("/static/images/emi.png"); }
+html.dark .section[data-icon] .head h3::before{ filter:brightness(.92); }
+
+/* UPI header block like Novacart */
+.upi-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:4px}
+.upi-title{font-weight:700;color:var(--ink)}
+.upi-help{color:#2563eb;font-weight:700;font-size:12px;text-decoration:none!important}
+.upi-help:hover{ text-decoration:underline; }
+.upi-hint{ color:#16a34a; font-weight:600; font-size:14px; margin-bottom:10px; }
+
+/* field label + errors */
+.field { margin:0 0 10px; display:flex; flex-direction:column;}
+.field-label{ display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin:0 0 6px; }
+.error-text{ color:#dc2626; font-size:12px; margin:2px 2px 0; line-height:1.35; }
+.error-text:empty{ display:block; height:0; margin:0; padding:0; overflow:hidden; }
+.fields-row > .field { align-self:start; }
+
+
+.field{ margin:0 0 10px; display:flex; flex-direction:column;}
+:root { --err-line: 16px; }         
+.error-text{ display:block; min-height:var(--err-line); color:#dc2626; font-size:12px; line-height:1.35; margin:4px 2px 0;}
+.error-text:empty{ visibility:hidden;}
+.fields-row > .field { align-self:start; }
+
+/* Inputs + focus + disabled */
+.input:focus,.select:focus,.btn:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.18);border-color:#3b82f6}
+html.dark .input,html.dark .select{background:#0f172a;border-color:#1f2937;color:#e5e7eb}
+html.dark .input:focus,html.dark .select:focus,html.dark .btn:focus{box-shadow:0 0 0 3px rgba(59,130,246,.16);border-color:#3b82f6}
+.btn-pay:disabled,.btn-verify:disabled{background:#e5e7eb!important;color:#9ca3af!important;cursor:not-allowed!important;box-shadow:none!important;border-color:#e5e7eb!important}
+
+/* Card input helpers */
+/* Card number: leave room for the brand logo and pin it to the far right */
+.has-icon{ position: relative; }
+.has-icon > input.input{ padding-right:56px; }      /* more room so text never hits the logo */
+#cardBrand{
+  position:absolute;
+  right:10px;                                      /* visually “far right” */
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;                                      /* slightly larger but controlled */
+  height:24px;
+  object-fit:contain;
+  opacity:.9;
+  pointer-events:none;
+}
+
+/* NetBanking search and list tweaks */
+.nb-search-wrap { position: relative; }
+.nb-search:focus::placeholder{ color:transparent; }
+#nbNoResults { text-align:center; padding:24px 0; }
+#nbNoResults img { width:100%; max-width:360px; height:auto; opacity:.95; }
+
+/* Sticky right stack: totals + discount */
+.price-stack{ position:sticky; display:flex; flex-direction:column; gap:8px; }
+.price-stack #offersOpen{
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  padding:12px;
+}
+
+
+/* Chevrons on section headers */
+.section .head .chev{
+  display:inline-block;
+  width:10px;height:10px;
+  border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform: rotate(45deg);transition: transform .25s var(--ease), color .25s var(--ease);
+  color: var(--ink-soft);
+}
+.section.open .head .chev{ transform: rotate(-135deg); color: var(--ink); }
+
+/* Keep images from widening their containers */
+img{ max-width:100%; height:auto; }
+
+/* Make long inline blocks wrap instead of stretching columns */
+.totals-toggle, .line-callout { min-width:0; }
+
+/* Card section: wider Expiry & CVV, keep in one line on desktop */
+.card-2col{
+  display:grid;
+  grid-template-columns: 1.2fr 0.8fr;   /* wider boxes overall */
+  gap:12px;
+  align-items:end;
+}
+
+/* If you still want mobile to stack nicely, keep this.
+   If you truly want “one line only everywhere”, remove this media rule. */
+@media (max-width: 560px){
+  .card-2col{ grid-template-columns: 1fr; }
+}
+
+/* Bank row layout + logo sizing */
+/* Bank rows container — scrollable */
+.bank-list{
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  max-height: min(56vh, 520px);   
+  overflow: auto;
+  padding-right: 6px;             /* room for scrollbar */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+/* row layout: allow wrapping so the CTA can go under */
+.bank-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;                 /* NEW */
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+}
+.bank-item:hover{background:#f8fafc}
+html.dark .bank-item:hover{background:#0f172a}
+
+/* let the text grow, logo stay at right */
+.bank-item .bank-name{ flex:1 1 auto; }
+
+/* only the "All other banks" list */
+.nb-other .bank-list { max-height: min(56vh, 520px); overflow: auto; }
+
+/* keep logos neat and at the edge */
+.bank-item .bank-logo{ width:24px; height:24px; margin-left:auto; object-fit:contain; }
+
+/* CTA under the selected bank row */
+.bank-item .bank-cta{ flex-basis:100%; margin-top:10px; }
+.bank-item .bank-cta .btn{ width:100%; }
+
+/* ====== CARD SECTION: make it like Novacart ====== */
+/* Make all inputs in the card section span the full line */
+#cardSection .input,
+#cardSection .select {
+  width: 100%;
+}
+
+/* Card number: icon inside the input on the far right */
+#cardSection .has-icon { position: relative; }
+#cardSection .has-icon > input.input { padding-right: 52px; }  /* room for the brand icon */
+#cardBrand {
+  position: absolute;         /* keep it inside the input */
+  right: 12px;                /* far right */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 20px;
+  object-fit: contain;
+  opacity: .9;
+  pointer-events: none;
+}
+
+/* Valid Thru + CVV on one line, wider boxes, small gap */
+#cardSection .fields-row {
+  display: grid;
+  grid-template-columns: 1.15fr 0.95fr;  /* widen both, CVV slightly smaller */
+  gap: 10px;                              /* reduce the whitespace between them */
+}
+
+/* On very narrow screens keep them on one line until it's impossible */
+@media (max-width: 420px) {
+  #cardSection .fields-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ====== NET BANKING: keep logos small and pinned to the right ====== */
+.bank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.bank-logo {
+  width: 28px;            /* hard cap the logo size */
+  height: 28px;
+  flex: 0 0 28px;
+  object-fit: contain;
+  margin-left: 12px;      
+}
+/* wrapper remains the same */
+.nb-search-wrap{ position:relative; display:block; width:100%; min-width:0; }
+
+/* REMOVE the separate icon completely */
+.nb-icon{ display:none !important; }
+
+/* keep the icon only as a background inside the input */
+.nb-search{
+  width:100%;
+  box-sizing:border-box;
+  padding-left:40px;
+  background: url("/static/images/magnifier.png") no-repeat 12px 50% / 18px 18px, #fff;
+}
+
+/* optional: tidy the “no results” block */
+#nbNoResults{ text-align:center; padding:18px 0; }
+#nbNoResults img{
+  display:block; margin:10px auto 0; height:auto;
+  width:clamp(160px,40vw,280px); opacity:.95;
+}
+
+/* Compact spacing just for the Gift Card section */
+/* Gift Card: tighten the two inputs only */
+#giftBody .field { margin: 0; }                /* neutralize any global margin */
+#giftBody .field + .field { margin-top: 8px; }  /* space only between the two fields */
+
+#giftBody .field-label { margin-bottom: 6px; }  /* tighter label → input */
+#giftBody .error-text { margin-top: 6px; min-height: 18px; } /* no jump when errors show */
+
+/* sizes & colors you can tweak */
+:root{
+  --rb-size: 20px;      /* overall radio size (Novacart-ish) */
+  --rb-ring: 2px;       /* outer ring thickness */
+  --rb-dot: 10px;       /* inner filled dot size */
+}
+
+/* Scope to only NetBanking list and EMI section */
+.bank-list .bank-item input[type="radio"],
+#emiSection .body input[type="radio"]{
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: var(--rb-size);
+  height: var(--rb-size);
+  border: var(--rb-ring) solid var(--line, #cfd4dc);
+  border-radius: 50%;
+  background: var(--surface, #fff);
+
+  display: inline-grid;
+  place-content: center;
+
+  /* keep layout tidy */
+  margin-right: 12px;
+  flex: 0 0 var(--rb-size);
+  cursor: pointer;
+  position: relative;
+}
+
+/* filled dot when checked */
+.bank-list .bank-item input[type="radio"]:checked,
+#emiSection .body input[type="radio"]:checked{
+  border-color: var(--brand, #2a55e5);
+  background-color: #fff;
+}
+
+.bank-list .bank-item input[type="radio"]::after,
+#emiSection .body input[type="radio"]::after{
+  content: "";
+  width: var(--rb-dot);
+  height: var(--rb-dot);
+  border-radius: 50%;
+  background: transparent;       /* hidden by default */
+  transition: transform .12s ease-out, background-color .12s ease-out;
+  transform: scale(0.6);         /* tiny nudge for nicer look */
+}
+
+.bank-list .bank-item input[type="radio"]:checked::after,
+#emiSection .body input[type="radio"]:checked::after{
+  background: var(--brand, #2a55e5);
+  transform: scale(1);
+}
+
+/* keyboard/focus ring */
+.bank-list .bank-item input[type="radio"]:focus-visible,
+#emiSection .body input[type="radio"]:focus-visible{
+  outline: 2px solid color-mix(in oklab, var(--brand, #2a55e5), #fff 40%);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand, #2a55e5), #fff 75%);
+}
+
+/* make the whole label a comfy tap target */
+.bank-list .bank-item,
+#emiSection .body label{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width:1276px){
+  .price-stack{
+    position: static;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .price-stack .price-card{
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 12px;
+  }
+  /* keep offersOpen green; only add spacing */
+  .price-stack #offersOpen{ padding:12px; }
+}
+
+
+
+/* ===== OFFERS MODAL (Novacart-like): centered, left rail + right list ===== */
+
+.offers-modal{
+  position: fixed; inset: 0;
+  display: none;                    /* toggle with .show */
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55);
+  z-index: 2000;
+}
+.offers-modal.show{ display: flex; }
+
+.offers-dialog{
+  position: relative;
+  width: min(900px, 92vw);
+  max-height: 84vh;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: visible;                 
+  display: flex; flex-direction: column;
+}
+
+/* Uniform title bar */
+.offers-header{
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center;
+  flex: 0 0 auto;
+  min-height: 52px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  border-top-left-radius:14px;
+  border-top-right-radius:14px;
+  background: var(--paper);
+}
+.offers-header h4{ margin: 0; font-size: 16px; font-weight: 800; }
+
+/* Close “×” OUTSIDE the dialog */
+.offers-close{
+  position: absolute;
+  top: 26px;                  
+  right: -48px;               
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 22px; line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+
+/* Layout: TOP tabs + list below (tabs side-by-side) */
+.offers-layout{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  max-height: calc(84vh - 52px);
+  overflow: hidden;
+}
+
+/* horizontal pill tabs */
+.offers-tabs{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  border-right: 0;
+  padding-right: 0;
+  flex-direction: row;
+  overflow: auto;
+}
+
+.offers-tab{
+  display: flex; align-items: center; gap: 8px;
+  width: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  font-weight: 700; font-size: 13px;
+  cursor: pointer; user-select: none;
+}
+.offers-tab.is-active{ background: #4f46e5; border-color:#4f46e5; color:#fff; }
+.offers-tab .brand-logo{ width: 18px; height: 18px; object-fit: contain; }
+
+/* Right list */
+.offers-list{
+  overflow: auto;
+  padding-right: 4px;               /* room for scrollbar */
+  display: grid; gap: 12px;
+}
+
+/* Offer cards (green title like Novacart) */
+.offer{
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--paper);
+}
+.offer-title{
+  display: flex; align-items: center; gap: 8px;
+  color: #16a34a; font-weight: 800;
+}
+.offer-title img{ width: 18px; height: 18px; object-fit: contain; }
+.offer-desc{ color: var(--ink-soft); font-size: 13px; margin: 6px 0 8px; }
+.offer-link{ color: var(--brand); font-weight: 800; font-size: 12px; text-decoration: none; }
+.offer-link:hover{ text-decoration: underline; }
+
+/* Small screens: stack, tabs become a horizontal bar */
+@media (max-width: 768px){
+  .offers-layout{ grid-template-columns: 1fr; gap: 12px; }
+  .offers-tabs{
+    border-right: 0; border-bottom: 1px solid var(--line);
+    flex-direction: row; flex-wrap: wrap; gap: 8px; padding-bottom: 12px;
+  }
+}
+
+/* Safety: keep images sane inside dialog even if global rules exist */
+.offers-dialog img{ max-width: 100%; height: auto; }
+/* put this AFTER the global header rule */
+.offers-dialog .offers-header{
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+}
+.offers-dialog .offers-header h4{ color: inherit; }
+
+/* Novacart-style green promo box */
+.line-callout{
+  /* colors */
+  background: #ecfdf5;           /* light green */
+  border-color: #cdeccb;         /* soft green border */
+  /* layout polish */
+  gap: 12px;
+  cursor: pointer;
+}
+
+/* Make the text a darker green */
+.line-callout > :first-child{
+  color: #065f46;                /* dark green text */
+  font-weight: 600;
+}
+.line-callout > :first-child strong{
+  color: #059669;                /* brighter green for the % text */
+  font-weight: 700;
+}
+
+/* Chips on ONE line (no wrapping) */
+.line-callout > :last-child{
+  display: flex;                 /* put chips in a row */
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* Chip styling */
+.chip{
+  margin-left: 0;                /* kill the old individual spacing */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #cdeccb;     /* match the box */
+}
+
+/* Dark mode tweaks (optional) */
+html.dark .line-callout{ background:#052e1a; border-color:#14532d; }
+html.dark .line-callout > :first-child{ color:#a7f3d0; }
+html.dark .line-callout > :first-child strong{ color:#34d399; }
+html.dark .chip{ background:#0f172a; border-color:#14532d; }
+
+/* 1) Make the discount box green (override the more specific rule) */
+.price-stack #offersOpen{
+  background:#ecfdf5;      /* light green */
+  border:1px solid #bbf7d0;/* soft green */
+  color:#065f46;           /* dark green text */
+}
+
+/* 2) Keep both pieces together without overlap:
+      make the wrapper sticky, not the card  */
+.price-stack{
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Cancel the sticky on the card so it won't cover the green box */
+.price-card{
+  position: static;
+  z-index: auto;
+}
+
+/* 3) Novacart-style title + subline you already added.
+      Keep the styling here for the split lines */
+#offersOpen .lc-text{ line-height:1.15; }
+#offersOpen .lc-title{ font-weight:700; }
+#offersOpen .lc-sub{ font-size:12px; color:#0f766e; margin-top:2px; }
+#offersOpen .lc-chips{ display:flex; gap:6px; white-space:nowrap; }
+@media (max-width:1276px){
+  .price-stack{ position: static; gap:12px; margin-bottom:12px; }
+}
+
+/* 1) Remove the default divider on the toggle */
+.totals-toggle{
+  border-top: 0 !important;     /* no line when collapsed */
+}
+
+/* 2) Show the divider ONLY when expanded */
+.totals-panel.is-open .totals-toggle{
+  border-top: 1px solid #e2e8f0;          /* light */
+}
+html.dark .totals-panel.is-open .totals-toggle{
+  border-top: 1px solid #1f2937;          /* dark */
+}
+
+/* 3) (Optional) Hide the inner separator unless expanded */
+.totals-sep{
+  height: 1px;
+  background: #e2e8f0;
+  opacity: 0;                             /* fade by default */
+  transition: opacity .2s var(--ease);
+}
+.totals-panel.is-open .totals-sep{ opacity: 1; }
+html.dark .totals-sep{ background:#1f2937; }
+
+/* 4) Make sure the body collapses without leaving space */
+.totals-body{
+  max-height: 0;
+  padding: 0 16px;                        /* no vertical padding when closed */
+  overflow: hidden;
+  transition: max-height .3s var(--ease), padding .3s var(--ease);
+}
+.totals-panel.is-open .totals-body{
+  max-height: 320px;                      /* big enough for content */
+  padding: 12px 16px 0;
+}
+
+
+/* ==== DARK MODE FIXES ==== */
+
+/* Totals card (right price panel) */
+html.dark .totals-panel{
+  background:#0f172a;          /* dark surface */
+  border-color:#1f2937;
+}
+html.dark .totals-body,
+html.dark .totals-row,
+html.dark .totals-toggle{
+  color:#e5e7eb;               /* primary text */
+}
+html.dark .totals-row .muted{   /* labels like “Price (1 item)” */
+  color:#94a3b8;
+}
+html.dark .totals-sep{ background:#1f2937; }
+html.dark .amount-val{ color:#c7d2fe; }     /* ₹ amount accent */
+
+/* Green promo (“10% instant discount”) */
+html.dark #offersOpen{
+  background:#052e1a;          /* dark green surface */
+  border-color:#14532d;
+  color:#a7f3d0;               /* main text */
+}
+html.dark #offersOpen strong{ color:#34d399; }     /* headline green */
+html.dark #offersOpen .lc-sub{ color:#86efac; }    /* small subtext */
+html.dark #offersOpen .chip{
+  background:#0b1220;          /* chip background in dark */
+  color:#e5e7eb;               /* <-- makes “+3” readable */
+  border-color:#14532d;
+}
+
+
+/* 1) Remove the default divider on the toggle */
+.totals-toggle{
+  border-top: 0 !important;     /* no line when collapsed */
+}
+
+/* 2) Show the divider ONLY when expanded */
+.totals-panel.is-open .totals-toggle{
+  border-top: 1px solid #e2e8f0;          /* light */
+}
+html.dark .totals-panel.is-open .totals-toggle{
+  border-top: 1px solid #1f2937;          /* dark */
+}
+
+/* 3) (Optional) Hide the inner separator unless expanded */
+.totals-sep{
+  height: 1px;
+  background: #e2e8f0;
+  opacity: 0;                             /* fade by default */
+  transition: opacity .2s var(--ease);
+}
+.totals-panel.is-open .totals-sep{ opacity: 1; }
+html.dark .totals-sep{ background:#1f2937; }
+
+/* 4) Make sure the body collapses without leaving space */
+.totals-body{
+  max-height: 0;
+  padding: 0 16px;                        /* no vertical padding when closed */
+  overflow: hidden;
+  transition: max-height .3s var(--ease), padding .3s var(--ease);
+}
+.totals-panel.is-open .totals-body{
+  max-height: 320px;                      /* big enough for content */
+  padding: 12px 16px 0;
+}
+
+/* When the grid becomes one column, show the price column first */
+@media (max-width:1276px){
+  .grid{ grid-template-columns: 1fr; }
+
+  /* put the right column (totals + discount) on top */
+  .price-col{ grid-row: 1; }
+
+  /* put the rest (left/payment methods) below */
+  .grid > :not(.price-col){ grid-row: 2; }
+
+  /* keep the price stack non-sticky in this mode (you already have this) */
+  .price-card{ position: static; }
+}
+
+/* left rail outer container */
+.pay-col{
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+/* keep gaps tidy inside */
+.pay-col .section + .section{ margin-top: 10px; }
+
+/* default (wide / 100%): NO outer box */
+.pay-col{
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+
+
+/* hidden on small widths */
+.payments-mast { display: none; }
+
+/* desktop / 100% case */
+@media (min-width: 1360px) {
+  .payments-mast {
+    position: sticky;
+    /* adjust if you have a fixed site header; set it to that header’s height */
+    top: var(--stickTop, 84px);
+    z-index: 1000;                     /* make sure it’s above cards */
+    padding: 0 24px 12px;
+  }
+  .payments-mast .mast-inner{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 12px 16px;
+  }
+  .mast-title{ font-weight: 700; }
+  .mast-total{ display:inline-flex; align-items:center; gap:8px; background:transparent; border:0; font-weight:600; cursor:pointer; }
+  .mast-total .amt{ font-weight:800; }
+  .mast-total .caret{
+    width:10px; height:10px;
+    border-right:2px solid currentColor; border-bottom:2px solid currentColor;
+    transform: rotate(45deg); transition: transform .15s ease;
+  }
+  .mast-total[aria-expanded="true"] .caret{ transform: rotate(-135deg); }
+}
+
+
+/* only on desktop where you want the band */
+@media (min-width: 1360px) {
+  .page, .page > .container { overflow: visible; }   /* adjust selectors to your wrappers */
+}
+
+ #nav-loading{
+    position: fixed; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,.45);
+    z-index: 99999;
+    -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
+  }
+  #nav-loading.is-on{ display:flex; }
+  #nav-loading .nav-card{
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+    padding:18px 20px; border-radius:12px;
+    background:#0b0f19; color:#e5e7eb; border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 14px 36px rgba(0,0,0,.55);
+  }
+  #nav-loading .nav-spin{
+    width:48px; height:48px; border-radius:50%;
+    border:4px solid rgba(255,255,255,.35);
+    border-top-color:#fff;
+    animation: nav-spin .7s linear infinite;
+  }
+  #nav-loading .nav-msg{ font-weight:800; letter-spacing:.2px; }
+  @keyframes nav-spin { to { transform: rotate(360deg); } }
+
+  /* While busy: block all interaction & scroll */
+  body.is-busy{ pointer-events: none; overflow: hidden; }
+  /* Let the overlay itself stay clickable/focusable */
+  body.is-busy #nav-loading{ pointer-events: all; }
+
+</style>
+</head>
+
+<body>
+<form id="payForm" action="/api/pay/success/" method="post"></form>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="brand">Novacart</div>
+    <div class="crumb">Payments</div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- SINGLE OUTER CONTAINER -->
+<main class="page" id="page">
+  <!-- Inside top bar (back • step • secure • continue) -->
+  <div class="topbar">
+    <div class="top-left">
+      <a class="back-btn" href="/api/checkout/?seed=1" aria-label="Back to Checkout">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <span>Step 3 of 3</span>
+      <span>• Payments</span>
+    </div>
+    <div class="top-right">
+      <span class="secure-pill">🔒 100% Secure</span>
+    </div>
+  </div>
+  <!-- Sticky payments band (desktop only) -->
+<div class="payments-mast" id="paymentsMast" aria-hidden="true">
+  <div class="mast-inner">
+    <div class="mast-title">Step 3 of 3 • Payments</div>
+
+    <!-- mini totals trigger that mirrors your main totals toggle -->
+    <button type="button"
+            class="mast-total"
+            id="mastTotals"
+            aria-controls="totalsBody"
+            aria-expanded="false">
+      <span class="label">Total Amount</span>
+      <span class="amt" id="mastAmt">₹0</span>
+      <span class="caret" aria-hidden="true"></span>
+    </button>
+  </div>
+</div>
+
+
+  <!-- Two-column layout -->
+  <div class="grid">
+    <!-- LEFT: PAYMENT METHODS -->
+    <section id="paymentsTop" class="pay-col">
+      <!-- UPI -->
+      <div class="section card" id="upiSection" data-accordion data-icon="upi">
+        <div class="head"><h3>UPI</h3><span class="chev" aria-hidden="true"></span></div>
+        <div class="collapsible">
+          <div class="body">
+            <div class="upi-head">
+              <div class="upi-title">Pay by any UPI app</div>
+              <a href="#" class="upi-help" id="upiHelpLink">How to find?</a>
+            </div>
+            <div class="upi-hint">Save upto ₹30 • 4 offers available</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px">
+              <input id="upi-id" class="input" placeholder="ENTER UPI ID" />
+              <button class="btn btn-verify" id="upi-verify" type="button" disabled>Verify</button>
+            </div>
+            <p class="error-text" id="upi-id-error" role="alert" aria-live="polite"></p>
+            <button class="btn btn-pay" id="upi-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post" disabled>Proceed to Pay</button>
+            <div class="muted" style="font-size:13px">Use any UPI app. We’ll request a collect to your UPI handle.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD -->
+      <div class="section card" id="cardSection" data-accordion data-icon="card">
+        <div class="head">
+          <h3>Credit / Debit / ATM Card</h3>
+          <span class="chev" aria-hidden="true"></span>
+        </div>
+        <div class="collapsible">
+          <div class="body">
+            <div class="muted">Add and secure cards as per RBI guidelines</div>
+            <div class="pay-hint" style="color:#16a34a;font-weight:700">Get upto 5% cashback* • 2 offers available</div>
+
+            <div class="field">
+            <label for="card-number" class="field-label">Card Number</label>
+            <div class="has-icon">
+                <input id="card-number" class="input" inputmode="numeric" autocomplete="cc-number" placeholder="Card Number" maxlength="19" />
+                <img id="cardBrand" src="/static/images/fakecard.png" alt="card brand">
+            </div>
+            <p class="error-text" id="card-number-error" role="alert" aria-live="polite"></p>
+            </div>
+
+            <div class="fields-row card-2col">
+            <div class="field">
+                <label for="expiry" class="field-label">Valid Thru</label>
+                <input id="expiry" class="input" inputmode="numeric" placeholder="MM/YY" maxlength="5" />
+                <p class="error-text" id="expiry-error" role="alert" aria-live="polite"></p>
+            </div>
+            <div class="field">
+                <label for="cvv" class="field-label">CVV</label>
+                <input id="cvv" class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="CVV">
+                <p class="error-text" id="cvv-error" role="alert" aria-live="polite"></p>
+            </div>
+            </div>  
+
+            <button class="btn btn-pay" id="card-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post">Proceed to Pay</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NET BANKING -->
+      <div class="section card" data-accordion data-icon="bank">
+        <div class="head"><h3>Net Banking</h3><span class="chev" aria-hidden="true"></span></div>
+        <div class="collapsible">
+          <div class="body" id="nbBody">
+            <div class="nb-search-wrap" id="nbSearchWrap">
+            <span class="nb-icon" aria-hidden="true"></span>
+            <input id="nbSearch" class="input nb-search" placeholder="Search for bank">
+            </div>
+
+            <div id="nbPopular">
+              <div class="muted" id="nbPopularHeader">Popular banks</div>
+              <div id="nbPopularList" class="bank-list">
+                <label class="bank-item">
+                  <input type="radio" name="bank" value="State Bank of India" checked>
+                  <span class="bank-name">State Bank of India</span>
+                  <img class="bank-logo" src="/static/images/sbi.png" alt="SBI" loading="lazy">
+                </label>
+                <label class="bank-item">
+                  <input type="radio" name="bank" value="HDFC Bank">
+                  <span class="bank-name">HDFC Bank</span>
+                  <img class="bank-logo" src="/static/images/hdfc.png" alt="HDFC Bank" loading="lazy">
+                </label>
+                <label class="bank-item">
+                  <input type="radio" name="bank" value="ICICI Bank">
+                  <span class="bank-name">ICICI Bank</span>
+                  <img class="bank-logo" src="/static/images/icici.png" alt="ICICI Bank" loading="lazy">
+                </label>
+                <label class="bank-item">
+                  <input type="radio" name="bank" value="Kotak Mahindra Bank">
+                  <span class="bank-name">Kotak Mahindra Bank</span>
+                  <img class="bank-logo" src="/static/images/kotak.png" alt="Kotak Mahindra Bank" loading="lazy">
+                </label>
+                <label class="bank-item">
+                  <input type="radio" name="bank" value="Axis Bank">
+                  <span class="bank-name">Axis Bank</span>
+                  <img class="bank-logo" src="/static/images/axis.png" alt="Axis Bank" loading="lazy">
+                </label>
+                <label class="bank-item">
+                  <input type="radio" name="bank" value="Federal Bank">
+                  <span class="bank-name">Federal Bank</span>
+                  <img class="bank-logo" src="/static/images/federal.png" alt="Federal Bank" loading="lazy">
+                </label>
+              </div>
+              <button id="nbShowAll" type="button"
+                style="background:transparent;border:none;color:var(--brand);font-weight:800;display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer">
+                All other banks <span style="font-size:18px">›</span>
+              </button>
+            </div>
+
+            <div id="nbDivider" class="muted" style="display:none;margin-top:10px">All other banks</div>
+            <div id="nbAllList" class="bank-list" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASH ON DELIVERY -->
+      <div class="section card" data-accordion data-icon="cash">
+        <div class="head"><h3>Cash on Delivery</h3><span class="chev" aria-hidden="true"></span></div>
+        <div class="collapsible">
+          <div class="body" id="codBody">
+            <div class="cod-fee-card" role="note" aria-label="Cash on Delivery handling fee">
+              <p class="cod-fee-title">Due to handling costs, a nominal fee of ₹5 will be charged for orders placed using this option.Avoid this fee by paying online now.</p>
+            </div>
+            <button class="btn btn-pay" id="codPlaceOrder" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post">Place Order</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GIFT CARD -->
+      <div class="section card" data-accordion data-icon="gift">
+        <div class="head"><h3>Have a Novacart Gift Card?</h3><span class="chev" aria-hidden="true"></span></div>
+        <div class="collapsible">
+          <div class="body" id="giftBody">
+            <div class="muted">Upto 10 giftcards can be added per transaction.</div>
+            <div class="field">
+              <label for="gcNumber" class="field-label">Voucher Number</label>
+              <input id="gcNumber" class="input" inputmode="numeric" autocomplete="off" placeholder="Enter 16-digit number" maxlength="16" />
+              <p class="error-text" id="gcNumberErr" role="alert" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="gcPin" class="field-label">Voucher PIN</label>
+              <input id="gcPin" class="input" inputmode="numeric" autocomplete="off" placeholder="Enter 6-digit PIN" maxlength="6" />
+              <p class="error-text" id="gcPinErr" role="alert" aria-live="polite"></p>
+            </div>
+            <button id="gcAddBtn" class="btn btn-pay" type="button" disabled>Add Gift Card</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMI -->
+      <div class="section card" id="emiSection" data-accordion data-icon="emi">
+        <div class="head">
+          <h3>EMI</h3>
+          <span class="chev" aria-hidden="true"></span>
+        </div>
+        <div class="collapsible">
+          <div class="body">
+            <div class="muted">Pay in easy monthly instalments on eligible cards.</div>
+            <div class="pay-hint" style="color:#16a34a;font-weight:700">No-cost EMI may apply on select plans</div>
+
+            <div class="field">
+              <label class="field-label">EMI Type</label>
+              <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <label><input type="radio" name="emiType" value="cc" checked> Credit Card EMI</label>
+                <label><input type="radio" name="emiType" value="dc"> Debit Card EMI</label>
+                <label><input type="radio" name="emiType" value="cl"> Cardless EMI</label>
+              </div>
+            </div>
+
+            <div class="fields-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="field">
+                <label for="emiBank" class="field-label">Bank</label>
+                <select id="emiBank" class="select">
+                  <option value="">Select bank…</option>
+                  <option>SBI</option>
+                  <option>HDFC Bank</option>
+                  <option>ICICI Bank</option>
+                  <option>Axis Bank</option>
+                  <option>Kotak</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="emiTenure" class="field-label">Tenure</label>
+                <select id="emiTenure" class="select">
+                  <option value="">Select tenure…</option>
+                  <option value="3">3 months</option>
+                  <option value="6">6 months</option>
+                  <option value="9">9 months</option>
+                  <option value="12">12 months</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="krow"><span>Interest (p.a.)</span><span id="emiRate">—</span></div>
+            <div class="krow"><span>Processing fee</span><span id="emiFee">—</span></div>
+            <div class="krow" style="font-weight:800"><span>Monthly EMI</span><span id="emiMonthly">—</span></div>
+
+            <button id="emiPay" class="btn btn-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post" disabled>Proceed with EMI</button>
+            <p class="error-text" id="emiError" role="alert" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- RIGHT: PRICE SUMMARY -->
+    <div class="price-col">
+      <div class="price-stack" id="priceStack">
+        <aside class="card price-card">
+          <div class="totals-panel" id="totalsPanel">
+            <div id="totalsBody" class="totals-body" aria-hidden="true">
+              <div class="totals-row">
+                <span class="muted">Price ({{ item_count }} {{ item_count|pluralize:"item,items" }})</span>
+                <span>₹{{ cart_total|floatformat:0 }}</span>
+              </div>
+              <div class="totals-row">
+                <span class="muted">Delivery charge</span>
+                <span>₹{{ shipping_fee|floatformat:0 }}</span>
+              </div>
+              <div class="totals-row">
+                <span class="muted">Platform fee</span>
+                <span>₹{{ platform_fee|floatformat:0 }}</span>
+              </div>
+              <div class="totals-sep"></div>
+            </div>
+
+            <button id="totalsToggle" class="totals-toggle" type="button" aria-expanded="false" aria-controls="totalsBody">
+              <span class="total-left">
+                Total Amount
+                <span class="caret" aria-hidden="true"></span>
+              </span>
+              <span class="total-right">
+                <span class="amount-val" id="amountMain">₹{{ total_payable|floatformat:0 }}</span>
+                <span class="caret" aria-hidden="true"></span>
+              </span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- DISCOUNT -->
+        <div class="line-callout" id="offersOpen" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="offersModal">
+          <div class="lc-text">
+          <div class="lc-title"><strong>10% instant discount</strong></div>
+          <div class="lc-sub">Claim now with payment offers</div>
+        </div>
+          <div>
+            <span class="chip">💳</span><span class="chip">🏦</span><span class="chip">+3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+
+<!-- BANKS MODAL -->
+<div class="modal-backdrop" id="banksModal" aria-modal="true" role="dialog" aria-labelledby="banksTitle">
+  <div class="modal">
+    <header><h4 id="banksTitle">Select Your Bank</h4></header>
+    <div class="m-body">
+      <input id="bankSearch" class="input" placeholder="Search for your bank…">
+      <div class="bank-list no-scrollbar" id="banksList"></div>
+    </div>
+    <div class="m-actions">
+      <button class="btn-secondary" id="banksClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPI HELP MODAL -->
+<div class="modal-backdrop" id="upiHelpModal" aria-modal="true" role="dialog" aria-labelledby="upiHelpTitle">
+  <div class="modal">
+    <header style="display:flex;justify-content:space-between;align-items:center;">
+      <h4 id="upiHelpTitle">Steps to find your UPI ID</h4>
+      <button id="upiHelpClose" class="btn-secondary" style="padding:4px 10px">Close</button>
+    </header>
+    <div class="m-body">
+      <div class="step">
+        <img class="appicon logo" src="/static/images/phonepe.png" alt="PhonePe">
+        <div>
+          <h5>PhonePe</h5>
+          <ol>
+            <li>Open the <strong>PhonePe</strong> app.</li>
+            <li>Tap your <strong>profile picture</strong> at the <strong>top-left</strong> of the home screen.</li>
+            <li>Open <strong>Bank Accounts / UPI</strong> and tap your account.</li>
+            <li>Your <strong>UPI ID</strong> (e.g. <code>name@bank</code>) is shown there.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="step">
+        <img class="appicon logo" src="/static/images/gpay.png" alt="Google Pay">
+        <div>
+          <h5>Google Pay</h5>
+          <ol>
+            <li>Open the <strong>Google Pay</strong> app.</li>
+            <li>Tap your <strong>profile photo</strong> at the <strong>top-right</strong>.</li>
+            <li>Choose <strong>Bank account</strong> / <strong>UPI ID</strong>.</li>
+            <li>Your linked bank shows one or more <strong>UPI IDs</strong>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="step">
+        <img class="appicon logo" src="/static/images/paytm.png" alt="Paytm">
+        <div>
+          <h5>Paytm</h5>
+          <ol>
+            <li>Open the <strong>Paytm</strong> app.</li>
+            <li>Tap your <strong>profile picture</strong> at the <strong>top-left</strong>.</li>
+            <li>Open <strong>UPI &amp; Payment Settings</strong> (or just <strong>UPI</strong>).</li>
+            <li>Your <strong>UPI ID</strong> is visible on that page.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="step">
+        <img class="appicon logo" src="/static/images/amazonpay.png" alt="Amazon Pay">
+        <div>
+          <h5>Amazon Pay</h5>
+          <ol>
+            <li>Open the <strong>Amazon Pay</strong> app.</li>
+            <li>Tap your <strong>profile icon</strong> at the <strong>top-left</strong>.</li>
+            <li>Open <strong>Profile</strong> / <strong>My UPI ID</strong>.</li>
+            <li>Your active <strong>UPI ID</strong> is listed there.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div style="margin-top:10px; font-size:13px;">
+        <strong>Tips:</strong>
+        <ul style="margin:8px 0 0 16px; padding:0; list-style:disc">
+          <li>A UPI ID looks like <code>yourname@bank</code> or <code>9876543210@upi</code>.</li>
+          <li>If you have multiple UPI IDs, any one works for collection.</li>
+          <li>Can’t find it? Update your app to the latest version.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OFFERS MODAL -->
+<div id="offersModal" class="offers-modal" role="dialog" aria-modal="true" aria-labelledby="offersTitle">
+  <div class="offers-dialog">
+    <button id="offersCloseX" class="offers-close" aria-label="Close">×</button>
+
+    <header class="offers-header">
+      <h4 id="offersTitle">Offers on online payment</h4>
+    </header>
+
+    <div class="offers-layout">
+      <!-- LEFT: tabs -->
+      <aside class="offers-tabs" role="tablist" aria-label="Offer categories">
+        <button class="offers-tab is-active" data-group="all" role="tab" aria-selected="true">All Offers</button>
+        <button class="offers-tab" data-group="sbi" role="tab" aria-selected="false">
+          <img class="brand-logo" src="/static/images/sbi.png" alt=""> <span>Novacart SBI Credit Card</span>
+        </button>
+        <button class="offers-tab" data-group="axis" role="tab" aria-selected="false">
+          <img class="brand-logo" src="/static/images/axis.png" alt=""> <span>Novacart Axis Bank Card</span>
+        </button>
+      </aside>
+
+      <!-- RIGHT: offers list -->
+      <section id="offersList" class="offers-list" role="tabpanel" aria-live="polite" aria-labelledby="offersTitle"></section>
+    </div>
+  </div>
+</div>
+
+
+<div id="nav-loading" aria-hidden="true">
+  <div class="nav-card" role="status" aria-live="polite">
+    <div class="nav-spin" aria-hidden="true"></div>
+    <div class="nav-msg">Processing payment…</div>
+  </div>
+</div>
+
+
+<script>
+/* =========================================================
+   Vanilla JS for theme, accordions, modals, totals, inputs
+   ========================================================= */
+/* ---------- Helpers ---------- */
+const Rs = n => '₹' + Math.round(+n||0).toLocaleString('en-IN');
+const numOnly = s => (s||'').replace(/\D+/g,'');
+
+/* ---------- Demo totals binding (kept: safe fallback if server values missing) ---------- */
+(function(){
+  const totals = { items: 2, price: 1799, delivery: 0, platform: 5 };
+  totals.total = totals.price + totals.delivery + totals.platform;
+  document.querySelectorAll('[data-bind="items"]').forEach(n=>n.textContent = totals.items);
+  document.querySelectorAll('[data-bind="price"]').forEach(n=>n.textContent = totals.price);
+  document.querySelectorAll('[data-bind="delivery"]').forEach(n=>n.textContent = totals.delivery);
+  document.querySelectorAll('[data-bind="platform"]').forEach(n=>n.textContent = totals.platform);
+  document.querySelectorAll('[data-bind="total"]').forEach(n=>n.textContent = totals.total);
+})();
+
+/* =========================================================
+   THEME TOGGLE (persists in localStorage)
+   ========================================================= */
+(function(){
+  const btn = document.getElementById('themeToggle');
+  const icon= document.getElementById('themeIcon');
+
+  function setTheme(mode){
+    if(mode==='dark'){
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme','dark');
+      icon.innerHTML='<path d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM4 11a1 1 0 0 1 1 1 6 6 0 1 0 6-6 1 1 0 0 1-1-1 8 8 0 1 1-8 8 1 1 0 0 1 1-1z"/>';
+    }else{
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme','light');
+      icon.innerHTML='<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+    }
+  }
+
+  setTheme(localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  btn?.addEventListener('click', ()=> setTheme(document.documentElement.classList.contains('dark')?'light':'dark'));
+})();
+
+/* =========================================================
+   STICKY SUBHEADER: continue button + amount mirror
+   ========================================================= */
+(function(){
+  const ctaBtn = document.getElementById('continuePayBtn');
+  const methodsTop = document.getElementById('paymentsTop');
+  ctaBtn?.addEventListener('click', ()=> methodsTop?.scrollIntoView({behavior:'smooth', block:'start'}));
+
+  // keep subheader & mobile chip amounts in sync with main total
+  const main = document.getElementById('amountMain');
+  const sub  = document.getElementById('subAmount');
+  const mob  = document.getElementById('mAmountMain');
+  function sync(){
+    const val = (main?.textContent||'').trim();
+    if(sub) sub.textContent = val;
+    if(mob) mob.textContent = val;
+  }
+  sync();
+  if(main){
+    const mo = new MutationObserver(sync);
+    mo.observe(main,{childList:true,subtree:true,characterData:true});
+  }
+})();
+
+/* =========================================================
+   ACCORDIONS (single open at a time)
+   ========================================================= */
+(function(){
+  document.querySelectorAll('[data-accordion]').forEach((section, idx)=>{
+    const head = section.querySelector('.head');
+    const box  = section.querySelector('.collapsible');
+    if(idx===0){ section.classList.add('open'); box?.classList.add('open'); }
+    head?.addEventListener('click', ()=>{
+      const opening = !section.classList.contains('open');
+      document.querySelectorAll('[data-accordion].open').forEach(s=>{
+        if(s!==section){ s.classList.remove('open'); s.querySelector('.collapsible')?.classList.remove('open'); }
+      });
+      if(opening){ section.classList.add('open'); box?.classList.add('open'); }
+      else{ section.classList.remove('open'); box?.classList.remove('open'); }
+    });
+  });
+})();
+
+/* =========================================================
+   TOTALS DROPDOWNS (desktop + mobile)
+   ========================================================= */
+function initTotalsDropdown(panelId,toggleId,bodyId){
+  const panel  = document.getElementById(panelId);
+  const toggle = document.getElementById(toggleId);
+  const body   = document.getElementById(bodyId);
+  if(!panel || !toggle || !body) return;
+  const setOpen = open=>{
+    toggle.setAttribute('aria-expanded', String(open));
+    body.setAttribute('aria-hidden', String(!open));
+    panel.classList.toggle('is-open', open);
+    body.style.maxHeight = open ? (body.scrollHeight + 'px') : '0px';
+  };
+  setOpen(false);
+  toggle.addEventListener('click', ()=> setOpen(toggle.getAttribute('aria-expanded')!=='true'));
+  addEventListener('resize', ()=>{ if(panel.classList.contains('is-open')) body.style.maxHeight = body.scrollHeight + 'px'; });
+}
+initTotalsDropdown('totalsPanel','totalsToggle','totalsBody');
+initTotalsDropdown('mTotalsPanel','mTotalsToggle','mTotalsBody');
+
+/* =========================================================
+   OFFERS MODAL + TABS (final)
+   ========================================================= */
+/* ===== OFFERS MODAL (single source of truth) ===== */
+(function(){
+  // 1) Offer data
+  const OFFERS = [
+    { id:1, brand:'axis', title:'5% Unlimited Cashback',
+      desc:'On Novacart Axis Bank Credit Card. T&C apply', terms:'T&C Apply' },
+    { id:2, brand:'sbi',  title:'10% Instant Discount',
+      desc:'On SBI Credit Card. Min spend ₹5000. Max ₹1250', terms:'T&C Apply' },
+    { id:3, brand:'sbi',  title:'Special Price on SBI Card',
+      desc:'Extra ₹2000 off with SBI Credit Card EMI',       terms:'View T&Cs' },
+    { id:4, brand:'axis', title:'Extra Discount with Axis',
+      desc:'5% off on Novacart Axis Bank Card EMI',          terms:'Know More' },
+  ];
+
+  const BRAND_LOGO = {
+    sbi:  '/static/images/sbi.png',
+    axis: '/static/images/axis.png'
+  };
+
+  // 2) Elements
+  const trigger = document.getElementById('offersOpen');     // green callout
+  const modal   = document.getElementById('offersModal');    // backdrop
+  const list    = document.getElementById('offersList');     // right list
+  const closeX  = document.getElementById('offersCloseX');   // outside ×
+  const tabs    = Array.from(modal.querySelectorAll('.offers-tab'));
+
+  if(!trigger || !modal || !list || !closeX || tabs.length === 0) return;
+
+  // 3) Helpers
+  function activeGroup(){
+    const btn = tabs.find(t => t.classList.contains('is-active'));
+    return (btn && btn.dataset.group) || 'all';
+  }
+
+  function setActive(group){
+    tabs.forEach(t => {
+      const on = (t.dataset.group || 'all') === group;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  function renderOffers(){
+    const group = activeGroup();
+    const rows  = OFFERS.filter(o => group === 'all' ? true : o.brand === group);
+
+    list.innerHTML = rows.map(o => `
+      <article class="offer">
+        <div class="offer-title">
+          ${o.brand ? `<img src="${BRAND_LOGO[o.brand] || ''}" alt="">` : ''}
+          <span>${o.title}</span>
+        </div>
+        <div class="offer-desc">${o.desc}</div>
+        <a href="#" class="offer-link">${o.terms} ›</a>
+      </article>
+    `).join('') || `<p class="muted" style="text-align:center;padding:12px 0">No offers available.</p>`;
+  }
+
+  function openModal(){
+    modal.classList.add('show');
+    renderOffers();
+  }
+  function closeModal(){
+    modal.classList.remove('show');
+  }
+
+  // 4) Wire events
+  trigger.addEventListener('click', openModal);
+  closeX.addEventListener('click', closeModal);
+
+  // click on backdrop to close
+  modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
+
+  // Esc to close
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && modal.classList.contains('show')) closeModal();
+  });
+
+  // tabs switch
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      setActive(btn.dataset.group || 'all');
+      renderOffers();
+    });
+  });
+
+  // default tab: All
+  setActive('all');
+})();
+
+
+/* =========================================================
+   BANKS MODAL (global list) – simple searchable list
+   ========================================================= */
+(function(){
+  const BANKS=['State Bank of India','HDFC Bank','ICICI Bank','Axis Bank','Kotak Mahindra Bank','Punjab National Bank','Bank of Baroda','Canara Bank','Union Bank of India','Bank of India','IndusInd Bank','Yes Bank','IDBI Bank','Federal Bank','South Indian Bank','Jammu & Kashmir Bank','Karur Vysya Bank','City Union Bank','Bandhan Bank','RBL Bank','Karnataka Bank','DCB Bank','Tamilnad Mercantile Bank','Nainital Bank','Dhanlaxmi Bank'];
+  const openBtn  = document.getElementById('openBanks');
+  const modal    = document.getElementById('banksModal');
+  const closeBtn = document.getElementById('banksClose');
+  const search   = document.getElementById('bankSearch');
+  const list     = document.getElementById('banksList');
+
+  function render(q=''){
+    const items = BANKS.filter(b=>b.toLowerCase().includes(q.toLowerCase()));
+    list.innerHTML = items.map(b=> `<label class="bank-item"><span>${b}</span><input type="radio" name="bank_all"></label>`).join('');
+  }
+  openBtn?.addEventListener('click', ()=>{ modal?.classList.add('show'); render(''); if(search){ search.value=''; setTimeout(()=>search.focus(),10);} });
+  closeBtn?.addEventListener('click', ()=> modal?.classList.remove('show'));
+  modal?.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('show'); });
+  search?.addEventListener('input', e=> render(e.target.value));
+})();
+
+/* =========================================================
+   UPI HELP MODAL (How to find?)
+   ========================================================= */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const openBtn = document.getElementById('upiHelpLink');
+  const modal   = document.getElementById('upiHelpModal');
+  const closeBtn= document.getElementById('upiHelpClose');
+  if(!openBtn || !modal) return;
+  openBtn.addEventListener('click', e=>{ e.preventDefault(); modal.classList.add('show'); });
+  closeBtn?.addEventListener('click', ()=> modal.classList.remove('show'));
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.classList.remove('show'); });
+  addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.classList.contains('show')) modal.classList.remove('show'); });
+});
+
+/* =========================================================
+   UPI VALIDATION (live + on blur; clears on accordion change)
+   ========================================================= */
+function isValidUpiId(v){ const x=(v||'').trim(); return /^[a-zA-Z0-9._-]{2,}@[a-zA-Z][a-zA-Z0-9._-]{2,}$/.test(x); }
+(function(){
+  const section = document.getElementById('upiSection');
+  const input   = document.getElementById('upi-id');
+  const verify  = document.getElementById('upi-verify');
+  const pay     = document.getElementById('upi-pay');
+  const err     = document.getElementById('upi-id-error');
+  if(!section || !input || !verify || !pay || !err) return;
+  let touched=false;
+
+  function setBtns(ok){ verify.disabled = !ok; pay.disabled = !ok; }
+  function showError(msg){ err.textContent = msg || ''; input.classList.toggle('is-invalid', !!msg); }
+  function render(){
+    const val=(input.value||'').trim(), ok=isValidUpiId(val);
+    setBtns(ok);
+    if(!touched){ showError(''); return; }
+    if(!val) showError('UPI ID is required');
+    else if(!ok) showError('Enter a valid UPI ID (e.g., name@bank)');
+    else showError('');
+  }
+  function reset(){ touched=false; showError(''); setBtns(false); }
+
+  reset();
+  input.addEventListener('input', render);
+  input.addEventListener('blur', ()=>{ touched=true; render(); });
+
+  // clear when accordion is closed
+  document.querySelectorAll('[data-accordion] .head').forEach(h=>{
+    h.addEventListener('click', ()=> setTimeout(()=>{ if(!section.classList.contains('open')) reset(); },0));
+  });
+})();
+
+/* =========================================================
+   CARD INPUT: brand detect, formatting, validation
+   ========================================================= */
+(function(){
+  const num  = document.getElementById('card-number');
+  const exp  = document.getElementById('expiry');
+  const cvv  = document.getElementById('cvv');
+  const pay  = document.getElementById('card-pay');
+  const brandImg = document.getElementById('cardBrand');
+  const errN = document.getElementById('card-number-error');
+  const errE = document.getElementById('expiry-error');
+  const errC = document.getElementById('cvv-error');
+  if(!num || !exp || !cvv || !pay || !brandImg || !errN || !errE || !errC) return;
+
+  const PATHS = {
+    default: '/static/images/fakecard.png',
+    visa: '/static/images/visa.png',
+    mastercard: '/static/images/mastercard.png',
+    amex: '/static/images/amex.png',
+    discover: '/static/images/discover.png',
+  };
+  const detectBrand = d=>{
+    if(/^4/.test(d)) return 'visa';
+    if(/^5[1-5]/.test(d)) return 'mastercard';
+    if(/^3[47]/.test(d)) return 'amex';
+    if(/^(6011|65|64[4-9])/.test(d)) return 'discover';
+    return 'default';
+  };
+  const setBrandUI = b=>{
+    brandImg.src = PATHS[b] || PATHS.default;
+    const len = b==='amex' ? 4 : 3;
+    cvv.maxLength = len;
+    cvv.value = numOnly(cvv.value).slice(0,len);
+    cvv.placeholder = b==='amex' ? 'CVV (4)' : 'CVV';
+  };
+  const luhnOk = d=>{
+    let sum=0, alt=false;
+    for(let i=d.length-1;i>=0;i--){ let n=d.charCodeAt(i)-48; if(alt){ n*=2; if(n>9) n-=9; } sum+=n; alt=!alt; }
+    return sum%10===0;
+  };
+  const fmtCard = (d,b)=> b==='amex'
+    ? [d.slice(0,4), d.slice(4,10), d.slice(10,15)].filter(Boolean).join(' ')
+    : d.replace(/(\d{4})(?=\d)/g,'$1 ').trim();
+
+  function sanitizeAndFormatCard(){
+    const d = numOnly(num.value);
+    const brand = detectBrand(d);
+    const cap = brand==='amex' ? 15 : 16;
+    const trimmed = d.slice(0,cap);
+    num.value = fmtCard(trimmed, brand);
+    setBrandUI(brand);
+    return trimmed;
+  }
+  function sanitizeAndFormatExpiry(){
+    let d = numOnly(exp.value).slice(0,4);
+    if(d.length>=3) d = d.slice(0,2)+'/'+d.slice(2);
+    exp.value = d;
+  }
+  function sanitizeCvv(){
+    const brand = detectBrand(numOnly(num.value));
+    const len = brand==='amex' ? 4 : 3;
+    cvv.value = numOnly(cvv.value).slice(0,len);
+  }
+
+  // Field-level validation (error lines show only after first blur)
+  let tN=false,tE=false,tC=false;
+  function vNumber(){
+    const d = numOnly(num.value);
+    let msg='';
+    if(!d) msg='Card number is required';
+    else{
+      const brand = detectBrand(d);
+      const lenOk = brand==='amex' ? d.length===15 : d.length===16;
+      if(!lenOk || !luhnOk(d)) msg='Enter a valid card number';
+    }
+    errN.textContent = tN ? msg : '';
+    num.classList.toggle('is-invalid', tN && !!msg);
+  }
+  function vExpiry(){
+    const v = (exp.value||'').trim(); let msg='';
+    const m = v.match(/^(\d{1,2})\s*\/\s*(\d{2})$/);
+    if(!v) msg='Expiry is required';
+    else if(!m) msg='Use MM/YY format';
+    else{
+      const mm=+m[1], yy=+('20'+m[2]);
+      if(mm<1||mm>12) msg='Invalid month';
+      else{
+        const now=new Date();
+        const end=new Date(yy,mm,0,23,59,59);
+        if(end < now) msg='Card expired';
+      }
+    }
+    errE.textContent = tE ? msg : '';
+    exp.classList.toggle('is-invalid', tE && !!msg);
+  }
+  function vCvv(){
+    const brand = detectBrand(numOnly(num.value));
+    const need  = brand==='amex' ? 4 : 3;
+    const ok = new RegExp(`^\\d{${need}}$`).test(cvv.value);
+    const msg = ok ? '' : `Enter ${need} digit CVV`;
+    errC.textContent = tC ? msg : '';
+    cvv.classList.toggle('is-invalid', tC && !!msg);
+  }
+
+  function refresh(){
+  // 1) keep inputs tidy while the user types
+  sanitizeAndFormatCard();
+  sanitizeAndFormatExpiry();
+  sanitizeCvv();
+
+  // 2) compute validity
+  const d = numOnly(num.value);
+  const brand   = detectBrand(d);
+  const needCvv = (brand === 'amex') ? 4 : 3;
+
+  // card number
+  const lenOk   = (brand === 'amex') ? (d.length === 15) : (d.length === 16);
+  const cardOk  = lenOk && luhnOk(d);
+
+  // expiry: MM/YY and not in the past
+  const m = (exp.value || '').match(/^(\d{2})\/(\d{2})$/);
+  let expiryOk = false;
+  if (m){
+    const mm = +m[1];
+    const yy = +('20' + m[2]);              // 24 -> 2024
+    if (mm >= 1 && mm <= 12){
+      const endOfMonth = new Date(yy, mm, 0, 23, 59, 59);
+      expiryOk = endOfMonth >= new Date();
+    }
+  }
+
+  // cvv
+  const cvvOk = new RegExp(`^\\d{${needCvv}}$`).test(cvv.value);
+
+  // 3) enable/disable pay button
+  const ok = cardOk && expiryOk && cvvOk;
+  pay.disabled = !ok;
+
+  // 4) NEW — optimistic clear: once a field becomes valid while typing,
+  //    remove its red error text + red border. (We still *show* errors on blur.)
+  if (tN){
+    // if valid, clear error & invalid styling
+    if (d && cardOk){
+      errN.textContent = '';
+      num.classList.remove('is-invalid');
+    }
+  }
+  if (tE){
+    if (expiryOk){
+      errE.textContent = '';
+      exp.classList.remove('is-invalid');
+    }
+  }
+  if (tC){
+    if (cvvOk){
+      errC.textContent = '';
+      cvv.classList.remove('is-invalid');
+    }
+  }
+}
+
+// keep refresh wired
+['input','blur'].forEach(ev=>{
+  num.addEventListener(ev, refresh);
+  exp.addEventListener(ev, refresh);
+  cvv.addEventListener(ev, refresh);
+});
+num.addEventListener('paste', ()=>requestAnimationFrame(refresh));
+exp.addEventListener('paste', ()=>requestAnimationFrame(refresh));
+cvv.addEventListener('paste', ()=>requestAnimationFrame(refresh));
+
+// show errors only after first blur
+num.addEventListener('blur', ()=>{ tN = true; vNumber(); });
+exp.addEventListener('blur', ()=>{ tE = true; vExpiry(); });
+cvv.addEventListener('blur', ()=>{ tC = true; vCvv(); });
+
+/* IMPORTANT: while typing, hide error + unset "touched",
+   so refresh() won't re-show the message during editing. */
+num.addEventListener('input', ()=>{ tN = false; errN.textContent=''; num.classList.remove('is-invalid'); });
+exp.addEventListener('input', ()=>{ tE = false; errE.textContent=''; exp.classList.remove('is-invalid'); });
+cvv.addEventListener('input', ()=>{ tC = false; errC.textContent=''; cvv.classList.remove('is-invalid'); });
+
+/* NEW: optimistic clear-on-type so the red text disappears while editing */
+function clearOnType(field, touchedFlagRef, errEl){
+  field.addEventListener('input', ()=>{
+    if (touchedFlagRef && errEl.textContent) {
+      errEl.textContent = '';
+      field.classList.remove('is-invalid');
+    }
+  });
+}
+clearOnType(num,  tN, errN);
+clearOnType(exp,  tE, errE);
+clearOnType(cvv,  tC, errC);
+
+/* ===============================
+   ADD: clear errors when Card section is re-opened
+   Inserted just before the final refresh();
+   =============================== */
+(function setupCardAccordionClear(){
+  const sec  = document.getElementById('cardSection');
+  if (!sec) return;
+
+  const head = sec.querySelector('.head');
+  const clearCardErrors = () => {
+    // reset touched flags
+    tN = tE = tC = false;
+    // remove error text + red borders
+    [errN, errE, errC].forEach(el => el && (el.textContent = ''));
+    [num, exp, cvv].forEach(el => el && el.classList.remove('is-invalid'));
+    // recompute state
+    if (typeof refresh === 'function') refresh();
+  };
+
+  // Watch for .open class changes on #cardSection
+  const mo = new MutationObserver(() => {
+    if (sec.classList.contains('open')) clearCardErrors();
+  });
+  mo.observe(sec, { attributes: true, attributeFilter: ['class'] });
+
+  // If your accordion uses aria-expanded on the header
+  if (head) {
+    const mo2 = new MutationObserver(() => {
+      if (head.getAttribute('aria-expanded') === 'true') clearCardErrors();
+    });
+    mo2.observe(head, { attributes: true, attributeFilter: ['aria-expanded'] });
+
+    // Click safety-net (in case state changes without attributes first)
+    head.addEventListener('click', () => {
+      setTimeout(() => {
+        if (sec.classList.contains('open') || head.getAttribute('aria-expanded') === 'true') {
+          clearCardErrors();
+        }
+      }, 0);
+    });
+  }
+})();
+
+/* (existing) final initial compute */
+refresh();
+})();
+
+
+/* ---------- Block clipboard/paste for card fields (as requested) ---------- */
+(function(){
+  ['card-number','expiry','cvv'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    ['paste','copy','cut','drop','dragover','contextmenu'].forEach(evt=> el.addEventListener(evt, e=>e.preventDefault()));
+    el.addEventListener('beforeinput', e=>{ if(e.inputType==='insertFromPaste'||e.inputType==='insertFromDrop') e.preventDefault(); });
+    el.addEventListener('keydown', e=>{
+      if((e.ctrlKey||e.metaKey) && ['v','x','c'].includes(e.key.toLowerCase())) e.preventDefault();
+    });
+  });
+})();
+
+/* =========================================================
+   Minimal required-field helper (used by UPI verify)
+   ========================================================= */
+function wireRequired(inputId,errorId,message="This field is required"){
+  const input=document.getElementById(inputId);
+  const error=document.getElementById(errorId);
+  if(!input||!error) return;
+  const show=()=>{
+    if(!input.value.trim()){ input.classList.add('is-invalid'); error.textContent=message; return false; }
+    input.classList.remove('is-invalid'); error.textContent=''; return true;
+  };
+  input.addEventListener('blur', show);
+  input.addEventListener('input', ()=>{
+  if (error.textContent || input.classList.contains('is-invalid')) {input.classList.remove('is-invalid');
+  error.textContent = '';
+  }
+});
+  return show;
+}
+const validateUpi = wireRequired('upi-id','upi-id-error','UPI ID is required');
+document.getElementById('upi-verify')?.addEventListener('click', e=>{ if(validateUpi && !validateUpi()){ e.preventDefault(); document.getElementById('upi-id')?.focus(); }});
+
+/* =========================================================
+   NET BANKING – Popular + “All other banks” inline + unified search + inline CTA
+   ========================================================= */
+(function(){
+  // ---- session-only open flag (resets on refresh)
+  let allOpen = false;
+
+  const nbBody=document.getElementById('nbBody'); if(!nbBody) return;
+  const nbShowAll=document.getElementById('nbShowAll');
+  const nbSearchWrap=document.getElementById('nbSearchWrap');
+  const nbSearch=document.getElementById('nbSearch');
+  const nbPopularHeader = document.getElementById('nbPopularHeader');
+  const nbDivider=document.getElementById('nbDivider');
+  const nbAllList=document.getElementById('nbAllList');
+  const nbPopularList=document.getElementById('nbPopularList');
+
+  // ensure initial collapsed UI
+  if (nbSearchWrap) nbSearchWrap.style.display = 'none';
+  if (nbAllList) nbAllList.style.display = 'none';
+  if (nbDivider) nbDivider.style.display = 'none';
+  if (nbShowAll) nbShowAll.style.display = ''; // link visible on fresh load
+
+  // No-results artwork (your existing block)
+  let nbNoResults=document.getElementById('nbNoResults');
+  if(!nbNoResults){
+    nbNoResults=document.createElement('div'); nbNoResults.id='nbNoResults';
+    nbNoResults.innerHTML='<img src="/static/images/failedsearch.png" alt="No results">';
+    (nbSearch?.parentNode||nbBody).insertBefore(nbNoResults, nbSearch?nbSearch.nextSibling:nbBody.firstChild);
+  }
+  nbNoResults.style.display='none';
+
+  // ---- data (unchanged)
+  const POPULAR="State Bank of India, HDFC Bank, ICICI Bank, Kotak Mahindra Bank, Axis Bank, Federal Bank".split(',').map(s=>s.trim());
+  const ALL_MASTER=("Airtel Payments Bank, AU Small Finance Bank, Bandhan Bank, Bassein Catholic Co-operative Bank, BNP Paribas, Bank of Bahrain and Kuwait, BOBCARD, Bank of Baroda Corporate, Bank of Baroda Retail, Bank of India, Bank of Maharashtra, Canara Bank, CSB Bank, Central Bank of India, City Union Bank, Corporation Bank, Cosmos Co-operative Bank, DBS Bank, DCB Bank, Dena Bank, Deutsche Bank, Dhanlaxmi Bank, HSBC, IDBI Bank, IDFC FIRST Bank, Indian Bank, Indian Overseas Bank, IndusInd Bank, Janata Sahakari Bank (Pune), J&K Bank, Karnataka Bank, Karur Vysya Bank, Lakshmi Vilas Bank - Retail, Lakshmi Vilas Bank - Corporate, Punjab National Bank, Punjab National Bank Corporate, Punjab & Sind Bank, Punjab & Maharashtra Co-operative Bank, RBL Bank, RBS, Saraswat Co-operative Bank, Shamrao Vithal Co-operative Bank, Shivalik Mercantile Co-operative Bank, South Indian Bank, Standard Chartered Bank, Tamilnad Mercantile Bank, Tamil Nadu Mercantile Bank, TNSC Bank, UCO Bank, Union Bank of India, Yes Bank, The Zoroastrian Co-operative Bank").split(',').map(s=>s.trim());
+  const POP_SET=new Set(POPULAR.map(n=>n.toLowerCase()));
+  const ALL_BANKS=Array.from(new Set(ALL_MASTER)).filter(n=>!POP_SET.has(n.toLowerCase())).sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+
+  const IMG='/static/images/';
+  const LOGO_MAP={
+    'state bank of india':'sbi.png','hdfc bank':'hdfc.png','icici bank':'icici.png','axis bank':'axis.png','kotak mahindra bank':'kotak.png','federal bank':'federal.png',
+    'airtel payments bank':'airtel.png','au small finance bank':'au.png','bandhan bank':'bandhan.png','bank of bahrain and kuwait':'bahrain.png',
+    'bassein catholic co-operative bank':'bassein.png','bobcard':'bobcard.png','city union bank':'cub.png','lakshmi vilas bank - corporate':'lakshmi.png',
+    'lakshmi vilas bank - retail':'lakshmi.png','shamrao vithal co-operative bank':'svc.png','shivalik mercantile co-operative bank':'smc.png',
+    'tamilnad mercantile bank':'tmb.png','tamil nadu mercantile bank':'tmb.png','the zoroastrian co-operative bank':'zoro.png',
+    'bank of baroda':'baroda.png','bank of india':'boi.png','canara bank':'canara.png','central bank of india':'central.png','cosmos co-operative bank':'cosmos.png',
+    'corporation bank':'corporation.png','csb bank':'csb.png','dbs bank':'dbs.png','dcb bank':'dcb.png','dena bank':'dena.png','deutsche bank':'deutsche.png',
+    'dhanlaxmi bank':'dhanlaxmi.png','idbi bank':'idbi.png','idfc first bank':'idfc.png','indian bank':'indian.png','indian overseas bank':'indianoverseas.png',
+    'indusind bank':'indus.png','j&k bank':'jandk.png','janata sahakari bank (pune)':'janata.png','karnataka bank':'karnataka.png','karur vysya bank':'karur.png',
+    'maharashtra bank':'maharastra.png','punjab national bank':'punjab.png','punjab & sind bank':'sind.png','rbl bank':'rbl.png','saraswat co-operative bank':'saraswati.png',
+    'south indian bank':'southindian.png','standard chartered bank':'standard.png','svc bank':'svc.png','tnsc bank':'tnsc.png','uco bank':'uco.png',
+    'union bank of india':'union.png','yes bank':'yes.png','hsbc':'hsbc.png','rbs':'rbs.png','bnpparibas':'bnb.png','pmc bank':'pmc.png','zoroastrian co-operative bank':'zoro.png'
+  };
+  const LOGO_ALIAS={
+    'bnpparibas':'bnpparibas','bnp paribas':'bnpparibas',
+    'bank of baroda corporate':'bank of baroda','bank of baroda retail':'bank of baroda',
+    'uco':'uco bank','yes':'yes bank','pnb':'punjab national bank','punjab national bank corporate':'punjab national bank',
+    'svs bank':'svc bank','svcb':'svc bank','saraswat bank':'saraswat co-operative bank','cosmos bank':'cosmos co-operative bank',
+    'sbi':'state bank of india','idfc first':'idfc first bank','jammu & kashmir bank':'j&k bank'
+  };
+  const DEFAULT_LOGO='bank.png';
+  const norm = s=> (s||'').toLowerCase().replace(/\s+/g,' ').trim();
+  function logoFor(name){
+    const key = norm(name);
+    const alias = LOGO_ALIAS[key];
+    const mainKey = alias ? norm(alias) : key;
+    if(LOGO_MAP[mainKey]) return IMG+LOGO_MAP[mainKey];
+    if(mainKey.includes('maharashtra')) return IMG+'maharastra.png';
+    if(mainKey.includes('punjab')&&mainKey.includes('sind')) return IMG+'sind.png';
+    if(mainKey.includes('cosmos')) return IMG+'cosmos.png';
+    if(mainKey.includes('corporation')) return IMG+'corporation.png';
+    if(mainKey.includes('standard chartered')) return IMG+'standard.png';
+    return IMG+DEFAULT_LOGO;
+  }
+
+  function wireRadios(){
+  nbBody.querySelectorAll('input[type="radio"][name="bank"]').forEach(r=>{
+    if(r._w) return; r._w=true;
+    r.addEventListener('change',()=>{
+      // remove any old CTAs
+      nbBody.querySelectorAll('.bank-cta').forEach(n=>n.remove());
+
+      const row = r.closest('.bank-item');      // this is a <label>
+      if(!row) return;
+
+      // ⬇️ insert AFTER the label so the label doesn’t eat the click
+      row.insertAdjacentHTML('afterend', `
+        <div class="bank-cta">
+          <button class="btn btn-pay"
+                  type="submit"
+                  form="payForm"
+                  formaction="/api/pay/success/"
+                  formmethod="post"
+                  style="margin:10px 0;width:100%">
+            Proceed to Pay
+          </button>
+        </div>
+      `);
+    });
+  });
+}
+
+
+// Ensure one radio is checked (prefer Popular list)
+function ensureDefaultChecked(){
+  let checked = nbBody.querySelector('input[type="radio"][name="bank"]:checked');
+  if (!checked) {
+    const first =
+      nbPopularList?.querySelector('input[type="radio"][name="bank"]')
+      || nbAllList?.querySelector('input[type="radio"][name="bank"]');
+    if (first) { first.checked = true; checked = first; }
+  }
+  return checked;
+}
+
+// Attach CTA under the currently-checked bank
+function attachCtaToChecked(){
+  const sel = ensureDefaultChecked();
+  if (sel) sel.dispatchEvent(new Event('change', { bubbles:true }));
+}
+
+
+  function renderAll(q=''){
+    const s=(q||'').trim().toLowerCase();
+    const list=s?ALL_BANKS.filter(b=>b.toLowerCase().includes(s)):ALL_BANKS;
+    if(nbAllList){
+      nbAllList.innerHTML=list.map(n=>`
+        <label class="bank-item">
+          <input type="radio" name="bank" value="${n}">
+          <span class="bank-name">${n}</span>
+          <img class="bank-logo" src="${logoFor(n)}" alt="${n}" loading="lazy">
+        </label>
+      `).join('');
+    }
+    wireRadios();
+    return list.length;
+  }
+
+  function filterPopular(q=''){
+    const s=(q||'').trim().toLowerCase();
+    if(!nbPopularList) return 0;
+    let shown=0;
+    nbPopularList.querySelectorAll('.bank-item').forEach(el=>{
+      const name=(el.querySelector('.bank-name')?.textContent||'').toLowerCase();
+      const match=!s || name.includes(s);
+      el.style.display = match ? '' : 'none';
+      if(match) shown++;
+    });
+    return shown;
+  }
+
+  // helper to enter "open all" mode for THIS session (no persistence)
+  function openAll(){
+    allOpen = true;
+    if (nbShowAll) nbShowAll.style.display = 'none';   // never show again this session
+    if (nbSearchWrap) nbSearchWrap.style.display = ''; // show search
+    if (nbAllList) nbAllList.style.display = '';       // show list
+    if (nbDivider) nbDivider.style.display = '';       // divider between popular & all
+    renderAll(nbSearch ? nbSearch.value : '');
+  }
+
+  function applySearch(){
+    const q = nbSearch ? nbSearch.value : '';
+    const searching = q.trim().length > 0;
+
+    const p = filterPopular(q);
+    const a = allOpen ? renderAll(q) : 0;
+    const none = (p + a) === 0;
+
+    // no-results art only when searching and truly none
+    nbNoResults.style.display = (searching && none) ? 'block' : 'none';
+
+    // headings/CTA visibility logic
+    if (nbPopularHeader) nbPopularHeader.style.display = (searching || none) ? 'none' : '';
+    if (nbDivider)       nbDivider.style.display       = (!allOpen || searching || none) ? 'none' : '';
+
+    // the link: visible ONLY before user opens; hidden forever this session after click
+    if (nbShowAll) nbShowAll.style.display = allOpen ? 'none' : '';
+
+    // list visibility (when not open, keep it hidden)
+    if (!allOpen){
+      if (nbAllList) nbAllList.style.display = 'none';
+    } else {
+      if (nbAllList) nbAllList.style.display = (searching && none) ? 'none' : '';
+    }
+  }
+
+  nbSearch?.addEventListener('input', applySearch);
+
+  nbShowAll?.addEventListener('click', ()=>{
+    openAll();       // enter open mode for this session
+    applySearch();   // update visibilities
+    nbNoResults.style.display='none';
+    nbSearch?.focus();
+  });
+
+  // initial render (collapsed)
+  filterPopular('');
+  applySearch();
+  wireRadios();
+  attachCtaToChecked();
+})();
+
+/* =========================================================
+   GIFT CARD VALIDATION
+   ========================================================= */
+(function(){
+  const section=document.querySelector('.section.card[data-icon="gift"]');
+  const num=document.getElementById('gcNumber');
+  const pin=document.getElementById('gcPin');
+  const add=document.getElementById('gcAddBtn');
+  const eNum=document.getElementById('gcNumberErr');
+  const ePin=document.getElementById('gcPinErr');
+  if(!section||!num||!pin||!add||!eNum||!ePin) return;
+
+  num.maxLength=16;
+
+  let tNum=false,tPin=false;
+  const sanitizeNumber=()=>{ const d=numOnly(num.value).slice(0,16); if(num.value!==d) num.value=d; return d; };
+  const sanitizePin   =()=>{ const d=numOnly(pin.value).slice(0,6); if(pin.value!==d) pin.value=d; return d; };
+
+  function vNumber(){ const d=sanitizeNumber(); let msg=''; if(!d) msg='Voucher number is required'; else if(d.length!==16) msg='Enter a valid 16-digit number'; eNum.textContent=tNum?msg:''; num.classList.toggle('is-invalid', tNum && !!msg); return !msg; }
+  function vPin(){ const d=sanitizePin(); let msg=''; if(!d) msg='PIN is required'; else if(d.length!==6) msg='Enter a valid 6-digit PIN'; ePin.textContent=tPin?msg:''; pin.classList.toggle('is-invalid', tPin && !!msg); return !msg; }
+  function refresh(){ const ok = vNumber() & vPin(); add.disabled = !ok; }
+  function reset(){ tNum=tPin=false; eNum.textContent=''; ePin.textContent=''; num.classList.remove('is-invalid'); pin.classList.remove('is-invalid'); sanitizeNumber(); sanitizePin(); add.disabled=true; }
+
+  document.querySelectorAll('[data-accordion] .head').forEach(h=>{
+    h.addEventListener('click', ()=> setTimeout(()=>{ if(!section.classList.contains('open')) reset(); },0));
+  });
+  [num,pin].forEach(el=>{
+    el.addEventListener('input', refresh);
+    el.addEventListener('beforeinput', e=>{ if(e.inputType==='insertFromPaste'||e.inputType==='insertFromDrop') requestAnimationFrame(refresh); });
+    el.addEventListener('keydown', e=>{
+      const ok = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+      if(ok.includes(e.key)||e.ctrlKey||e.metaKey) return;
+      if(!/^\d$/.test(e.key)) e.preventDefault();
+    });
+  });
+  num.addEventListener('blur', ()=>{ tNum=true; refresh(); });
+  pin.addEventListener('blur', ()=>{ tPin=true; refresh(); });
+
+  reset();
+  add.addEventListener('click', ()=>{ tNum=tPin=true; refresh(); if(!add.disabled) alert('Gift card added!'); });
+})();
+
+/* =========================================================
+   PLACE ORDER plumbing (hidden form submission from sections)
+   ========================================================= */
+(function(){
+  const form = document.getElementById('placeOrderForm');
+  const methodInput = document.getElementById('poMethod');
+  if(!form || !methodInput) return;
+  const submitOrder = m=>{ methodInput.value=m||''; form.submit(); };
+  document.getElementById('upi-pay')?.addEventListener('click', ()=>submitOrder('upi'));
+  document.getElementById('card-pay')?.addEventListener('click', ()=>submitOrder('card'));
+  document.getElementById('codPlaceOrder')?.addEventListener('click', ()=>submitOrder('cod'));
+  document.getElementById('emiPay')?.addEventListener('click', ()=>submitOrder('emi'));
+  document.getElementById('nbBody')?.addEventListener('click', e=>{
+    const btn=e.target.closest('.bank-cta .btn'); if(btn) submitOrder('net_banking');
+  });
+})();
+
+/* =========================================================
+   EMI CALCULATOR (reads current Total Amount)
+   ========================================================= */
+(function(){
+  const bankSel   = document.getElementById('emiBank');
+  const tenureSel = document.getElementById('emiTenure');
+  const typeRadios= document.querySelectorAll('input[name="emiType"]');
+  const rateNode  = document.getElementById('emiRate');
+  const feeNode   = document.getElementById('emiFee');
+  const monthlyNd = document.getElementById('emiMonthly');
+  const payBtn    = document.getElementById('emiPay');
+  const errNode   = document.getElementById('emiError');
+  if(!bankSel||!tenureSel||!rateNode||!feeNode||!monthlyNd||!payBtn||!errNode) return;
+
+  const parseAmount = t => +((t||'').toString().replace(/[^\d.]/g,''))||0;
+  const getTotal = ()=> parseAmount(document.getElementById('amountMain')?.textContent || '0');
+
+  const RATE = {
+    _default:{ feePct:1.0, p:{3:13.0,6:13.5,9:14.0,12:14.5} },
+    'SBI':{ feePct:0.9,  p:{3:12.5,6:13.0,9:13.5,12:14.0} },
+    'HDFC Bank':{ feePct:0.75, p:{3:12.0,6:12.5,9:13.0,12:13.5} },
+    'ICICI Bank':{ feePct:0.85, p:{3:12.75,6:13.25,9:13.75,12:14.25} },
+    'Axis Bank':{ feePct:0.85, p:{3:12.5,6:13.0,9:13.5,12:14.0} },
+    'Kotak':{ feePct:0.8, p:{3:12.75,6:13.25,9:13.5,12:13.99} },
+    'Kotak Mahindra Bank':{ feePct:0.8, p:{3:12.75,6:13.25,9:13.5,12:13.99} },
+  };
+  const adjByType=(apr,type)=> type==='cl' ? apr+1.25 : type==='dc' ? apr+0.5 : apr;
+  const typeSel = ()=> (Array.from(typeRadios).find(x=>x.checked)?.value || 'cc');
+
+  function emi(P, apr, n){
+    const r=(apr/100)/12; if(r===0) return P/n;
+    const a=Math.pow(1+r,n); return P*r*a/(a-1);
+  }
+  function render(){
+    errNode.textContent='';
+    const bank=bankSel.value||'', months=+(tenureSel.value||0), total=getTotal(), type=typeSel();
+    const base=RATE[bank]||RATE._default;
+    const apr = adjByType(base.p[months] ?? RATE._default.p[months] ?? 0, type);
+    const fee = (base.feePct/100)*total;
+
+    if(!(months && total>0 && apr>0)){
+      rateNode.textContent='—'; feeNode.textContent='—'; monthlyNd.textContent='—'; payBtn.disabled=true; return;
+    }
+    monthlyNd.textContent=Rs(emi(total,apr,months));
+    rateNode.textContent=apr.toFixed(2)+'%';
+    feeNode.textContent=Rs(fee);
+    payBtn.disabled=false;
+  }
+  bankSel.addEventListener('change',render);
+  tenureSel.addEventListener('change',render);
+  typeRadios.forEach(r=> r.addEventListener('change',render));
+
+  // keep in sync if Total Amount text changes
+  (function(){
+    const n=document.getElementById('amountMain'); if(!n) return;
+    const mo=new MutationObserver(render); mo.observe(n,{childList:true,subtree:true,characterData:true});
+  })();
+
+  render();
+  payBtn.addEventListener('click', e=>{
+    const ok = bankSel.value && tenureSel.value && getTotal()>0;
+    if(!ok){ e.preventDefault(); errNode.textContent='Please select Bank and Tenure to continue with EMI.'; }
+  });
+})();
+
+/* =========================================================
+   Double-click guard on primary pay buttons
+   ========================================================= */
+(function(){
+  const form = document.getElementById('payForm');
+  if(!form) return;
+
+  function fastSubmit(btn){
+    // copy per-button overrides
+    form.action = btn.getAttribute('formaction') || form.action || '/api/pay/success/';
+    form.method = btn.getAttribute('formmethod') || form.method || 'post';
+    btn.disabled = true; // prevent double tap, but no timeout
+    requestAnimationFrame(()=> form.submit()); // submit on next frame
+  }
+
+  // Capture-phase: runs before any other click listeners
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.btn-pay[form="payForm"]');
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    fastSubmit(btn);
+  }, true);
+})();
+
+
+(function(){
+  const miniBtn = document.getElementById('mastTotals');
+  const miniAmt = document.getElementById('mastAmt');
+  const mainAmt = document.getElementById('amountMain');   // from your totals card
+  const mainTgl = document.getElementById('totalsToggle'); // from your totals card
+  if (!miniBtn || !miniAmt || !mainAmt || !mainTgl) return;
+
+  const sync = () => {
+    miniAmt.textContent = mainAmt.textContent;
+    miniBtn.setAttribute('aria-expanded', mainTgl.getAttribute('aria-expanded') || 'false');
+  };
+  sync();
+  new MutationObserver(sync).observe(mainAmt, { childList:true, subtree:true, characterData:true });
+
+  miniBtn.addEventListener('click', () => {
+    mainTgl.click();
+    sync();
+  });
+})();
+
+
+document.querySelectorAll('.btn-pay[form="payForm"]').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
+    const form = document.getElementById('payForm');
+    if(!form) return;
+
+    // copy per-button settings onto the form
+    form.action = btn.getAttribute('formaction') || form.action;
+    form.method = btn.getAttribute('formmethod') || form.method;
+
+    // submit explicitly
+    form.submit();
+  });
+});
+
+
+/* =========================================================
+Spinner 
+========================================================= */
+
+(function(){
+  const overlay   = document.getElementById('nav-loading');
+  const payForm   = document.getElementById('payForm') || document.querySelector('form[action][method="post"]');
+  const once = { shown:false };
+
+  function showLoader(msg){
+    if (once.shown) return;
+    once.shown = true;
+    if (msg) overlay.querySelector('.nav-msg').textContent = msg;
+    document.body.classList.add('is-busy');
+    overlay.classList.add('is-on');
+    // disable all form controls to avoid double submit
+    document.querySelectorAll('button, input, select, textarea, a').forEach(el=>{
+      if (el.closest('#nav-loading')) return; // don't disable overlay itself
+      el.setAttribute('tabindex','-1');
+      el.setAttribute('aria-disabled','true');
+      if (el.tagName === 'BUTTON' || (el.tagName === 'INPUT' && /submit|button/.test(el.type))) {
+        el.disabled = true;
+      }
+    });
+  }
+
+  // 1) When the payment form submits
+  if (payForm){
+    payForm.addEventListener('submit', function(){
+      showLoader('Processing payment…');
+    });
+  }
+
+  // 2) Also show on any navigation trigger (links/buttons with href)
+  document.addEventListener('click', function(e){
+    const a = e.target.closest('a[href]:not([target="_blank"])');
+    if (!a) return;
+    // ignore in-page anchors
+    if (a.getAttribute('href').startsWith('#')) return;
+    showLoader('Loading…');
+  });
+
+  // 3) If the browser is doing a page unload, show it too
+  window.addEventListener('beforeunload', function(){
+    showLoader('Processing…');
+  });
+
+  // 4) If page is restored from bfcache, remove the busy state
+  window.addEventListener('pageshow', function(e){
+    if (e.persisted){
+      overlay.classList.remove('is-on');
+      document.body.classList.remove('is-busy');
+      once.shown = false;
+    }
+  });
+})();
+
+</script>

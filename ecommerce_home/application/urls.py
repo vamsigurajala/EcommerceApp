@@ -51,4 +51,10 @@ urlpatterns = [
     path('reviews/<int:product_id>/stats/', views.review_stats, name='review_stats'), 
     path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),
     path("api/reviews/gallery/", views.review_gallery, name="review_gallery"),
+    path("pay/start/", views.start_payment_from_checkout, name="start_payment"),
+    path("pay/success/", views.payment_success, name="payment_success"),
+    path("pay/failure/", views.payment_failure, name="payment_failure"),
+    path('checkout/addquantity/', views.add_quantity_checkout, name='addquantity_checkout'),
+    path('checkout/reducequantity/', views.reduce_quantity_checkout, name='reducequantity_checkout'),
+    path('checkout/deleteproduct/', views.delete_product_checkout, name='deleteproduct_checkout')
 ]

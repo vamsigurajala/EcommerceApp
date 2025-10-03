@@ -153,9 +153,14 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-STATICFILES_DIRS =[os.path.join(BASE_DIR / "static")]
+STATICFILES_DIRS =[BASE_DIR / "static"]
 
+STATIC_ROOT = BASE_DIR / 'staticfiles' 
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+APPEND_SLASH = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
@@ -166,13 +171,11 @@ AUTH_USER_MODEL = 'application.User'
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDIANTIALS = True
 
-# PRODUCT_SERVICE_URL = 'http://127.0.0.1:8001/api/'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
 
 user_url = 'http://127.0.0.1:8000'
 product_url = 'http://127.0.0.1:8001'
 cart_url = 'http://127.0.0.1:8002'
 order_url ='http://127.0.0.1:8003'
 review_url = 'http://127.0.0.1:8004'
+payment_url = 'http://127.0.0.1:8005/api'

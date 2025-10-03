@@ -151,8 +151,13 @@ body.dark-mode .orders-container{ background:#232323; color:#fff; }
                 <div class="order-datetime" data-datetime="{{ order.placed_time|escape }}"></div>
               </td>
               <td rowspan="{{ order.order_items|length }}">{{ order.order_status }}</td>
-              <td rowspan="{{ order.order_items|length }}"><span class="order-total-box">Rs.{{ order.total_amount }}</span></td>
+             <!-- <td rowspan="{{ order.order_items|length }}"><span class="order-total-box">Rs.{{ order.total_amount }}</span></td>-->
+              {% firstof order.summary.final_total order.summary.total_payable order.total_amount "0" as raw_total %}
+              <td rowspan="{{ order.order_items|length }}">
+                <span class="order-total-box">Rs.{{ raw_total|floatformat:2 }}</span>
+              </td>
             {% endif %}
+
 
             {# Actions per PRODUCT (sits next to Total Amount) #}
             <td class="actions-cell">

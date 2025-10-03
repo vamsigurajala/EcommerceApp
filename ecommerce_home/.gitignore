@@ -1,23 +1,23 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyc
 
-# Envs / tooling
+# Virtual environments
 .venv/
 venv/
+
+# IDEs / tooling
 .env
 .idea/
 .vscode/
 
-# Django
+# Django specific
 db.sqlite3
 /media/
 /staticfiles/
 
-# OS
+# OS generated
 .DS_Store
 Thumbs.db
-
-*.pyc
-__pycache__/

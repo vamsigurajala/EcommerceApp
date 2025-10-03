@@ -315,7 +315,9 @@ body.dark-mode .cart-table-scroll thead th {
     </div>
     <div style="margin-top: 28px;">
         <button class="btn-clear" onclick="location.href='/api/clearcart?product_id={{ item.product_id }}';">Clear Cart</button>
-        <button class="btn-checkout" onclick="location.href='/api/checkout/'">Proceed to Checkout</button>
+
+        <!-- CHANGED: add ?open=summary&seed=1 and anchor -->
+        <button class="btn-checkout" onclick="location.href='/api/checkout/?seed=1'">Proceed to Checkout</button>
     </div>
 {% else %}
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
@@ -344,7 +346,8 @@ body.dark-mode .cart-table-scroll thead th {
 
     // small delay so spinner is visible before navigation
     setTimeout(function () {
-      window.location.href = '/api/checkout/';
+      // CHANGED: keep Order Summary open + reseed snapshot
+      window.location.href = '/api/checkout/?seed=1';
     }, 1200); // adjust (e.g., 800–1500ms) as you like
   }, true);
 })();
