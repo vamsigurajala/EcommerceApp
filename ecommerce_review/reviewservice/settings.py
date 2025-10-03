@@ -147,6 +147,7 @@ product_url = 'http://127.0.0.1:8001'
 cart_url    = 'http://127.0.0.1:8002'
 order_url   = 'http://127.0.0.1:8003'
 review_url  = 'http://127.0.0.1:8004'
+payment_url = 'http://127.0.0.1:8005'
 
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",

@@ -142,7 +142,7 @@ class GetProductIdAPIView(views.APIView):
         product = Product.objects.get(product_id = product_id)
         #return Response(ProductSerializer(product).data)
         product_ids = Product.objects.all().values_list('product_id', flat=True)
-        print(product_ids)
+        #print(product_ids)
         return Response(product_ids)
 
 
