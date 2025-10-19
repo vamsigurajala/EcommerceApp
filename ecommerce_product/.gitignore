@@ -1,8 +1,34 @@
-# Envs / tooling
+# --- Envs / tooling
 .venv/
 venv/
 .env
 .idea/
 .vscode/
-*.pyc
+
+# --- Python bytecode / caches
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Django local artifacts
+# (track migrations; don't ignore the migrations/ folders)
+db.sqlite3
+*.sqlite3
+
+htmlcov/
+.coverage
+
+# --- OS cruft
+.DS_Store
+Thumbs.db
+
+# --- Logs & dumps
+*.log
+*.bak
+*.tmp
+dump.rdb

@@ -1,0 +1,199 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Invoice {{ order_code }}</title>
+<style>
+  /* Use a clean system font stack (no external font files needed) */
+  *{box-sizing:border-box}
+  body{font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+       font-size:13px; color:#111; margin:22px; line-height:1.35}
+
+  /* Title */
+  .title{font-size:20px;font-weight:700;text-align:center;margin:0 0 12px;letter-spacing:.2px}
+
+  /* Seller block (simple text, no boxes) */
+  .seller h3{margin:0 0 2px;font-size:13px;font-weight:700}
+  .line{margin:0}
+
+  /* One-row meta: GSTIN (left) + Invoice No. (right) — NO borders */
+  .meta-row{display:table;width:100%;table-layout:fixed;margin:8px 0 2px}
+  .meta-left{display:table-cell;vertical-align:bottom;text-align:left}
+  .meta-right{display:table-cell;vertical-align:bottom;text-align:right;font-weight:700;white-space:nowrap}
+
+  /* Divider + spacing */
+  .divider-thin{border:0;border-top:1px solid #111;margin:10px 0}
+
+  /* Three columns (Order | Billing | Shipping) */
+  .cols3{display:table;width:100%;table-layout:fixed;margin-top:2px}
+  .col{display:table-cell;vertical-align:top}
+  .col + .col{padding-left:24px}
+  .block h4{margin:0 0 6px;font-size:13px;font-weight:700}
+  .pair{white-space:nowrap;margin:0 0 4px}
+  .label{font-weight:700}
+  .value{margin-left:6px}
+  .addr .name{font-weight:700;margin-bottom:3px}
+  .addr .line{margin:0 0 2px}
+
+  /* ONLY the items table has borders */
+  table.items-table{width:100%;border-collapse:collapse;margin-top:12px}
+  .items-table th,.items-table td{border:1px solid #e5e7eb;padding:8px;vertical-align:top;text-align:left}
+  .items-table th{background:#f7fafc;font-weight:700}
+  .items-table td.right,.items-table th.right{text-align:right}
+  .items-table .total-row td{font-weight:700}
+  .amount-box{margin-top:10px;border:1px solid #e5e7eb;padding:10px;font-weight:600}
+  .amount-box .label{font-weight:700;margin-right:6px}
+  .items-table { font-variant-numeric: tabular-nums; }
+
+  .inv-block .row{display:flex;justify-content:space-between;gap:12px;margin:4px 0;}
+  .inv-block .label{color:#6b7280;min-width:160px;}
+  .no-bullets{list-style:none;padding:0;margin:0;}
+  .muted{opacity:.7;}
+
+</style>
+</head>
+<body>
+
+  <!-- Centered title -->
+  <h1 class="title">Tax Invoice</h1>
+
+  <!-- Seller lines -->
+  <div class="seller">
+    <h3>Sold by {{ seller_name|default:"Novacart Pvt. Ltd." }}</h3>
+    <p class="line">PAN: {{ seller_pan|default:"AABCN0000X" }}</p>
+  </div>
+
+  <!-- One row: GSTIN (left) + Invoice No. (right) -->
+  <div class="meta-row">
+    <div class="meta-left">GSTIN: {{ seller_gstin|default:"29AACFN0000Z1D" }}</div>
+    <div class="meta-right">Invoice No.: {{ invoice_no|default:order_code }}</div>
+  </div>
+
+  <hr class="divider-thin">
+
+  <!-- Three columns -->
+  <div class="cols3">
+    <div class="col block">
+      <h4>Order Details</h4>
+      <div class="pair"><span class="label">Order ID:</span><span class="value">{{ order_code }}</span></div>
+      <div class="pair"><span class="label">Order Date:</span><span class="value">{{ order_date_str }}</span></div>
+      <div class="pair"><span class="label">Invoice Date:</span><span class="value">{{ invoice_date_str }}</span></div>
+    </div>
+
+    <div class="col block addr">
+      <h4>Billing Address</h4>
+      {% if billing_name %}<div class="name">{{ billing_name }}</div>{% endif %}
+      {% if billing_line1 %}<div class="line">{{ billing_line1 }}</div>{% endif %}
+      {% if billing_line2 %}<div class="line">{{ billing_line2 }}</div>{% endif %}
+      <div class="line">
+        {% if billing_city %}{{ billing_city }}{% endif %}
+        {% if billing_pincode %}{% if billing_city %}, {% endif %}{{ billing_pincode }}{% endif %}
+        {% if billing_state %}{% if billing_city or billing_pincode %}, {% endif %}{{ billing_state }}{% endif %}
+      </div>
+      {% if billing_phone %}<div class="line"><span class="label">Phone:</span> {{ billing_phone }}</div>{% endif %}
+    </div>
+
+    <div class="col block addr">
+      <h4>Shipping Address</h4>
+      {% if shipping_name %}<div class="name">{{ shipping_name }}</div>{% endif %}
+      {% if shipping_line1 %}<div class="line">{{ shipping_line1 }}</div>{% endif %}
+      {% if shipping_line2 %}<div class="line">{{ shipping_line2 }}</div>{% endif %}
+      <div class="line">
+        {% if shipping_city %}{{ shipping_city }}{% endif %}
+        {% if shipping_pincode %}{% if shipping_city %}, {% endif %}{{ shipping_pincode }}{% endif %}
+        {% if shipping_state %}{% if shipping_city or shipping_pincode %}, {% endif %}{{ shipping_state }}{% endif %}
+      </div>
+      {% if shipping_phone %}<div class="line"><span class="label">Phone:</span> {{ shipping_phone }}</div>{% endif %}
+    </div>
+  </div>
+
+  <hr class="divider-thin">
+<p style="font-size:12px;margin:6px 0 0;color:#555;">
+  Note: Delivery charge is ₹100 for orders below ₹1500, and a platform fee of ₹5 applies.
+</p>
+
+  <!-- Items -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width:36%">Description</th>
+        <th class="right" style="width:8%">Qty</th>
+        <th class="right" style="width:16%">Gross Amount ₹</th>
+        <th class="right" style="width:12%">Discount ₹</th>
+        <th class="right" style="width:16%">Taxable Value ₹</th>
+        <th class="right" style="width:8%">IGST ₹</th>
+        <th class="right" style="width:16%">Total ₹</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td>{{ it.product_name|default:"Item" }}</td>
+        <td class="right">{{ it.qty|default:1 }}</td>
+        <td class="right">₹{{ it.unit_price|default:0|floatformat:2 }}</td>
+        <td class="right">₹0.00</td>
+        <td class="right">₹{{ it.unit_price|default:0|floatformat:2 }}</td>
+        <td class="right">₹0.00</td>
+        <td class="right">₹{{ it.line_total|default:0|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+      {% with s=summary %}
+        <tr class="total-row">
+            <td colspan="6" class="right">Total</td>
+            <td class="right">₹{{ s.final_total|floatformat:2 }}</td>
+        </tr>
+        {% endwith %}
+    </tbody>
+  </table>
+<div class="amount-box">
+  <p style="margin:0; font-weight:700;">Amount in words:</p>
+  <p style="margin:4px 0 0;">{{ amount_in_words }}</p>
+</div>
+
+<!-- Payment section on invoice -->
+<div class="inv-block">
+  <tr>
+  <td style="width:20%; font-weight:700;">Payment mode</td>
+  <td colspan="5">{{ payment_mode_label|default:"—" }}</td>
+</tr>
+
+  </div>
+
+  {% if order.payment_attempts and order.payment_mode_label == "Mixed payment" %}
+  <div class="row">
+    <div class="label">Breakdown</div>
+    <div class="value">
+      <ul class="no-bullets">
+        {% for a in order.payment_attempts %}
+          {% if a.status == "success" and a.amount > 0 %}
+            <li>
+              {% if a.mode == "Card" %}
+                Card {{ a.brand }} ****{{ a.last4 }} — ₹{{ a.amount|floatformat:0 }}
+              {% elif a.mode == "EMI" %}
+                Card EMI {{ a.brand }} ****{{ a.last4 }}{% if a.emi_tenure %} ({{ a.emi_tenure }} mo){% endif %} — ₹{{ a.amount|floatformat:0 }}
+              {% elif a.mode == "UPI" %}
+                UPI{% if a.upi_id %} ({{ a.upi_id }}){% endif %} — ₹{{ a.amount|floatformat:0 }}
+              {% elif a.mode == "Wallet" %}
+                Wallet — ₹{{ a.amount|floatformat:0 }}
+              {% elif a.mode == "Gift Card" %}
+                Gift Card — ₹{{ a.amount|floatformat:0 }}
+              {% elif a.mode == "Netbanking" %}
+                Netbanking{% if a.bank %} ({{ a.bank }}){% endif %} — ₹{{ a.amount|floatformat:0 }}
+              {% elif a.mode == "COD" %}
+                Cash on Delivery — ₹{{ a.amount|floatformat:0 }}
+              {% else %}
+                {{ a.mode }} — ₹{{ a.amount|floatformat:0 }}
+              {% endif %}
+              {% if a.txn_id %}<span class="muted"> (Txn {{ a.txn_id }})</span>{% endif %}
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>

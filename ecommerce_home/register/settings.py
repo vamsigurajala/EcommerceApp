@@ -54,6 +54,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -80,7 +81,10 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
     'SIGNING_KEY': SECRET_KEY,
 }
-
+# add a single constant you’ll reuse
+JWT_SECRET = SIMPLE_JWT.get('SIGNING_KEY', SECRET_KEY)
+JWT_ALG = 'HS256'
+JWT_TTL_MINS = 60
 
 TEMPLATES = [
     {

@@ -1,8 +1,8 @@
 from django.urls import path,include 
 from . import views
-from . views import OrderAPIVew, OrderItemsAPIView , PlaceOrderView, HasPurchasedInternalView, PurchasedProductsView
+from . views import OrderAPIVew, OrderItemsAPIView , PlaceOrderView, PurchasedProductsView,log_failed_order,has_purchased_internal
 
-
+app_name = "ordersvc"
 from drf_yasg.views import get_schema_view 
 from drf_yasg import openapi
 
@@ -22,8 +22,10 @@ urlpatterns = [
     path("orderdata/",OrderAPIVew.as_view(), name="getproducts"),
     path('orderitems/', OrderItemsAPIView.as_view(), name="orderitems"),
     path('placeorder/', PlaceOrderView.as_view(), name="placeorder"),
-    path('internal/has-purchased/', HasPurchasedInternalView.as_view(), name='has-purchased'),
-    path('internal/purchased-products/', PurchasedProductsView.as_view(), name='purchased-products')
+    path("internal/has-purchased/", has_purchased_internal, name="has_purchased_internal"),
+    path('internal/purchased-products/', PurchasedProductsView.as_view(), name='purchased-products'),
+    path("log_failed_order/", views.log_failed_order, name="log_failed_order"),
+    path("<int:order_id>/invoice.pdf", views.invoice_pdf, name="invoice_pdf"),
 ]
 
 

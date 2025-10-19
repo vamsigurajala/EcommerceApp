@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import  Get_ProductAPIView, GetProductIdAPIView, ProductAPIView, AllProductAPIView, SearchAPIView, Set_ProductAPIView, SingleProductAPIView
+from .views import  Get_ProductAPIView, GetProductIdAPIView, ProductAPIView, AllProductAPIView, SearchAPIView, Set_ProductAPIView, SingleProductAPIView, ProductByCodeAPIView
 
 from drf_yasg.views import get_schema_view 
 from drf_yasg import openapi
@@ -28,5 +28,6 @@ urlpatterns = [
     path('singleproduct/<int:product_id>/', SingleProductAPIView.as_view(), name='singleproduct'),
     path('homepage/', SearchAPIView.as_view(), name='homepage'),
     path('setproducts/', Set_ProductAPIView.as_view({'get': 'list'})),
+    path('api/product/bycode/<str:code>/', ProductByCodeAPIView.as_view(), name='product_by_code'),
 
 ]

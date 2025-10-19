@@ -1,0 +1,37 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  *{box-sizing:border-box}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,Helvetica,sans-serif;
+    font-size:12px;color:#444;margin:0;padding:0;
+  }
+  .wrap{width:100%;padding:0 22px}
+  table.ft{width:100%;border-collapse:collapse}
+  .l{width:70%;vertical-align:bottom;text-align:left}
+  .r{width:30%;vertical-align:bottom;text-align:right}
+  .logo{max-width:150px;height:auto;display:inline-block}
+  .thanks{font-weight:700}
+  /* dotted line BELOW the two rows */
+  .line-below{border-bottom:1px dashed #bbb;height:1px;margin-top:6px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <table class="ft">
+      <tr>
+        <td class="l"></td>
+        <td class="r"><img class="logo" src="{{ logo_url }}" alt="Novacart"></td>
+      </tr>
+      <tr>
+        <td class="l">Regd. office: Novacart Pvt. Ltd. • Contact: 044-66904500 • www.novacart.com/helpcentre</td>
+        <td class="r"><span class="thanks">Thank You! for shopping with us</span></td>
+      </tr>
+    </table>
+    <div class="line-below"></div>
+  </div>
+</body>
+</html>

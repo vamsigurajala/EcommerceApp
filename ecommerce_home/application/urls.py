@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
-from .views import UserDetailsView, GetUserIdAPIView, UserLoginAPIView, LogoutView, AddressView, review_stats
+from .views import (UserDetailsView, GetUserIdAPIView, UserLoginAPIView, LogoutView, AddressView, review_stats,payment_timeout,invoice_pdf,
+                    add_to_wishlist_ajax, remove_wishlist_item, move_wishlist_to_cart, move_cart_to_wishlist)
 
 
 from drf_yasg.views import get_schema_view 
@@ -39,9 +40,24 @@ urlpatterns = [
     path('reducequantity/', views.reduce_quantity, name="reducequantity"),
     path('deleteproduct/', views.delete_product, name="deleteproduct"),
     path('clearcart/', views.clear_cart, name="clearcart"),
+    path('move-cart-to-wishlist/', views.move_cart_to_wishlist, name='move_cart_to_wishlist'),
+    path('addtowishlist-ajax/', add_to_wishlist_ajax, name='add_to_wishlist_ajax'),
+    path('removewishlist/', remove_wishlist_item, name='remove_wishlist_item'),
+    path('move-wishlist-to-cart/', move_wishlist_to_cart, name='move_wishlist_to_cart'),
+    path('wishlist/addquantity/', views.wishlist_addquantity, name='wishlist_addquantity'),
+    path('wishlist/reducequantity/', views.wishlist_reducequantity, name='wishlist_reducequantity'),
     path('getuseraddress/', views.get_user_address, name='useraddress'),
     path('checkout/', views.checkout, name='checkout'),
-    path("vieworders/", views.vieworders, name='vieworder'),
+    path('vieworders/', views.vieworders, name='vieworder'),
+    path('vieworders/', views.vieworders, name='vieworders'),
+    path('pay/flash/success/', views.pay_flash_success, name='pay_flash_success'),
+    path('pay/flash/fail/', views.pay_flash_fail, name='pay_flash_fail'),
+    path('pay/success/', views.payment_success, name='payment_success'),
+    path('pay/timeout/', views.payment_timeout, name='payment_timeout'),
+    path('pay/failure/', views.payment_failure, name='payment_failure'),
+    path('vieworderdetails/<int:order_pk>/', views.vieworderdetails, name='vieworderdetails'),
+    path("api/orders/<int:order_id>/access/remove/", views.remove_access_number, name="remove_access_number"),
+    path("api/orders/<int:order_pk>/invoice.pdf", invoice_pdf, name="invoice-pdf"),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('addtocart-ajax/', views.add_to_cart_ajax, name='add_to_cart_ajax'),
     path('reviews/<int:product_id>/', views.reviews_page, name='reviews_page'),
@@ -53,7 +69,8 @@ urlpatterns = [
     path("api/reviews/gallery/", views.review_gallery, name="review_gallery"),
     path("pay/start/", views.start_payment_from_checkout, name="start_payment"),
     path("pay/success/", views.payment_success, name="payment_success"),
-    path("pay/failure/", views.payment_failure, name="payment_failure"),
+    path("pay/failure/", views.payment_failure,name="payment_failure"),
+    path("pay/timeout/", views.payment_timeout, name="pay_timeout"),
     path('checkout/addquantity/', views.add_quantity_checkout, name='addquantity_checkout'),
     path('checkout/reducequantity/', views.reduce_quantity_checkout, name='reducequantity_checkout'),
     path('checkout/deleteproduct/', views.delete_product_checkout, name='deleteproduct_checkout')

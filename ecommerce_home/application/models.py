@@ -7,6 +7,7 @@ class UserRole(models.Model):
 
 class User(AbstractUser):
     user_id = models.AutoField(primary_key=True, unique=True)
+    user_code = models.CharField(max_length=32, unique=True, db_index=True, null=True, blank=True)
     username = models.CharField(max_length=50)
     email = models.EmailField(max_length=255, unique=True)
     password = models.CharField(max_length=255)

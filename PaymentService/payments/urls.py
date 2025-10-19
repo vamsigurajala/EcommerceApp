@@ -16,8 +16,8 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
-    path("payments/intents/", PaymentIntentAPIView.as_view()),          # <--- slash
-    path("payments/webhook/", PaymentWebhookAPIView.as_view()),         # <--- slash
-    path("payments/", PaymentAPIView.as_view()),                        # <--- slash
-    path("payments/<int:payment_id>/", PaymentDetailAPIView.as_view()), # <--- slash
+    path("payments/intents/", PaymentIntentAPIView.as_view()),          
+    path("payments/webhook/", PaymentWebhookAPIView.as_view()),        
+    path("payments/", PaymentAPIView.as_view()),                        
+    path("payments/<int:payment_id>/", PaymentDetailAPIView.as_view()), 
 ]

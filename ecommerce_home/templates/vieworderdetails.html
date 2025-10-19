@@ -1,0 +1,1804 @@
+{% extends "changemode.html" %}
+{% load static %}
+{% block title %}Novacart Order Details Page{% endblock %}
+
+{% block extra_style %}
+<style>
+  :root{
+    --ink:#111827; --ink-soft:#6b7280; --paper:#fff; --bg:#f3f4f6; --line:#e5e7eb;
+    --brand:#1e40af; --brand-2:#2563eb; --ok:#16a34a; --warn:#f59e0b; --bad:#ef4444;
+    --radius:12px; --shadow:0 2px 6px rgba(0,0,0,.06),0 12px 28px rgba(0,0,0,.08);
+  }
+  body{ background:var(--bg); color:var(--ink); font-family: Inter, system-ui, Arial, sans-serif; }
+  body.dark-mode{ --paper:#161616; --bg:#0d0d0d; --ink:#e5e7eb; --ink-soft:#9ca3af; --line:#2a2a2a; }
+
+  .wrap{ max-width:1200px; margin:0 auto; padding:16px; }
+  .crumbs{ display:flex; gap:8px; align-items:center; font-size:12px; color:var(--ink-soft); margin:8px 0 12px; }
+  .crumbs a{ text-decoration:none; color:inherit; }
+  .crumbs a:hover{ color:var(--brand-2); }
+
+  .grid{ display:grid; grid-template-columns: 1fr 440px; gap:16px; }
+  @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
+
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); }
+
+  /* Product header card */
+  .product-card{ padding:16px; display:grid; grid-template-columns: 92px 1fr auto; gap:16px; align-items:center; }
+  .thumb{ width:92px; height:92px; border-radius:8px; background:#f7f7f7; display:grid; place-items:center; overflow:hidden; }
+  .thumb img{ width:100%; height:100%; object-fit:contain; }
+  body.dark-mode .thumb{ background:#222; }
+  .title{ font-size:18px; font-weight:600; margin:0 0 4px; }
+  .muted{ font-size:13px; color:var(--ink-soft); }
+  .price{ font-size:20px; font-weight:800; }
+
+  /* Timeline */
+  .tl-card{ padding:0; overflow:hidden; }
+  .tl-row{ display:grid; grid-template-columns: 1fr; }
+  .tl{ position:relative; padding:18px 20px 18px 48px; }
+  .tl + .tl{ border-top:1px solid var(--line); }
+  .dot{ position:absolute; left:20px; top:24px; width:14px; height:14px; border-radius:50%; border:2px solid var(--ok); background:#fff; }
+  .dot.ok{ background:var(--ok); border-color:var(--ok); }
+  .dot.pending{ background:#fff; border-color:#94a3b8; }
+  .bar{ position:absolute; left:26px; top:40px; width:2px; height:calc(100% - 40px); background:#94a3b8; }
+  .bar.ok{ background:var(--ok); }
+  .tl h4{ margin:0 0 2px; font-size:14px; }
+  .date{ font-size:12px; color:var(--ink-soft); }
+  .track-note{ margin:12px 20px; padding:12px; border:1px dashed var(--line); border-radius:8px; font-size:13px; color:var(--ink); }
+  body.dark-mode .track-note{ background:rgba(255,255,255,.03); }
+
+  /* Right column cards */
+  .side-card{ padding:14px 16px; }
+  .side-card h3{ margin:0 0 12px; font-size:16px; }
+  .kv{ display:grid; grid-template-columns: 22px 1fr; gap:10px; align-items:start; font-size:14px; }
+  .kv + .kv{ margin-top:10px; }
+  .pill{ display:inline-flex; align-items:center; gap:6px; padding:10px 12px; border:1px solid var(--line); background:var(--paper); border-radius:8px; box-shadow:var(--shadow); }
+  .btn{ display:inline-flex; align-items:center; gap:8px; padding:10px 14px; background:var(--brand); color:#fff; border-radius:8px; font-weight:700; text-decoration:none; border:1px solid transparent; }
+  .btn:hover{ filter:brightness(1.05); }
+  .btn-outline{ background:transparent; color:var(--brand-2); border-color:var(--brand-2); }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  /* Price details */
+  .price-list{ list-style:none; padding:0; margin:0; font-size:14px; }
+  .price-list li{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed var(--line); }
+  .price-list li:last-child{ border-bottom:none; padding-bottom:0; }
+  .total{ font-weight:800; font-size:16px; }
+
+
+/* --- Flipkart-like details layout --- */
+.main-order-card{ padding:16px; }
+.banner-failed{
+  border:1px solid #fecaca; background:#fff1f2; color:#991b1b;
+  padding:12px 14px; border-radius:10px; margin:4px 0 14px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.banner-failed .cta{ background:#2563eb; color:#fff; border-radius:8px;
+  font-weight:700; padding:8px 12px; text-decoration:none; border:1px solid transparent; }
+
+.item-head{ display:grid; grid-template-columns: 88px 1fr; gap:14px; align-items:start; }
+.item-head .thumb{ width:88px; height:88px; }
+.item-name{ font-weight:600; font-size:16px; margin:0 0 2px; }
+.item-sub{ font-size:13px; color:var(--ink-soft); margin-bottom:6px; }
+.item-meta{ font-size:14px; display:flex; gap:16px; flex-wrap:wrap; }
+.item-meta .kv{ color:var(--ink-soft); }
+.item-meta .price{ color:var(--ink); font-weight:700; }
+
+/* Other items list card */
+.other-items{ padding:0; overflow:hidden; }
+.other-items header{ padding:12px 16px; font-weight:700; border-bottom:1px solid var(--line); }
+.other-items .row{ display:grid; grid-template-columns: 70px 1fr auto; gap:12px; align-items:center;
+  padding:12px 16px; border-bottom:1px solid var(--line); }
+.other-items .row:last-child{ border-bottom:none; }
+.other-items .thumb{ width:70px; height:70px; }
+.other-items .title{ font-weight:600; font-size:14px; margin:0 0 2px; }
+.other-items .sub{ font-size:12px; color:var(--ink-soft); }
+.other-items .qp{ font-size:13px; color:var(--ink-soft); }
+.other-items .amt{ font-weight:700; font-variant-numeric: tabular-nums; }
+/* Failure banner (Flipkart-like) */
+.banner-failed{display:grid;grid-template-columns:1fr;gap:12px;padding:16px;border:1px solid #fecaca;border-radius:10px;background:radial-gradient(120% 140% at 100% 0,rgba(255,0,0,.06) 0,rgba(255,0,0,0) 60%),radial-gradient(120% 140% at 0 100%,rgba(255,0,0,.06) 0,rgba(255,0,0,0) 60%),#fff;}
+.banner-failed h3{margin:0;font-size:16px;font-weight:700;}
+.banner-failed p{margin:0;font-size:14px;line-height:1.5;color:var(--ink);}
+.banner-failed .btn-buy-again,a.btn-buy-again{display:block;width:100%;text-align:center;text-decoration:none;padding:12px 14px;border:1px solid #1e40af;border-radius:8px;background:#fff;color:#1e40af;font-weight:700;line-height:1.2;box-sizing:border-box;margin-top:8px;}
+a.btn-buy-again:hover{filter:brightness(1.02);box-shadow:0 1px 0 rgba(30,64,175,.08);}
+body.dark-mode .banner-failed{border:1px solid #7f1d1d;background:radial-gradient(120% 140% at 100% 0,rgba(239,68,68,.22) 0,rgba(239,68,68,0) 60%),radial-gradient(120% 140% at 0 100%,rgba(239,68,68,.16) 0,rgba(239,68,68,0) 60%),var(--paper);}
+body.dark-mode .banner-failed h3{color:#fecaca;}
+body.dark-mode .banner-failed p{color:var(--ink-soft);}
+body.dark-mode .banner-failed .btn-buy-again{background:transparent;border:1px solid #60a5fa;color:#93c5fd;}
+body.dark-mode .banner-failed .btn-buy-again:hover{background:rgba(96,165,250,.08);filter:none;box-shadow:none;}
+
+
+.product-card{display:grid;grid-template-columns:92px 1fr auto;gap:16px;align-items:start;padding:16px;}
+.pc-banner{grid-column:1/-1;border:1px solid #fecaca;border-radius:10px;background:radial-gradient(120% 140% at 100% 0,rgba(255,0,0,.06) 0,rgba(255,0,0,0) 60%),radial-gradient(120% 140% at 0 100%,rgba(255,0,0,.06) 0,rgba(255,0,0,0) 60%),#fff;padding:16px;display:grid;grid-template-columns:1fr;gap:12px;}
+.pc-banner h3{margin:0;font-size:16px;font-weight:700;}
+.pc-banner p{margin:0;font-size:14px;line-height:1.5;color:var(--ink);}
+.pc-buy{display:block;width:100%;text-align:center;text-decoration:none;padding:12px 14px;border:1px solid #1e40af;border-radius:8px;background:#fff;color:#1e40af;font-weight:700;line-height:1.2;box-sizing:border-box;}
+.thumb{width:92px;height:92px;border-radius:8px;background:#f7f7f7;display:grid;place-items:center;overflow:hidden;}
+.thumb img{width:100%;height:100%;object-fit:contain;}
+.info{display:flex;flex-direction:column;gap:4px;}
+.meta-row{display:flex;justify-content:flex-start;align-items:center;gap:14px;margin-top:2px;}
+.pc-price{font-size:16px;font-weight:600;align-self:start;}
+.pc-divider{grid-column:1/-1;height:1px;background:var(--line);margin:10px 0;}
+.pc-status{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:14px;}
+.dot-bad{width:12px;height:12px;border-radius:50%;background:#dc2626;box-shadow:0 0 0 2px #fecaca inset;}
+.pc-updates{grid-column:1/-1;margin-top:6px;font-size:14px;color:#1e40af;text-decoration:none;font-weight:600;display:inline-block;}
+.pc-chat{grid-column:1/-1;display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);width:max-content;margin-top:8px;}
+.pc-chat:hover{filter:brightness(1.02);}
+
+
+/* Qty + price on one row, Flipkart weight */ .product-card .info .meta-row{display:flex;justify-content:space-between;align-items:center;margin-top:6px;} .product-card .info .meta-row .muted{font-size:13px;color:var(--ink-soft);} .product-card .info .meta-row .price{font-size:18px;font-weight:700;}
+/* Single divider spacing (under header, and before chat) */ .product-card .divider{grid-column:1/-1;height:1px;background:var(--line);margin:8px 0;}
+/* Status row (red filled dot with white tick, black date) */ .status-row{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:8px 0;color:var(--ink);} .status-dot{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#ef4444;color:#fff;} .status-row svg{width:10px;height:10px;} .status-date{font-size:13px;font-weight:500;color:var(--ink);}
+ /* Updates row (left, with bigger chevron) */ .updates-row{grid-column:1/-1;display:flex;justify-content:flex-start;align-items:center;margin:6px 0;} .link-updates{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#2563eb;text-decoration:none;font-weight:600;} .link-updates::after{content:"";display:inline-block;width:8px;height:8px;border:2px solid currentColor;border-left:0;border-top:0;transform:rotate(-45deg);border-radius:2px;margin-top:3px;margin-left:-4px;}
+/* Centered “Chat with us” (plain text button, no box) */ .chat-center{grid-column:1/-1;display:flex;justify-content:center;align-items:center;padding:10px 0 4px;} .btn-chat{display:inline-flex;gap:8px;align-items:center;background:transparent;border:none;color:var(--ink);font-weight:700;padding:0;margin:0;text-decoration:none;} .btn-chat svg{opacity:.85;}
+
+/* banner container in dark */ body.dark-mode .pc-banner{border:1px solid #4b1d1d;background:radial-gradient(120% 140% at 100% 0,rgba(239,68,68,.18) 0,rgba(239,68,68,0) 60%),radial-gradient(120% 140% at 0 100%,rgba(239,68,68,.18) 0,rgba(239,68,68,0) 60%),#121212;}
+/* banner text in dark */ body.dark-mode .pc-banner h3{color:#fff;} body.dark-mode .pc-banner p{color:#e5e7eb;}
+/* outlined Buy again button in dark */ body.dark-mode .pc-banner .pc-buy{background:transparent;color:#93c5fd;border-color:#93c5fd;}
+/* status dot + link tint in dark */ body.dark-mode .status-dot{background:#ef4444;color:#fff;} body.dark-mode .link-updates{color:#93c5fd;} body.dark-mode .link-updates .chev{border-color:#93c5fd;}
+/* Make status label and date the same weight */
+.status-row strong,.status-row .status-date{font-size:14px;font-weight:700;}
+
+.status-row{display:flex;align-items:center;gap:10px;margin:8px 0;color:var(--ink);}
+.status-dot{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;}
+.status-dot.ok{background:#16a34a;box-shadow:0 0 0 2px rgba(34,197,94,.25) inset;}
+.status-text{display:flex;gap:6px;align-items:baseline;}
+.status-text strong,.status-text .status-date{font-weight:700;font-size:14px;}
+body.dark-mode .status-dot.ok{background:#16a34a;box-shadow:0 0 0 2px rgba(34,197,94,.35) inset;}
+
+/* hollow grey status dot for "not delivered yet" */
+.status-dot.hollow{ background:#fff; color:transparent; border:2px solid #9ca3af; width:18px; height:18px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;}
+body.dark-mode .status-dot.hollow{ background:#111827; border-color:#475569; }
+
+
+/* delivery details icons + stronger labels */
+.kv img.icon{width:18px;height:18px;display:block;opacity:.9}
+body.dark-mode .kv img.icon{opacity:.85}
+.pill .label{font-weight:700}
+.pill .name{font-weight:700}
+.pill .sep{opacity:.5;margin:0 6px}
+.btn-chat img{width:18px;height:18px;display:block;opacity:.9}
+
+.dlv .row{ display:flex; gap:10px; align-items:flex-start; padding:10px 2px; background:transparent;border-radius:8px;}
+.dlv .row + .row{ margin-top:8px; }
+.dlv .ico{width:18px; height:18px; object-fit:contain; margin-top:2px}
+.dlv .lines{display:flex; flex-direction:column; gap:2px}
+.dlv .line{font-size:14px}
+.dlv .sub{font-size:13px; color:var(--ink-soft)}
+.dlv .divider{height:1px; background:var(--line); margin:6px 0}
+.dlv .divider{ height:1px; background:rgba(37,99,235,.25);  /* keep divider visible on tint */ margin:6px 0;}
+.dlv{ border:1px solid var(--line); border-radius:10px; background:rgba(37,99,235,.08); padding:12px;}
+
+body.dark-mode .dlv{background:rgba(255,255,255,.06); border-color:#2a2a2a;}
+/* keep rows transparent so only the container is tinted */
+.dlv .row{ background:transparent; }
+
+
+.price-list .has-more .more{display:none;font-size:12px;color:var(--ink-soft);padding:8px 0 0}
+.price-list .has-more{position:relative}
+.price-list .has-more .tw{display:flex;justify-content:space-between;align-items:center;
+  width:100%;background:transparent;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.price-list .chev{
+  border:solid currentColor;border-width:0 2px 2px 0;display:inline-block;padding:3px;
+  transform:rotate(45deg);margin-left:8px
+}
+.price-list .has-more.open .chev{transform:rotate(-135deg)}
+.price-list .has-more.open .more{display:block}
+
+/* === PRICE CARD (Flipkart-like) – base softbox === */
+.price-card .softbox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(37,99,235,.08);}
+body.dark-mode .price-card .softbox{background:rgba(255,255,255,.06);}
+
+/* === PRICE LIST – rows and totals === */
+.plist{list-style:none;margin:0;padding:0;font-size:14px}
+.plist li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.plist li:last-child{border-bottom:none}
+
+/* === INLINE LABEL + CHEVRON === */
+.plabel{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.chev{display:inline-block;width:6px;height:6px;border:2px solid currentColor;border-left:0;border-top:0;transform:rotate(45deg);border-radius:2px;margin-left:4px;transition:transform .15s ease}
+.chev.up{transform:rotate(-135deg)}
+
+/* === HIDDEN EXPLANATION ROW UNDER A LIST ITEM === */
+.exp{display:none;font-size:12px;color:var(--ink-soft);padding:6px 0 0 0}
+.open + .exp{display:block}
+
+/* === TOTAL ROW EMPHASIS === */
+.plist .total{font-weight:800;font-size:16px}
+
+/* === DISCLOSURE CONTROLS (open/close) === */
+.price-list .expander{display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;}
+.price-list .expander .chev{width:8px;height:8px;border:2px solid currentColor;border-left:0;border-top:0;transform:rotate(45deg);transition:transform .18s ease;margin-left:6px;}
+.price-list .expander.open .chev{transform:rotate(-135deg);}
+
+/* === EXTRA TEXT ROWS INSIDE PRICE LIST === */
+.price-list .explain{display:none;font-size:12px;color:var(--ink-soft);padding-top:6px;}
+.price-list .explain.show{display:block;}
+
+/* === DOWNLOAD BUTTON ICON – KEEP ORIGINAL COLORS === */
+.btn-invoice img,.btn-invoice .ico{filter:none !important;mix-blend-mode:normal;opacity:1;}
+
+/* === PRICE CARD CONTAINER – OVERFLOW TWEAK === */
+.price-card{overflow:visible;}
+
+/* === PRICE CARD SOFTBOX – FLEX COLUMN LAYOUT === */
+.price-card .softbox{display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);border-radius:10px;padding:12px;background:rgba(37,99,235,.08);}
+body.dark-mode .price-card .softbox{background:rgba(255,255,255,.06);}
+
+/* === FULL-WIDTH DOWNLOAD INVOICE BUTTON === */
+.btn-invoice{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;padding:14px 18px;margin-top:4px;border-radius:10px;background:#88898d;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;}
+.btn-invoice:hover{filter:brightness(1.05);}
+
+/* === BIGGER DOWNLOAD ICON (PNG) === */
+.btn-invoice img{width:36px;height:36px;display:block;filter:none !important;mix-blend-mode:normal;opacity:1;}
+
+/* === ACCESS STRIP ABOVE PRODUCT CARD === */
+.access-strip{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;margin:0 0 12px;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);font-size:14px;}
+.access-strip .manage{color:var(--brand-2);font-weight:700;text-decoration:none;}
+.access-strip .manage:hover{filter:brightness(1.05);}
+body.dark-mode .access-strip{background:#151515;border-color:#2a2a2a;}
+
+/* === SIMPLE MODAL (BACKDROP + SHEET) === */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:50;}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,92vw);background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px;display:none;z-index:51;}
+.modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.modal h4{margin:0;font-size:16px;}
+.modal .x{background:transparent;border:0;font-size:20px;line-height:1;cursor:pointer;color:var(--ink-soft);}
+.modal .list{display:flex;flex-direction:column;gap:8px;margin:10px 0;}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;}
+.badge .remove{margin-left:auto;background:transparent;border:0;color:#ef4444;font-weight:700;cursor:pointer;}
+body.dark-mode .modal{background:#161616;border-color:#2a2a2a;}
+
+/* === ACCESS CARD (FLIPKART-LIKE SMALL CARD) – VARIANT 1 === */
+.access-card{background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:0;margin:0 0 12px;overflow:hidden;}
+.access-phone{padding:12px 14px;font-size:14px;}
+.access-phone strong{font-weight:700;}
+.access-note{margin-top:4px;font-size:13px;color:var(--ink-soft);}
+.access-manage{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;text-decoration:none;color:var(--brand-2);font-weight:700;border-top:1px solid var(--line);}
+.access-manage::after{content:"";width:8px;height:8px;border:2px solid currentColor;border-left:0;border-top:0;transform:rotate(-45deg);border-radius:2px;}
+.access-manage:hover{filter:brightness(1.05);}
+body.dark-mode .access-card{background:#151515;border-color:#2a2a2a;}
+
+/* === BADGE – GENERIC MINI TAGS === */
+.badge{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;}
+.badge .num{font-weight:600;}
+.badge .tag{font-size:12px;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--brand-2);}
+.badge .remove{margin-left:auto;background:transparent;border:0;color:#ef4444;font-weight:700;cursor:pointer;}
+
+/* === TOAST (BASE + SUCCESS VARIANT) === */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:none;z-index:60;padding:12px 14px;font-size:14px;border-radius:6px;}
+.toast.show{display:flex;align-items:center;gap:10px;animation:fadeOut 2.1s ease forwards;}
+@keyframes fadeOut{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
+.toast.success{background:#e9f1ff;color:#0b57d0;border:1px solid #c8dcff;box-shadow:none;}
+.toast .ico{width:18px;height:18px;display:inline-block;}
+
+/* === ACCESS CARD (FLIPKART-LIKE SMALL CARD) – VARIANT 2 === */
+.access-card{background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);margin:0 0 12px;overflow:hidden;}
+.access-phone{padding:12px 14px;font-size:14px;}
+.access-phone strong{font-weight:700;}
+.access-note{margin-top:4px;font-size:13px;color:var(--ink-soft);}
+.access-manage{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;text-decoration:none;color:var(--brand-2);font-weight:700;border-top:1px solid var(--line);}
+.access-manage::after{content:"";width:8px;height:8px;border:2px solid currentColor;border-left:0;border-top:0;transform:rotate(-45deg);border-radius:2px;}
+.access-manage:hover{filter:brightness(1.05);}
+body.dark-mode .access-card{background:#151515;border-color:#2a2a2a;}
+
+/* === MODAL (DUPLICATE RULE – KEEP AS PROVIDED) === */
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,92vw);background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px;display:none;z-index:51;}
+
+/* === FLOATING X (OUTSIDE, TOP-RIGHT OF MODAL) === */
+.x-outside{position:absolute;top:-6px;right:-34px;width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;font-size:18px;line-height:1;}
+.x-outside:hover{filter:brightness(1.05);}
+
+
+.modal h4{ margin:0 0 8px; font-size:16px; }
+.modal .list{ display:flex; flex-direction:column; gap:8px; }
+
+/* Number chip */
+.badge{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.badge .num{font-weight:600}
+.badge .tag{font-size:12px;padding:2px 6px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--brand-2)}
+.badge .remove{margin-left:auto;background:transparent;border:0;color:#ef4444;font-weight:700;cursor:pointer}
+
+/* when modal is open, prevent background scrolling */
+.no-scroll{position: fixed;overflow: hidden;width: 100%;}
+
+body.dark-mode .modal{background:#1b1b1f;border:1px solid #2c2c33;box-shadow:0 8px 22px rgba(0,0,0,.55),0 2px 6px rgba(0,0,0,.35);color:#e6e7eb;}
+body.dark-mode .modal h4{color:#fff;}
+body.dark-mode .badge{background:#151519;border-color:#2b2b32;color:#e6e7eb;}
+body.dark-mode .badge .tag{background:rgba(147,197,253,.14);color:#93c5fd;}
+body.dark-mode .badge .remove{color:#f87171;}
+body.dark-mode .badge .remove:hover{color:#fecaca;}
+body.dark-mode .x-outside{background:#1b1b1f;border-color:#2c2c33;font-size: 28px;color:#aeb1b7;}
+body.dark-mode #access-close{font-size: 28px;color:#bfc3c9;}
+body.dark-mode #access-close:hover{color:#fff;}
+.modal-backdrop{backdrop-filter:blur(2px);}
+body.dark-mode .modal-backdrop{background:rgba(0,0,0,.65);backdrop-filter:blur(3px);}
+body.dark-mode .modal .list>.badge+.badge{border-top:1px solid #26262d;}
+body.dark-mode .toast.success{background:#0f2a4d;color:#cfe3ff;border-color:#1e3a8a;}
+
+.toast{background:#111;color:#fff;border:1px solid #222;box-shadow:0 8px 24px rgba(0,0,0,.4);border-radius:8px;padding:12px 16px}
+body.dark-mode .toast{background:#0c0c10;border-color:#1f1f26;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+.toast.success{background:#111;color:#fff;border-color:#222}
+.toast.error{background:#111;color:#fecaca;border-color:#7f1d1d}
+
+
+/* Download invoice button — neutral slate, good in light & dark */
+.btn-invoice{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;box-sizing:border-box;padding:16px 20px;border-radius:12px;background:#334155;color:#fff;font-weight:800;text-decoration:none;border:1px solid rgba(15,23,42,.15);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+.btn-invoice:hover{filter:brightness(1.03);}
+body.dark-mode .btn-invoice{background:#3b3f48;color:#e5e7eb;border:1px solid #4b5563;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+body.dark-mode .btn-invoice:hover{filter:brightness(1.06);}
+/* Icon a bit larger; keep original colors */
+.btn-invoice img{width:40px;height:40px;display:block;filter:none !important;mix-blend-mode:normal;opacity:1;}
+/* Slightly larger product images */
+.product-card .thumb{width:104px;height:104px;}
+.other-items .thumb{width:78px;height:78px;}
+
+.crumbs .sep{font-size:18px;line-height:1;}
+body.dark-mode .crumbs .sep{color:#9ca3af;}
+
+
+/* --- enhanced invoice button effects --- */
+.btn-invoice{ position:relative;overflow:hidden;background: linear-gradient(180deg,#475569,#334155);box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 
+    0 6px 14px rgba(2,6,23,.18); transition: transform .15s ease, box-shadow .2s ease, filter .15s ease;}
+.btn-invoice:hover{transform: translateY(-1px);
+box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 22px rgba(2,6,23,.22);}
+.btn-invoice:active{transform: translateY(0); filter: brightness(.98);}
+.btn-invoice:focus-visible{outline: 0;box-shadow:0 0 0 3px rgba(59,130,246,.35),0 8px 18px rgba(2,6,23,.22);}
+
+/* ripple */
+.btn-invoice .ripple{position:absolute; left:0; top:0; width:10px; height:10px;transform:translate(-50%,-50%); border-radius:999px;
+  background:rgba(255,255,255,.35); pointer-events:none; opacity:0;animation:ripple .5s ease-out forwards;}
+@keyframes ripple{from{ opacity:.45; transform: translate(-50%,-50%) scale(.6); }to  { opacity:0;    transform: translate(-50%,-50%) scale(26); }}
+
+.btn-invoice{ cursor:pointer; }
+
+.btn-invoice.loading{cursor:pointer;}
+.btn-invoice .label-loading{ display:none; }
+.btn-invoice.loading .label{ display:none; }
+.btn-invoice.loading .label-loading{ display:inline-flex; align-items:center; gap:10px; }
+
+.btn-invoice .spinner{width:18px; height:18px; border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff; animation:spin .8s linear infinite;}
+@keyframes spin{ to{ transform:rotate(360deg) } }
+
+/* dark mode tune */
+body.dark-mode .btn-invoice{background: linear-gradient(180deg,#3b3f48,#2f333b);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 6px 14px rgba(0,0,0,.35);}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .btn-invoice, .btn-invoice:hover, .btn-invoice:active{ transition:none; transform:none }
+}
+
+/* image block */
+.session-hero{ display:flex; justify-content:center; margin:6px 0 12px; }
+.session-hero img{ width:min(1000px, 100%); height:auto; display:block; object-fit:contain; filter:none;}
+body.dark-mode .session-hero img{ opacity:.95; }
+
+
+/* session expired modal tweaks */
+.session-msg{
+  display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.5;
+  border:1px solid var(--line); border-radius:10px; padding:12px;
+  background: #fff7ed; /* warm hint */
+}
+body.dark-mode .session-msg{ background:#2b1f13; border-color:#3b2a18; }
+.session-actions{ display:flex; gap:10px; margin-top:12px; }
+.btn-login{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
+  border-radius:8px; background:#2563eb; color:#fff; font-weight:800; text-decoration:none;
+}
+.btn-login:hover{ filter:brightness(1.05); }
+.btn-why{ background:transparent; color:var(--ink-soft); border:0; padding:0; cursor:pointer; }
+
+.crumbs::before { content: none !important; }
+
+#session-expired-modal header{position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;}
+#session-expired-modal header h4{margin:0;text-align:center;}
+#session-expired-modal header .x{position:absolute;right:8px;top:8px;}
+#session-expired-modal .msg{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;margin:0 0 10px;}
+#session-expired-modal .why{text-align:right;text-align:right;margin:6px 0 8px;}
+#session-expired-modal .why a{font-size:13px;font-weight:600;color:#93c5fd;text-decoration:none;}
+#session-expired-modal .why a:hover{filter:brightness(1.05);}
+#session-expired-modal .btn-login{display:block;width:100%;text-align:center;justify-content:center;padding:14px 16px;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+#session-expired-modal .btn-login:hover{filter:brightness(1.04);}
+#session-expired-modal .note{font-size:12px;opacity:.85;margin-top:8px;}
+/* allow the outside X to sit outside */
+#session-expired-modal{ overflow:visible; }
+
+/* hide any in-header X if you still have it */
+#session-expired-modal header .x{ display:none !important; }
+/* allow outside X to overflow the box */
+#session-modal{ overflow: visible; }
+
+/* floating X outside the top-right */ 
+#session-close-outside{position:absolute;top:-18px;right:-54px;width:30px;height:30px;font-size:28px;display:grid;place-items:center;border-radius:10px;
+  background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;font-size:18px;line-height:1;z-index:2;}
+
+/* bigger illustration, nicely centered and responsive */ 
+.session-illus{display:block;width:min(420px,90%);height:auto;margin:8px auto 16px;}
+
+/* center the CTA row (if not already) */ 
+.session-actions{display:flex;justify-content:center;}
+
+/* remove underline for "Why did this happen?" */ 
+#session-modal .why a{text-decoration:none;color:inherit;} 
+#session-modal .why a:hover{text-decoration:none;}
+
+/* put the session modal OVER everything */ 
+#session-backdrop{position:fixed;inset:0;z-index:5000;}
+
+/* modal position + stacking */ 
+#session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5001;overflow:visible;}
+
+/* if you use an outside X, give it a bit more too */ 
+#session-close-outside{font-size:28px;z-index:5002;}
+
+/* link highlight states */
+ #session-modal .why a:hover{color:#2563eb;}
+ #session-modal .why a.clicked{color:#ef4444;}
+
+/* yellow info block, always below the link */ 
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;position:relative;z-index:1;} 
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+
+/* prevent page scroll when modal open */ 
+.no-scroll{position:fixed;overflow:hidden;width:100%;}
+
+/* smaller image only in the FIRST (main) card */ 
+.product-card{grid-template-columns:80px 1fr auto;}
+ .product-card .thumb{width:85px;height:85px;}
+
+/* keep your current padding-left for the rows; just ensure consistent height */ 
+.status-list .status-row{position:relative;padding:8px 0 8px 28px;min-height:28px;display:flex;align-items:center;}
+
+/* put the label+date on ONE line */ 
+.status-list .status-text{display:flex;gap:12px;align-items:baseline;white-space:nowrap;}
+
+/* your dots (keep your ok/hollow styles) */ 
+.status-list .status-dot{position:absolute;left:10px;top:50%;transform:translate(-50%,-50%);}
+
+/* Timeline (2 dots, animated line between them) */ 
+.status-list{--gutter:12px;position:relative;margin-left:0;} 
+.status-list .status-row{position:relative;display:flex;align-items:center;gap:10px;padding-left:calc(var(--gutter) + 22px);min-height:34px;} 
+.status-list .status-text{display:flex;gap:10px;align-items:baseline;white-space:nowrap;color:var(--ink);} 
+.status-list .status-dot{position:absolute;left:var(--gutter);top:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;}
+
+/* Draw ONLY between the dots (inner edge to inner edge) */ 
+.status-list::before,.status-list::after{content:"";position:absolute;left:var(--x,var(--gutter));transform:translateX(-50%);top:var(--segStart,0px);
+  height:var(--segLen,0px);width:4px;border-radius:px;z-index:0;} .status-list::before{background:#d1d5db;} 
+.status-list::after{content:"";position:absolute;left:var(--x,var(--gutter));transform:translateX(-50%);top:var(--segStart,0px);height:var(--fillLen,
+  var(--segLen,0px));width:4px;background:#16a34a;border-radius:3px;transform-origin:top;transform:scaleY(0);transition:transform .9s ease-out;z-index:1;} 
+.status-list.animate::after{transform:scaleY(1);}
+
+/* hollow/ok (you already had these; include if missing) */ 
+.status-dot.hollow{background:#fff;border:2px solid #9ca3af;color:transparent;} 
+.status-dot.ok{background:#16a34a;color:#fff;box-shadow:0 0 0 2px rgba(34,197,94,.25) inset;}
+
+/* 1) define a small nudge for the green line only */ 
+.status-list{--fill-nudge:-2px;} /* 2) apply the nudge only to the green fill (::after) */ 
+.status-list::after{left:calc(var(--x,var(--gutter)) + var(--fill-nudge));} 
+.status-list{--fill-ms:600ms;} .status-list::after{transition:transform var(--fill-ms) ease-out;} 
+.status-list::before,.status-list::after{z-index:0;} .status-list .status-dot{z-index:1;}
+
+/* =============================== Updates modal – slim + animated rail =============================== */
+/* Visibility is controlled by [hidden] */ 
+#updates-backdrop,#updates-modal{display:block;} #updates-backdrop[hidden],#updates-modal[hidden]{display:none !important;}
+
+/* Backdrop */ 
+#updates-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:2000;}
+
+/* ------------ Novacart-like list (no dividers) ------------ */ 
+.fk-list{position:relative;padding:4px 0;--gutter:18px;--rail-top:26px;--rail-bottom:70px;}
+
+/* Each section */ 
+.fk-item{position:relative;padding:10px 0 12px 36px;}
+
+/* Section heading (title + timestamp) */ 
+.fk-head{display:flex;gap:6px;align-items:baseline;font-weight:700;line-height:1.2;} 
+.fk-head > div:first-child{font-size:14px;} 
+.fk-when{font-size:11.5px;color:var(--ink-soft);font-weight:600;}
+
+/* Body lines */ 
+.fk-sub{margin-top:6px;font-size:13.5px;line-height:1.35;} 
+.fk-sub .when{display:block;margin-top:2px;font-size:11.5px;color:var(--ink-soft);}
+
+/* Dot beside each section title */ 
+.fk-item::before{content:"";position:absolute;left:var(--gutter);transform:translateX(-50%);top:13px;width:12px;height:12px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 2px rgba(34,197,94,.25) inset;z-index:1;}
+
+/* (optional) grey/pending dot style if you ever need it by class */ 
+.fk-item.pending::before{background:#fff;box-shadow:none;border:2px solid #cbd5e1;}
+
+/* --- Single animated rail (grey track + green fill) --- */ 
+.fk-list::before,.fk-list::after{content:"";position:absolute;left:var(--gutter);transform:translateX(-50%);top:var(--rail-top);width:2px;border-radius:2px;} 
+.fk-list::before{bottom:var(--rail-bottom);background:#e5e7eb;} 
+.fk-list::after{height:0;background:#16a34a;animation:updatesFill 3.6s linear forwards;} 
+@keyframes updatesFill{to{height:calc(100% - var(--rail-top) - var(--rail-bottom));}}
+
+/* Dark mode polish */ 
+body.dark-mode #updates-modal{box-shadow:0 10px 26px rgba(0,0,0,.55);} 
+body.dark-mode .updates-head{border-bottom-color:#2a2a2a;} 
+body.dark-mode .fk-item.pending::before{border-color:#475569;}
+
+/* Typography — start GREY for everything except section 1 */ 
+.fk-head > :first-child{font-size:14px;color:var(--ink-soft);} 
+.fk-when{font-size:14px;color:var(--ink-soft);font-weight:500;} 
+.fk-sub{margin-top:6px;font-size:14px;line-height:1.45;color:var(--ink-soft);} 
+.fk-sub .when{display:block;margin-top:2px;font-size:12px;color:var(--ink-soft);} 
+.fk-item.reached .fk-head > :first-child{color:var(--ink);} 
+.fk-item.reached .fk-sub{color:var(--ink);}
+
+/* Failed / Not Placed: single red dot, no rail */
+ .fk-list.fk-failed::before,.fk-list.fk-failed::after{display:none;} .fk-item.failed::before{background:#ff4343;}
+
+/* the outside X */ /* (optional) never scroll inside the modal; only page behind is locked */ 
+@media (max-height:640px){#updates-modal{max-height:calc(100vh - 40px);overflow:auto;}} /* Updates modal: never show horizontal scrollbar */ 
+#updates-modal,#updates-body,#updates-body .fk-list{overflow-x:hidden !important;} #updates-modal::-webkit-scrollbar{width:0;height:0;}
+
+/* modal must NOT clip children */ 
+#updates-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px,92vw);
+  background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);
+  z-index:9999;overflow:visible !important;}
+
+/* inside ✕ (used on small screens) */ 
+#updates-close.upd-x-in{position:absolute;top:-2pxx;right:-46px;width:32px;height:32px;font-size:28px;display:grid;
+  place-items:center;border:0;background:transparent;color:var(--ink-soft);font-size:20px;line-height:1;cursor:pointer;z-index:1;}
+
+/* outside ✕ (the one you want) */ 
+#updates-close-outside.upd-x-out{position:absolute;top:-2px;right:-46px;width:32px;height:32px;font-size:28px;display:grid;place-items:center;
+  border-radius:10px;background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:10000;}
+
+/* on narrow screens, hide the outside one */ @media (max-width:560px){#updates-close-outside.upd-x-out{display:none;}}
+
+/* Move the title to the right a bit */ 
+.brand-title{margin-left:24px !important;}
+
+/* Pull the moon/sun away from the edge */ 
+#theme-toggle,.mode-toggle{right:46px !important;}
+
+/* spinner theme color */ 
+:root{--spin-color:#7c3aed;}
+
+/* overlay container */ 
+#vo-spin{position:fixed;inset:0;z-index:99999;display:none;place-items:center;background:rgba(10,10,14,.35);backdrop-filter:blur(2px);} #vo-spin.show{display:grid;}
+
+/* spinner container — stack vertically, center */ 
+#vo-spin .wrap{display:flex;flex-direction:column;align-items:center;gap:1px;}
+
+/* ring element */ 
+#vo-spin .ring{display:block;width:64px;height:64px;border-radius:50%;border:6px solid color-mix(in srgb,var(--spin-color) 20%,transparent);
+  border-top-color:var(--spin-color);border-right-color:color-mix(in srgb,var(--spin-color) 60%,transparent);animation:vo-rot .8s linear infinite;}
+
+/* label sits under the ring */ 
+#vo-spin .txt{position:static !important;display:block;margin:0;font:700 14px/1 Inter,system-ui,Arial,sans-serif;color:#fff;letter-spacing:.2px;opacity:.95;text-shadow:0 1px 0 rgba(0,0,0,.25);}
+
+/* rotation keyframes */ @keyframes vo-rot{to{transform:rotate(360deg)}}
+
+/* reduce motion respect */ @media (prefers-reduced-motion:reduce){#vo-spin .ring{animation:none}}
+
+/* Center the overlay content perfectly (dup ensures precedence) */ 
+#vo-spin{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;} 
+#vo-spin .wrap{display:flex;flex-direction:column;align-items:center;gap:10px;} 
+#vo-spin .txt{margin:0;} #vo-spin{display:none;} 
+#vo-spin.show{display:grid;}
+
+/* lock cursor and selection while spinning */ 
+html.vo-spinning,html.vo-spinning *{cursor:auto !important;}
+html.vo-spinning{caret-color:transparent;} 
+html.vo-spinning body{user-select:none;} 
+#vo-spin.show{pointer-events:all;} 
+#vo-spin .wrap{pointer-events:none;}
+#vo-spin.show{cursor:pointer;}
+html.vo-lock { overflow:hidden; }
+
+/* add an actions column after price */
+.other-items .row{ display:grid; grid-template-columns: 70px 1fr auto auto; gap:12px; align-items:center;
+  padding:12px 16px; border-bottom:1px solid var(--line); }
+/* compact action buttons (reuse your list-page styles but a bit tighter) */
+.other-items .btn-action{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; border:1px solid #d8d8d8;
+  background:#fff; color:#1f2937; font-weight:700; text-decoration:none;  box-shadow:0 1px 2px rgba(0,0,0,.05);}
+.other-items .btn-review{background:#f5f0ff;border-color:#e5d7ff;color:#5b21b6;}
+.other-items .btn-edit{background:#eef5ff;border-color:#d5e5ff;color:#1d4ed8;}
+body.dark-mode .other-items .btn-action{background:#1a1a1a;border-color:#2a2a2a;color:#e5e7eb;box-shadow:none;}
+body.dark-mode .other-items .btn-review{background:rgba(91,33,182,.12);border-color:#3f2a5e;color:#c4b5fd;}
+body.dark-mode .other-items .btn-edit{background:rgba(29,78,216,.12);border-color:#2a3d71;color:#93c5fd;}
+
+
+.other-items .row{display:grid;grid-template-columns:80px 1fr auto auto;align-items:center;column-gap:14px;}
+.other-items .oi-meta{display:flex;flex-direction:column;row-gap:4px;margin-left:2px;}
+.other-items .oi-meta .title{font-weight:700;line-height:1.25;}
+.other-items .oi-meta .sub{font-size:14px;color:#6b7280;}
+.other-items .oi-meta .qp{font-size:14px;color:#6b7280;}
+body.dark-mode .other-items .oi-meta .sub,body.dark-mode .other-items .oi-meta .qp{color:#9aa4b2;}
+
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="wrap" id="order-root"
+     data-order-id="{{ order.order_id }}"
+     data-updates-api="{{ order.updates_api }}"
+     data-session-expired="{% if session_expired %}1{% else %}0{% endif %}"
+     data-confirmed-ts="{% firstof order.confirmed_at order.placed_ts 0 %}"
+     data-delivered-ts="{{ order.delivered_at|default:0 }}"
+     data-eta-ts="{{ order.delivery_eta_ts|default:0 }}"
+     data-is-delivered="{% if order.is_delivered or order.order_status == 'Delivered' %}1{% else %}0{% endif %}"
+     data-order-status="{{ order.order_status|default:'' }}"
+     data-created-ts="{{ order.created_ts|default:0 }}">
+
+    <!-- breadcrumb -->
+    <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="/api/paginate/?page=1">Home</a> <span class="sep">›</span>
+        <a href="/account">My Account</a> <span class="sep">›</span>
+        <a href="/api/vieworders/">My Orders</a> <span class="sep">›</span>
+        <span class="muted">{{ order.display_code|default:order.order_code|default:order.order_id }}</span>
+    </nav>
+
+    <div id="vo-spin" class="show">
+  <div class="wrap">
+    <span class="ring"></span>
+    <span class="txt">Loading…</span>
+  </div>
+</div>
+
+
+    <div class="grid">
+        <!-- LEFT: product + timeline -->
+    <section>
+
+    {% if order.show_access_strip %}
+    <div class="access-card" id="access-card"
+        data-hidekey="hide_access_{% firstof order.display_code order.order_code order.order_id order.id order_pk %}">
+        <div class="access-phone">
+        Order can be tracked by <strong>{{ order.access_phone }}</strong>.
+        <div class="access-note">Tracking link is shared via SMS.</div>
+        </div>
+
+        <!-- Entire row is clickable -->
+        <a href="#" class="access-manage" id="btn-manage-access" aria-label="Manage who can access">
+        Manage who can access
+        </a>
+    </div>
+    {% endif %}
+
+
+
+  {# Use order.order_items when present; otherwise fall back to single "item" #}
+  {% with items=order.order_items %}
+    {% if items %}
+      {% with first=items.0 others=items|slice:"1:" %}
+        {# ===== Main order area + banner + timeline + other-items go here (unchanged) ===== #}
+
+        <!-- ===== Main order area ===== -->
+            <article class="card product-card">
+            {# banner INSIDE the card #}
+            {% if order.order_status == 'Payment Failed' or order.order_status == 'Order Not Placed' %}
+            <div class="pc-banner">
+                <h3>Order not placed. Try ordering again</h3>
+                <p>Due to an error with the payment, this order could not be placed. Please place a new order. Payment was not successful. Please contact your bank for any money deducted.</p>
+                <a class="pc-buy" href="/api/checkout/?seed=1" aria-label="Buy again and go to checkout">Buy again</a>
+            </div>
+            {% endif %}
+
+            {# header row: image • info • price #}
+            <div class="thumb">
+            <img src="{{ first.image|default:'https://via.placeholder.com/200x200?text=Item' }}" alt="{{ first.product_name|default:'Product' }}" loading="lazy" decoding="async">
+            </div>
+
+            <div class="info">
+            <h2 class="title">{{ first.product_name|default:"Product" }}</h2>
+            <div class="muted">Seller: {{ first.seller_name|default:"Retailer" }}{% if first.color %} • Color: {{ first.color }}{% endif %}</div>
+
+            <!-- Qty + Price on the same row -->
+            <div class="meta-row">
+                <span class="muted">Qty: {{ first.qty|default:first.quantity|default:1 }}</span>
+                <span class="price">₹{% firstof first.final_price first.price first.total_price first.amount "0" %}</span>
+            </div>
+            </div>
+            <div class="divider"></div>
+            <!-- full-width divider under the image/info area -->
+            {# STATUS: show only when not placed/failed #}
+            {% if order.order_status == 'Payment Failed' or order.order_status == 'Order Not Placed' or order.order_status == 'Not yet placed' %}
+            <div class="status-row">
+                <span class="status-dot" style="background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.25) inset;">
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 6l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div class="status-text"><strong>Order Not Placed</strong><span class="status-date date" data-ts="{{ order.created_ts|default:0 }}">-</span></div>
+            </div>
+            {% else %}
+            <!-- Timeline wrapper (no inner bar elements) -->
+            <div class="status-list" id="mini-tl2"
+                data-delivered="{% if order.is_delivered or order.order_status == 'Delivered' %}1{% else %}0{% endif %}">
+
+                <!-- 1) Confirmed — always ticked -->
+                <div class="status-row">
+                <span class="status-dot ok" aria-hidden="true">
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d="M3 6l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <div class="status-text">
+                    <strong>Order Confirmed,</strong>
+                    <span class="status-date date" data-ts="{{ order.confirmed_at|default:order.placed_ts|default:0 }}">-</span>
+                </div>
+                </div>
+
+                <!-- 2) Delivered/Delivery-by — starts as hollow; JS will flip to tick after line anim -->
+                <div class="status-row" id="mini-tl2-row2">
+                <span class="status-dot hollow" aria-hidden="true"></span>
+                <div class="status-text">
+                    {% if order.is_delivered %}
+                    <strong>Delivered,</strong>
+                    <span class="status-date date" data-ts="{% firstof order.delivered_at order.delivery_eta_ts 0 %}">-</span>
+                    {% else %}
+                    <strong>Delivery by,</strong>
+                    <span class="status-date date" data-ts="{{ order.delivery_eta_ts|default:0 }}">-</span>
+                    {% endif %}
+                </div>
+                </div>
+
+            </div>
+            {% endif %}
+
+            <!-- See all updates -->
+            <div class="updates-row">
+            <a class="link-updates" href="#" id="link-updates">See All Updates</a>
+            </div>
+
+            <!-- divider before chat -->
+            <div class="divider"></div>
+
+            <!-- centered chat button -->
+            <div class="chat-center">
+            <a class="btn-chat" href="#" aria-label="Chat with us">
+                <img src="{% static 'images/chat.png' %}" alt="" style="width:18px;height:18px;object-fit:contain;opacity:.9">
+                Chat with us
+            </a>
+            </div>
+
+            </article>
+
+
+
+          {% if others|length %}
+        <section class="card other-items" style="margin-top:12px">
+          <header>Other items in this order</header>
+
+          {% for it in others %}
+            <div class="row">
+              <div class="thumb">
+                <img src="{{ it.image|default:'https://via.placeholder.com/200x200?text=Item' }}"
+                    alt="{{ it.product_name|default:'Product' }}" loading="lazy" decoding="async">
+              </div>
+
+               <div class="oi-meta"
+ >                <div class="title">{{ it.product_name|default:"Product" }}</div>
+                {% if it.description %}<div class="sub">{{ it.description }}</div>{% endif %}
+                <div class="qp">Qty: {{ it.qty|default:it.quantity|default:1 }}</div>
+              </div>
+
+              <div class="amt">₹{% firstof it.final_price it.price it.total_price it.amount "0" %}</div>
+
+              {# ---- ACTIONS COLUMN (only when delivered / delivery confirmed) ---- #}
+            {% if order.is_delivered or order.order_status == 'Delivered' or order.delivered_at %}
+            <div class="actions">
+              {% if it.my_review_id %}
+                <a class="btn-action btn-edit"
+                  style="min-width:160px;justify-content:center;"
+                  href="/api/reviews/{{ it.product_id }}/?edit=1"
+                  aria-label="Edit review for {{ it.product_name }}">
+                  <!-- pencil -->
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M3 17.25V21h3.75L18.81 8.94l-3.75-3.75L3 17.25zm18-11.19a1 1 0 0 0 0-1.41l-1.9-1.9a1 1 0 0 0-1.41 0l-1.59 1.59 3.75 3.75 1.55-1.55z"/>
+                  </svg>
+                  <span>Edit Review</span>
+                </a>
+              {% else %}
+                <a class="btn-action btn-review"
+                  style="min-width:160px;justify-content:center;"
+                  href="/api/reviews/{{ it.product_id }}/"
+                  aria-label="Review {{ it.product_name }}">
+                  <!-- star -->
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                  </svg>
+                  <span>Review Product</span>
+                </a>
+              {% endif %}
+            </div>
+          {% endif %}
+
+            </div>
+          {% endfor %}
+        </section>
+        {% endif %}
+
+
+      {% endwith %}
+
+    {% else %}
+      {# --- Fallback: no list found, use the single "item" variable passed from the view --- #}
+      {% with first=item others=None %}
+        <!-- reuse the exact same markup as above, replacing "first" where used -->
+        <!-- Main card -->
+        <article class="card main-order-card">
+          {% if order.order_status == 'Payment Failed' or order.order_status == 'Order Not Placed' %}
+            <div class="banner-failed">
+              <div><strong>Order not placed.</strong><span style="margin-left:6px;">Payment was not successful. Please try again.</span></div>
+              <a class="cta" href="{% if first.product_id %}/api/product/{{ first.product_id }}/{% else %}/{% endif %}">Buy again</a>
+            </div>
+          {% endif %}
+          <div class="item-head">
+            <div class="thumb">
+              <img src="{{ first.image|default:'https://via.placeholder.com/200x200?text=Item' }}"
+                   alt="{{ first.product_name|default:'Product' }}" loading="lazy" decoding="async">
+            </div>
+            <div>
+              <h2 class="item-name">{{ first.product_name|default:"Product" }}</h2>
+              <div class="item-sub">Seller: {{ first.seller_name|default:"Retailer" }}</div>
+              <div class="item-meta">
+                <span class="kv">Qty: {{ first.qty|default:first.quantity|default:1 }}</span>
+                <span class="price">₹{% firstof first.final_price first.price first.total_price first.amount "0" %}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Timeline (same as above) -->
+        <article class="card tl-card" id="timeline" style="margin-top:12px">
+          <div class="tl-row">
+            <div class="tl">
+              <span class="dot {% if order.order_status in 'On the way,Delivered,Returned,Cancelled' %}ok{% else %}pending{% endif %}"></span>
+              <span class="bar {% if order.order_status in 'On the way,Delivered,Returned,Cancelled' %}ok{% endif %}"></span>
+              <h4>Order Confirmed</h4>
+              <div class="date" data-ts="{{ order.confirmed_ts|default:0 }}"></div>
+            </div>
+            <div class="tl">
+              <span class="dot {% if order.order_status == 'Delivered' %}ok{% else %}pending{% endif %}"></span>
+              <h4>{% if order.order_status == 'Delivered' %}Delivered{% else %}Delivery by{% endif %}</h4>
+              <div class="date {% if order.order_status == 'Delivered' %}delivered{% endif %}" data-ts="{{ order.delivery_eta_ts|default:0 }}"></div>
+            </div>
+          </div>
+        </article>
+      {% endwith %}
+    {% endif %}
+  {% endwith %}
+
+</section>
+
+
+    <!-- RIGHT: details -->
+    <aside class="side">
+
+        {% load static %}
+    <div class="card side-card" aria-labelledby="deliv-head">
+    <h3 id="deliv-head">Delivery details</h3>
+
+    <div class="dlv">
+        <!-- Address row -->
+        <div class="row">
+        <img class="ico" src="{% static 'images/location.png' %}" alt="">
+        <div class="lines">
+            <div class="line"><strong>{{ order.address_label|default:"Home" }}</strong></div>
+            <div class="sub">{{ order.shipping_address|default:"—" }}</div>
+        </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Recipient row (NAME + PHONE) -->
+        <div class="row">
+        <img class="ico" src="{% static 'images/user.png' %}" alt="">
+        <div class="lines">
+            <div class="line">
+            <strong>{{ order.recipient_name|default:order.customer_name|default:"" }}</strong>
+            </div>
+            <div class="sub">{{ order.recipient_phone|default:"" }}</div>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
+
+        <!-- Price details -->
+    <div class="card side-card price-card" style="margin-top:16px" aria-labelledby="price-head">
+    <h3 id="price-head">Price details</h3>
+    <div class="softbox">
+    {% with s=order.summary %}
+        <ul class="plist">
+
+      <!-- Items count + cart total -->
+      <li>
+        <span>
+          Items ({{ order.order_items|length }} {{ order.order_items|length|pluralize:"item,items" }})
+        </span>
+        <span>₹{% if s %}{{ s.cart_total|default:0 }}{% else %}0{% endif %}</span>
+      </li>
+
+      <!-- Listing/Selling/Discounts (placeholders for now) -->
+      <li>
+        <span>Listing price</span>
+        <span>₹{% if s %}{{ s.cart_total|default:0 }}{% else %}0{% endif %}</span>
+      </li>
+      <li>
+        <span>Selling price</span>
+        <span>₹{% if s %}{{ s.cart_total|default:0 }}{% else %}0{% endif %}</span>
+      </li>
+      <li>
+        <span>Extra discount</span>
+        <span>₹0</span>
+      </li>
+      <li>
+        <span>Special price</span>
+        <span>₹0</span>
+      </li>
+      <li>
+        <li>
+        <label class="plabel" data-exp="disc">
+            Other discount <i class="chev"></i>
+        </label>
+        <span>₹0</span>
+        </li>
+        <div id="disc" class="exp" style="display:none">Get extra ₹0 on items (price inclusive of cashback/coupon)</div>
+
+      <!-- Delivery charge with inline chevron + explainer directly below -->
+      <li>
+        <label class="plabel" data-exp="exp-dlv">Delivery charge <i class="chev"></i></label>
+        <span>₹{% if s %}{{ s.shipping_fee|default:0 }}{% else %}0{% endif %}</span>
+      </li>
+      <div id="exp-dlv" class="exp">Shipping charge for your address.</div>
+
+      <!-- Platform fee with inline chevron + explainer directly below -->
+      <li>
+        <label class="plabel" data-exp="exp-plat">Platform fee <i class="chev"></i></label>
+        <span>₹{% if s %}{{ s.platform_fee|default:0 }}{% else %}0{% endif %}</span>
+      </li>
+      <div id="exp-plat" class="exp">Small fee to support platform operations.</div>
+
+      <!-- Total -->
+      <li class="total">
+        <span>Total amount</span>
+        <span>
+          ₹{% if s %}
+              {{ s.final_total|default:s.total_payable|default:order.total_amount|default:0 }}
+            {% else %}
+              {{ order.total_amount|default:0 }}
+            {% endif %}
+        </span>
+      </li>
+    </ul>
+
+            <!-- Wide centered invoice button -->
+    {% if order.is_delivered or order.order_status == 'Delivered' or order.delivered_at %}
+    <a class="btn btn-invoice btn-invoice-js" href="{% url 'invoice-pdf' order.order_id %}" id="btn-invoice">
+    <img src="{% static 'images/download.png' %}" alt="">
+    <span class="label">Download invoice</span>
+    <span class="label-loading"><span class="spinner" aria-hidden="true"></span> Preparing…</span>
+    </a>
+    {% endif %}
+
+    {% endwith %}
+    </div>
+    </div>
+</div>
+
+    </aside>
+  </div>
+<!-- KEEP these -->
+<div class="modal-backdrop" id="access-backdrop"></div>
+
+<div class="modal" id="access-modal" role="dialog" aria-modal="true" aria-labelledby="access-title">
+  <button class="x-outside" id="access-close" aria-label="Close">×</button>
+  <h4 id="access-title">Order details shared with</h4>
+  <div class="list" id="access-list" data-api="{{ order.access_remove_api }}">
+    {% for ph in order.shared_numbers %}
+      <div class="badge" data-ph="{{ ph }}">
+        <span class="num">{{ ph }}</span>
+        {% if ph == order.recipient_phone %}<span class="tag">Recipient</span>{% endif %}
+        <button class="remove" aria-label="Remove">Remove</button>
+      </div>
+    {% empty %}
+      <div class="badge"><span>No numbers</span></div>
+    {% endfor %}
+  </div>
+</div>
+
+</div>
+
+<!-- toast -->
+<div id="toast" class="toast" role="status" aria-live="polite">
+  <svg class="ico" viewBox="0 0 20 20" aria-hidden="true">
+    <circle cx="10" cy="10" r="10" fill="#0b57d0"/>
+    <path d="M5 10.4l3 3 7-7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <span id="toast-msg"></span>
+</div>
+
+
+<!-- Backdrop -->
+<div class="modal-backdrop" id="updates-backdrop" hidden></div>
+<div class="modal updates-modal" id="updates-modal" hidden>
+  <button id="updates-close-outside" type="button" class="upd-x-out" aria-label="Close">×</button>
+
+  <div id="updates-body">
+    <div class="fk-list">
+
+      {# ---------- 1) ORDER CONFIRMED ---------- #}
+      {% with cts=order.confirmed_at|default:order.placed_ts %}
+      {% if cts %}
+      <section class="fk-item">
+        <div class="fk-head">
+          <div>Order Confirmed</div>
+          <div class="fk-when">{{ cts|date:"M j, Y, g:i A" }}</div>
+        </div>
+
+        <div class="fk-sub">
+          Your Order has been placed.
+          <span class="when">{{ cts|date:"M j, Y, g:i A" }}</span>
+        </div>
+
+        <div class="fk-sub">
+          Seller has processed your order.
+          <span class="when">{{ cts|date:"M j, Y, g:i A" }}</span>
+        </div>
+
+        <div class="fk-sub">
+          Your item has been picked up by the delivery partner.
+          <span class="when">{{ cts|date:"M j, Y, g:i A" }}</span>
+        </div>
+      </section>
+      {% endif %}
+      {% endwith %}
+
+      {# ---------- 2) SHIPPED (same timestamp as confirmed) ---------- #}
+      {% with cts=order.confirmed_at|default:order.placed_ts %}
+      {% if cts %}
+      <section class="fk-item">
+        <div class="fk-head">
+          <div>Shipped</div>
+          <div class="fk-when">{{ cts|date:"M j, Y, g:i A" }}</div>
+        </div>
+
+        <div class="fk-sub">
+          Your item has been shipped.
+          <span class="when">{{ cts|date:"M j, Y, g:i A" }}</span>
+        </div>
+
+        <div class="fk-sub">
+          Your item has been received in the hub nearest to you
+          <span class="when">{{ cts|date:"M j, Y, g:i A" }}</span>
+        </div>
+      </section>
+      {% endif %}
+      {% endwith %}
+
+      {# ---------- 3) OUT FOR DELIVERY (prefer delivered_ts, else ETA, else confirmed/placed) ---------- #}
+      {% with of_ts=order.delivered_at|default:order.delivery_eta_ts|default:order.confirmed_at|default:order.placed_ts %}
+      {% if of_ts %}
+      <section class="fk-item">
+        <div class="fk-head">
+          <div>Out For Delivery</div>
+          <div class="fk-when">{{ of_ts|date:"M j, Y, g:i A" }}</div>
+        </div>
+
+        <div class="fk-sub">
+          Your item is out for delivery
+          <span class="when">{{ of_ts|date:"M j, Y, g:i A" }}</span>
+        </div>
+      </section>
+      {% endif %}
+      {% endwith %}
+
+      {# ---------- 4) DELIVERED (or DELIVERY BY if not yet delivered) ---------- #}
+      {% with status=order.order_status|default:""|lower %}
+        {% if order.delivered_at or order.is_delivered or "delivered" in status %}
+          {% with dts=order.delivered_at|default:order.delivery_eta_ts|default:order.confirmed_at|default:order.placed_ts %}
+          <section class="fk-item">
+            <div class="fk-head">
+              <div>Delivered</div>
+              <div class="fk-when">{{ dts|date:"M j, Y, g:i A" }}</div>
+            </div>
+
+            <div class="fk-sub">
+              Your item has been delivered
+              <span class="when">{{ dts|date:"M j, Y, g:i A" }}</span>
+            </div>
+          </section>
+          {% endwith %}
+        {% elif order.delivery_eta_ts %}
+          <section class="fk-item">
+            <div class="fk-head">
+              <div>Delivery by</div>
+              <div class="fk-when">{{ order.delivery_eta_ts|date:"M j, Y, g:i A" }}</div>
+            </div>
+
+            <div class="fk-sub">
+              Estimated delivery date.
+              <span class="when">{{ order.delivery_eta_ts|date:"M j, Y, g:i A" }}</span>
+            </div>
+          </section>
+        {% endif %}
+      {% endwith %}
+
+    </div>
+  </div>
+</div>
+
+
+{% load static %}
+
+<!-- Backdrop -->
+<div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+
+<!-- Modal -->
+<div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+  <header style="position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;">
+    <h4 id="session-title" style="margin:0;text-align:center;">Your session expired</h4>
+ <button id="session-close-outside" aria-label="Close">×</button>
+  </header>
+
+  <!-- hero image -->
+  <div class="session-hero" aria-hidden="true">
+    <img src="{% static 'images/sessionend.png' %}" alt="" />
+  </div>
+
+  <!-- optional “why” link -->
+  <div class="why" id="why-link-wrap">
+    <a href="#" id="why-link">Why did this happen?</a>
+  </div>
+  <div id="session-why-text" class="msg" style="display:none;">
+    For security, we auto-sign out after inactivity or when your session token expires.
+  </div>
+
+  <!-- actions -->
+  <div class="session-actions">
+    <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+  </div>
+</div>
+
+
+
+</div>
+
+<script>
+
+(() => {
+  const toDate = (ts) => { let n = Number(ts||0); if(!n) return ''; if(n>1e12) n=Math.round(n/1000); const d=new Date(n*1000); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); };
+  document.querySelectorAll('.date').forEach(el=>{ el.textContent = toDate(el.getAttribute('data-ts')); });
+  const rows=document.querySelectorAll('#timeline .tl'); if(rows.length>=2){ const last=rows[rows.length-1].querySelector('.bar'); if(last) last.remove(); }
+})();
+
+(() => {
+  const strip = document.getElementById('access-card');
+  if (!strip) return;
+
+  const key = strip.dataset.hidekey;
+  const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+  const isReload = nav ? nav.type === 'reload' : (performance.navigation && performance.navigation.type === 1);
+
+  // Only hide if this is a RELOAD of this page and the flag is set
+  if (key && isReload && sessionStorage.getItem(key) === '1') {
+    strip.remove();
+  } else {
+    // For fresh navigations back to this page, clear the flag so the card reappears
+    if (key && !isReload) sessionStorage.removeItem(key);
+  }
+})();
+
+
+document.querySelectorAll('.price-list .has-more .tw').forEach(btn=>{
+  btn.addEventListener('click', ()=>btn.parentElement.classList.toggle('open'));
+});
+
+document.querySelectorAll('.plabel').forEach(lbl=>{
+  lbl.addEventListener('click', ()=>{
+    const chev = lbl.querySelector('.chev'); chev && chev.classList.toggle('up');
+    const id = lbl.getAttribute('data-exp'); const exp = id ? document.getElementById(id) : lbl.parentElement.nextElementSibling;
+    if (!exp) return; exp.style.display = exp.style.display==='block' ? 'none' : 'block';
+  });
+});
+
+document.querySelectorAll('.price-list .expander').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const tgt=document.getElementById(btn.dataset.target); const open=btn.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open?'true':'false'); if(tgt) tgt.classList.toggle('show', open);
+  });
+});
+
+
+
+(function () {
+  // --- DOM refs (all optional-safe) ---
+  const list     = document.getElementById('access-list');        // inside modal
+  const modal    = document.getElementById('access-modal');
+  const back     = document.getElementById('access-backdrop');
+  const openBtn  = document.getElementById('btn-manage-access');  // “Manage who can access”
+  const closeBtn = document.getElementById('access-close');       // × button
+  const strip    = document.getElementById('access-card');        // the small card on the page
+
+  // If modal/backdrop are missing, bail early (keeps page resilient)
+  if (!modal || !back) return;
+
+  // --- helpers ---
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = String(y);
+    document.body.style.top = `-${y}px`;
+    document.body.classList.add('no-scroll');
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.classList.remove('no-scroll');
+    document.body.style.top = '';
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+  function openAccess(){
+    modal.style.display = 'block';
+    back.style.display  = 'block';
+    lockScroll();
+  }
+  function closeAccess(){
+    modal.style.display = 'none';
+    back.style.display  = 'none';
+    unlockScroll();
+  }
+  // expose for other code (removal handler)
+  window.__closeAccessModal = closeAccess;
+
+  // --- open/close wiring ---
+  openBtn  && openBtn.addEventListener('click', e => { e.preventDefault(); openAccess(); });
+  closeBtn && closeBtn.addEventListener('click', closeAccess);
+  back     && back.addEventListener('click', closeAccess);
+  ['wheel','touchmove'].forEach(evt => {
+    back && back.addEventListener(evt, e => e.preventDefault(), { passive:false });
+  });
+
+  // --- remove number handler ---
+  if (list) {
+    function getCookie(name){
+      const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
+      return m ? m.pop() : '';
+    }
+
+    list.addEventListener('click', async (e) => {
+      if (!e.target.classList.contains('remove')) return;
+
+      const badge = e.target.closest('.badge');
+      const phone = badge?.dataset.ph;
+      if (!phone) return;
+
+      // optimistic UI
+      badge.remove();
+
+      let remaining = 0;
+      const api = list.dataset.api || '';
+
+      try {
+        if (api) {
+          const res  = await fetch(api, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ phone })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (typeof data?.remaining === 'number') remaining = data.remaining;
+        } else {
+          remaining = list.querySelectorAll('.badge[data-ph]').length;
+        }
+
+        if (remaining <= 0) {
+          // show empty state inside modal
+          list.innerHTML = '<div class="badge"><span>No numbers</span></div>';
+
+          // hide the strip now and on reloads
+          const key = strip?.dataset.hidekey;
+          if (key) sessionStorage.setItem(key, '1');
+          if (strip && strip.parentNode) strip.remove();
+
+          // close modal & unlock scroll
+          window.__closeAccessModal && window.__closeAccessModal();
+        }
+
+        showToast(`${phone} removed successfully!`, 'success');
+      } catch (err) {
+        showToast('Something went wrong. Please try again.', 'error');
+      }
+    });
+  }
+})();
+
+function showToast(msg, kind='success'){
+  const t=document.getElementById('toast'), m=document.getElementById('toast-msg'); if(!t||!m) return;
+  m.textContent=msg; t.className='toast '+kind; void t.offsetWidth; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2100);
+}
+
+// enhanced click: ripple + brief loading state + double-click guard
+(function(){
+  const btn = document.querySelector('.btn-invoice-js');
+  if(!btn) return;
+
+  let lock = false;
+  btn.addEventListener('click', function(e){
+    if(lock) { e.preventDefault(); return; }  // block double taps
+
+    // ripple
+    const r = document.createElement('span');
+    r.className = 'ripple';
+    const rect = btn.getBoundingClientRect();
+    const x = (e.clientX || (rect.left + rect.width/2)) - rect.left;
+    const y = (e.clientY || (rect.top + rect.height/2)) - rect.top;
+    r.style.left = x + 'px';
+    r.style.top  = y + 'px';
+    btn.appendChild(r);
+    setTimeout(()=> r.remove(), 520);
+
+    // loading state (doesn't stop navigation; PDF download starts)
+    btn.classList.add('loading');
+    lock = true;
+
+    // auto-reset just in case (download keeps current page)
+    setTimeout(()=>{
+      btn.classList.remove('loading');
+      lock = false;
+    }, 4000);
+  }, {passive:true});
+})();
+
+
+
+(function(){
+  const root = document.getElementById('order-root');
+  if (!root) return;
+  if (root.dataset.sessionExpired !== '1') return;
+
+  const modal = document.getElementById('session-modal');
+  const back  = document.getElementById('session-backdrop');
+  const closeOutside = document.getElementById('session-close-outside');
+  const whyLink  = document.getElementById('why-link');
+  const whyBlock = document.getElementById('session-why-text');
+
+  // modal-only scroll lock
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+
+  function open(){ modal.style.display='block'; back.style.display='block'; lockScroll(); }
+  function shut(){ modal.style.display='none'; back.style.display='none'; unlockScroll(); }
+
+  // Why toggle: blue on hover via CSS; red once clicked via .clicked class
+  function toggleWhy(e){
+    e.preventDefault();
+    if (!whyLink || !whyBlock) return;
+    const open = whyBlock.style.display !== 'block';
+    whyBlock.style.display = open ? 'block' : 'none';
+    whyLink.classList.toggle('clicked', open);              // red when open
+    whyLink.textContent = open ? 'Hide details' : 'Why did this happen?';
+  }
+
+  closeOutside?.addEventListener('click', shut);
+  back?.addEventListener('click', shut);
+  whyLink?.addEventListener('click', toggleWhy);
+
+  // Only show the modal if the session is STILL bad now
+  fetch('/api/userview/', { credentials:'same-origin' })
+    .then(r => { if (r.status !== 200) open(); })
+    .catch(open);
+})();
+
+
+
+
+(() => {
+  const toDate = (ts) => { let n = Number(ts||0); if(!n) return ''; if(n>1e12) n=Math.round(n/1000);
+    const d=new Date(n*1000); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); };
+  document.querySelectorAll('.date').forEach(el => { el.textContent = toDate(el.getAttribute('data-ts')); });
+
+  const list = document.getElementById('mini-tl2');
+  if(!list) return;
+
+  const rows = list.querySelectorAll('.status-row');
+  if(rows.length < 2) return;
+
+  const delivered = list.dataset.delivered === '1';
+  const dot1 = rows[0].querySelector('.status-dot');
+  const dot2 = rows[1].querySelector('.status-dot');
+  if(!dot1 || !dot2) return;
+
+  const r1 = dot1.getBoundingClientRect();
+  const r2 = dot2.getBoundingClientRect();
+  const root = list.getBoundingClientRect();
+
+  const cx  = Math.round((r1.left + r1.width / 2) - root.left);
+  const c1y = (r1.top + r1.height/2) - root.top;
+  const c2y = (r2.top + r2.height/2) - root.top;
+  const R   = r1.height / 2;
+
+  const segStart = c1y + R;
+  const segLen   = Math.max(0, (c2y - R) - (c1y + R));
+
+  const OVERLAP = R;
+  const FUDGE   = 2;
+  const start = Math.max(0, segStart - OVERLAP);
+  const lost  = (segStart - OVERLAP) - start;
+  const len   = Math.max(0, segLen + OVERLAP - lost);
+
+  //  Delivered: full, Not delivered: half
+  const progress = delivered ? 1 : 0.5;
+  const fillLen  = Math.round(len * progress) + FUDGE;
+
+  list.style.setProperty('--x',        `${cx}px`);
+  list.style.setProperty('--segStart', `${start}px`);
+  list.style.setProperty('--segLen',   `${len}px`);      // grey track to 2nd dot
+  list.style.setProperty('--fillLen',  `${fillLen}px`);  // green fill (half if !delivered)
+
+  //  Always show the 2nd dot; keep it hollow when not delivered
+  dot2.classList.remove('ok');
+  dot2.classList.add('hollow');
+  dot2.innerHTML = '';
+
+  // Animate the green fill
+  const duration = 1600;
+  list.style.setProperty('--fill-ms', duration + 'ms');
+  requestAnimationFrame(() => list.classList.add('animate'));
+
+  //  Only flip to a tick when delivered
+  if (delivered) {
+    setTimeout(() => {
+      dot2.classList.remove('hollow');
+      dot2.classList.add('ok');
+      if(!dot2.querySelector('svg')){
+        dot2.innerHTML = `
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M3 6l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>`;
+      }
+    }, duration + 60);
+  }
+})();
+
+
+
+/* ================== Updates Modal (Flipkart-like) ================== */
+(function(){
+  // ---- DOM refs ----
+  const openBtn        = document.getElementById('link-updates');
+  const modal          = document.getElementById('updates-modal');
+  const back           = document.getElementById('updates-backdrop');
+  const closeBtn      = document.getElementById('updates-close');
+  const closeOutside  = document.getElementById('updates-close-outside');
+  const bodyEl         = document.getElementById('updates-body');
+
+  if(!openBtn || !modal || !back || !bodyEl) return;
+
+  // ---- helpers: scroll lock / unlock ----
+  function lockScroll(){
+    const sw = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = sw ? sw + 'px' : '';
+  }
+  function unlockScroll(){
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+  }
+
+  function open(){
+    back.hidden = false;
+    modal.hidden = false;
+    lockScroll();
+  }
+  function close(){
+    modal.hidden = true;
+    back.hidden  = true;
+    unlockScroll();
+  }
+
+  // ---- date helpers ----
+  function toEpoch(x){
+    if(!x) return 0;
+    if(typeof x === 'number') return x > 1e12 ? Math.round(x/1000) : x; // ms->s if needed
+    if(/^\d+$/.test(x)){ const n = Number(x); return n > 1e12 ? Math.round(n/1000) : n; }
+    const t = Date.parse(x);
+    return isNaN(t) ? 0 : Math.round(t/1000);
+  }
+  function fmt(epochSeconds){
+    if(!epochSeconds) return '';
+    const d = new Date(epochSeconds * 1000);
+    return d.toLocaleString('en-US', {
+      month:'short', day:'numeric', year:'numeric',
+      hour:'numeric', minute:'2-digit'
+    });
+  }
+
+  // ---- render the content inside the modal ----
+  function renderFlipkartish(){
+    const root = document.getElementById('order-root');
+    if(!root){ bodyEl.innerHTML = ''; return; }
+    const ds = root.dataset;
+
+    // *** FAILED / NOT PLACED short-circuit ***
+    const status   = (ds.orderStatus || '').toLowerCase();
+    const isFailed = /not\s*placed|payment\s*failed|failed/.test(status);
+
+    // Choose a sensible timestamp to show for failed case
+    const created  = toEpoch(ds.createdTs || ds.created_ts || ds.placedTs || ds.placed_ts || ds.confirmedTs || ds.confirmed_ts);
+    const createdF = fmt(created);
+
+    if (isFailed){
+      bodyEl.innerHTML = `
+        <div class="fk-list fk-failed">
+          <section class="fk-item failed">
+            <div class="fk-head">
+              <div>Order Not Placed</div>
+              <div class="fk-when">${createdF}</div>
+            </div>
+            <div class="fk-sub">
+              Your payment was not confirmed by the bank.
+              <span class="when">${createdF}</span>
+            </div>
+          </section>
+        </div>`;
+      return; // stop: no rail, no other sections
+    }
+
+    // ---- Normal (successful / in-progress) build ----
+    const confirmedTs = toEpoch(ds.confirmedTs || ds.confirmed_ts || ds.confirmed || ds.placedTs || ds.placed_ts);
+    const deliveredTs = toEpoch(ds.deliveredTs || ds.delivered_ts || ds.delivered);
+    const etaTs       = toEpoch(ds.etaTs || ds.deliveryEtaTs || ds.delivery_eta_ts);
+    const isDelivered =
+      ds.isDelivered === '1' ||
+      /delivered/.test((ds.orderStatus || '').toLowerCase()) ||
+      !!deliveredTs;
+
+    let html = '<div class="fk-list">';
+
+    // 1) Order Confirmed
+    if (confirmedTs){
+      const when = fmt(confirmedTs);
+      html += `
+        <section class="fk-item">
+          <div class="fk-head">
+            <div>Order Confirmed</div>
+            <div class="fk-when">${when}</div>
+          </div>
+          <div class="fk-sub">Your Order has been placed.<span class="when">${when}</span></div>
+          <div class="fk-sub">Seller has processed your order.<span class="when">${when}</span></div>
+          <div class="fk-sub">Your item has been picked up by the delivery partner.<span class="when">${when}</span></div>
+        </section>`;
+    }
+
+    // 2) Shipped (same timestamp as confirmed, as per your mock)
+    if (confirmedTs){
+      const when = fmt(confirmedTs);
+      html += `
+        <section class="fk-item">
+          <div class="fk-head">
+            <div>Shipped</div>
+            <div class="fk-when">${when}</div>
+          </div>
+          <div class="fk-sub">Your item has been shipped.<span class="when">${when}</span></div>
+          <div class="fk-sub">Your item has been received in the hub nearest to you<span class="when">${when}</span></div>
+        </section>`;
+    }
+
+    // 3) Out For Delivery — show if we have deliveredTs or etaTs
+    if (deliveredTs || etaTs){
+      const outWhen = fmt(deliveredTs || etaTs);
+      html += `
+        <section class="fk-item">
+          <div class="fk-head">
+            <div>Out For Delivery</div>
+            <div class="fk-when">${outWhen}</div>
+          </div>
+          <div class="fk-sub">Your item is out for delivery<span class="when">${outWhen}</span></div>
+        </section>`;
+    }
+
+    // 4) Delivered (prefer deliveredTs); else “Delivery by …”
+    if (isDelivered && deliveredTs){
+      const when = fmt(deliveredTs);
+      html += `
+        <section class="fk-item">
+          <div class="fk-head">
+            <div>Delivered</div>
+            <div class="fk-when">${when}</div>
+          </div>
+          <div class="fk-sub">Your item has been delivered<span class="when">${when}</span></div>
+        </section>`;
+    } else if (etaTs){
+      const when = fmt(etaTs);
+      html += `
+        <section class="fk-item">
+          <div class="fk-head">
+            <div>Delivery by</div>
+            <div class="fk-when">${when}</div>
+          </div>
+          <div class="fk-sub">Estimated delivery date.<span class="when">${when}</span></div>
+        </section>`;
+    }
+
+    html += '</div>';
+    bodyEl.innerHTML = html;
+
+    // ---- Section-wise progress animation (rail) ----
+    const list  = bodyEl.querySelector('.fk-list');
+    const items = Array.from(list.querySelectorAll('.fk-item'));
+    if (items.length < 2) return;  // nothing to animate
+
+    // Make an overlay rail element (once)
+    let rail = list.querySelector('.fk-rail');
+    if (!rail) {
+      rail = document.createElement('span');
+      rail.className = 'fk-rail';
+      // style comes from CSS: the ::before/::after in your sheet already handle track/fill;
+      // this one is a simple growing bar; we’ll just set height.
+      rail.style.position = 'absolute';
+      rail.style.left = 'var(--gutter)';
+      rail.style.transform = 'translateX(-50%)';
+      rail.style.width = '2px';
+      rail.style.background = '#16a34a';
+      rail.style.borderRadius = '2px';
+      rail.style.height = '0px';
+      rail.style.zIndex = '1';
+      list.appendChild(rail);
+    }
+
+    const listRect   = list.getBoundingClientRect();
+    const scrollTop  = list.scrollTop;
+    const centers    = items.map(it => {
+      const head = it.querySelector('.fk-head');
+      const r = head.getBoundingClientRect();
+      return (r.top - listRect.top) + scrollTop + Math.round(r.height/2);
+    });
+
+    // start at the first dot
+    rail.style.top = `${centers[0]}px`;
+    rail.style.height = '0px';
+
+    // smooth animate height to each subsequent dot
+    const targets = centers.map(c => c - centers[0]);
+    const msPerStep = 1200;
+    const ease = t => t<.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+
+    function animateTo(targetH){
+      return new Promise(resolve=>{
+        const h0 = parseFloat(rail.style.height) || 0;
+        const dh = targetH - h0;
+        const t0 = performance.now();
+        function tick(now){
+          const p   = Math.min(1, (now - t0)/msPerStep);
+          const val = h0 + dh * ease(p);
+          rail.style.height = `${val}px`;
+          if (p < 1) requestAnimationFrame(tick);
+          else resolve();
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+
+    (async () => {
+      // mark first section as reached (black text)
+      items.forEach(i => i.classList.remove('reached'));
+      items[0].classList.add('reached');
+      for(let i=1;i<targets.length;i++){
+        await animateTo(targets[i]);
+        items[i].classList.add('reached');
+      }
+    })();
+  }
+
+  // ---- wire up open/close ----
+  openBtn.addEventListener('click', (e) => { e.preventDefault(); renderFlipkartish(); open(); });
+  closeBtn && closeBtn.addEventListener('click', close);
+  closeOutside && closeOutside.addEventListener('click', close);
+  back.addEventListener('click', close);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !modal.hidden) close(); });
+})();
+
+
+
+(function () {
+  const spin = document.getElementById('vo-spin');
+  if (!spin) return;
+
+  const show = () => {
+  spin.classList.add('show');
+  document.documentElement.classList.add('vo-spinning');   // <— add
+};
+const hide = () => {
+  spin.classList.remove('show');
+  document.documentElement.classList.remove('vo-spinning'); // <— remove
+};
+
+  // Flag to skip the beforeunload spinner for downloads
+  let skipBeforeUnload = false;
+
+  // Elements that must never trigger the spinner
+  const EXCLUDE = [
+    '#btn-manage-access',   // access strip
+    '#link-updates',        // “See all updates” modal
+    '#btn-invoice',         // invoice download
+    '.btn-invoice-js',      // invoice button class
+    '[data-nospin]'         // optional: mark anything else with this
+  ];
+  const EXCLUDE_SEL = EXCLUDE.join(',');
+
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a');
+    if (!a) return;
+
+    // Ignore non-primary clicks or with modifiers (open in new tab)
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    // 1) Never spin for excluded controls
+    if (a.matches(EXCLUDE_SEL) || a.closest(EXCLUDE_SEL)) {
+      // prevent the beforeunload overlay from flashing for downloads
+      if (a.matches('#btn-invoice, .btn-invoice-js') ||
+          a.hasAttribute('download') ||
+          /invoice|\.pdf($|\?)/i.test(a.href)) {
+        skipBeforeUnload = true;
+        setTimeout(() => { skipBeforeUnload = false; }, 4000);
+      }
+      return;
+    }
+
+    // 2) Ignore JS/hash links
+    const raw = a.getAttribute('href') || '';
+    if (!raw || raw === '#' || raw.startsWith('javascript:')) return;
+
+    function showSpinner(label){
+  const box = document.getElementById('vo-spin');
+  if (label) {
+    const t = box?.querySelector('.txt');
+    if (t) t.textContent = label;
+  }
+  box?.classList.add('show');
+
+  // use a neutral lock class that ONLY blocks scroll — not cursor
+  document.documentElement.classList.add('vo-lock');
+  document.body.style.overflow = 'hidden';
+}
+function hideSpinner(){
+  document.getElementById('vo-spin')?.classList.remove('show');
+  document.documentElement.classList.remove('vo-lock');
+  document.body.style.overflow = '';
+}
+
+
+    // 3) Only same-origin navigations in this tab
+    const u = new URL(a.href, location.href);
+    if (a.target && a.target !== '_self') return;
+    if (u.origin !== location.origin) return;
+    if (u.pathname === location.pathname && u.hash && !u.search) return;
+
+    // Real navigation -> show spinner
+    show();
+  }, { capture: true, passive: true });
+
+  // Show for toolbar refresh/back/forward — unless skipped
+  window.addEventListener('beforeunload', (e) => {
+    if (skipBeforeUnload) return;
+    show();
+  });
+
+  // Hide when the next page is ready (also handles bfcache)
+  window.addEventListener('load', hide);
+  window.addEventListener('pageshow', (e) => { if (e.persisted) hide(); });
+})();
+</script>
+{% endblock %}

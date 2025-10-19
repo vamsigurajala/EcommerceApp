@@ -54,31 +54,36 @@
       {% endfor %}
     {% endif %}
 
-    <form method="POST">
-      {% csrf_token %}
-      <div class="input-field">
-        <input type="text" name="email" placeholder="Enter your email" value="{{ email|default:'' }}" required>
-      </div>
-      <div class="input-field">
-        <input type="password" name="password" placeholder="Enter your password" required>
-      </div>
-      <div class="checkbox-text">
-        <div class="checkbox-content">
-          <input type="checkbox" id="logcheck">
-          <label for="logcheck" class="text">Remember me</label>
-        </div>
-        <a href="{% url 'forgot_password' %}" class="text">Forgot Password?</a>
-      </div>
-      <div class="input-field button">
-        <input type="submit" value="Login Now">
-      </div>
-    </form>
+  <form method="POST"
+      action="{% url 'loginuser' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">
+  {% csrf_token %}
 
-    <div class="login-signup">
-      <span class="text">Not a member?
-        <a href="{% url 'usersignup' %}" class="signed-text">Signup now</a>
-      </span>
+  <!-- carry next through safely -->
+  <input type="hidden" name="next"
+         value="{% firstof request.GET.next request.POST.next '/api/paginate/?page=1' %}"/>
+
+  <div class="input-field">
+    <input type="text" name="email" placeholder="Enter your email" value="{{ email|default:'' }}" required>
+  </div>
+  <div class="input-field">
+    <input type="password" name="password" placeholder="Enter your password" required>
+  </div>
+
+  <div class="checkbox-text">
+    <div class="checkbox-content">
+      <input type="checkbox" id="logcheck">
+      <label for="logcheck" class="text">Remember me</label>
     </div>
+    <a href="{% url 'forgot_password' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}" class="text">
+      Forgot Password?
+    </a>
+  </div>
+
+  <div class="input-field button">
+    <input type="submit" value="Login Now">
+  </div>
+</form>
+
   </div>
 </div>
 {% endblock %}

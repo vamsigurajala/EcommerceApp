@@ -1,355 +1,1056 @@
 {% extends 'changemode.html' %}
+{% load static %}
+
 {% block extra_style %}
 <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    body {
-        font-family: 'Inter', Arial, sans-serif;
-        font-size: 16px;
-        background: #f5f5f5;
-    }
-    body.dark-mode {
-        background: #181818;
-        color: #fff;
-    }
-    .fixed-back-btn {
-        position: fixed;
-        left: 30px;
-        top: 40px;
-        z-index: 1000;
-        background-color: #333;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        padding: 8px 16px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-    }
-    .fixed-back-btn:hover { background: #555; }
-    .cart-container {
-    width: 70vw;
-    max-width: 1900px;
-    min-height: 300px;   
-    margin: 32px auto 0 auto;
-    padding: 16px 20px 24px 20px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 0 22px rgba(0, 0, 0, 0.13);
-    position: relative;
-}
-    body.dark-mode .cart-container {
-        background: #232323;
-        color: #fff;
-    }
-    h1 {
-        text-align: center;
-        font-size: 2.4rem;
-        margin-bottom: 18px;
-        font-weight: 700;
-        color: #24262b;
-    }
-    body.dark-mode h1 {
-        color: #fff;
-    }
-    .cart-table-scroll {
-        max-height: calc(70vh - 140px);
-        min-height: 200px;
-        overflow-y: auto;
-        overflow-y: auto;
-        margin-bottom: 20px;
-        border-radius: 7px;
-        box-shadow: 0 0 3px #eaeaea;
-        scrollbar-width: none; 
-    }
-    
-    .cart-table-scroll::-webkit-scrollbar {
-        display: none;        
-    }
-    
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background: none;
-    }
-    th, td {
-        text-align: left;
-        padding: 16px 10px;
-    }
-    th {
-        background: #24262b;
-        color: #fff;
-        font-weight: 600;
-        font-size: 17px;
-    }
-    body.dark-mode th {
-        background: #232323;
-        color: #fff;
-    }
-    tr:nth-child(even) {
-        background: #f8f8fa;
-    }
-    body.dark-mode tr:nth-child(even) {
-        background: #2b2b2b;
-    }
-    td {
-        font-size: 16px;
-        font-weight: 500;
-        vertical-align: middle;
-        color: #24262b;
-    }
-    body.dark-mode td {
-        color: #fff;
-    }
-    img {
-        width: 70px;
-        height: 70px;
-        border-radius: 6px;
-        object-fit: contain;
-        background: #f6f6f9;
-        display: block;
-        margin: auto;
-        border: 1px solid #eaeaea;
-    }
-    .quantity {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .btn-quantity {
-        border: none;
-        background-color: #24262b;
-        color: white;
-        font-weight: bold;
-        font-size: 20px;
-        padding: 5px 12px;
-        border-radius: 5px;
-        cursor: pointer;
-        margin: 0 6px;
-    }
-    .btn-quantity:hover {
-        background: #444;
-    }
-    .btn-delete {
-        border: none;
-        background-color: #ff2323;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-        padding: 8px 16px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .btn-clear {
-        border: none;
-        background-color: #a200ff;
-        color: white;
-        font-weight: bold;
-        font-size: 18px;
-        padding: 9px 22px;
-        border-radius: 7px;
-        cursor: pointer;
-        margin-right: 15px;
-    }
-    .btn-checkout {
-        border: none;
-        background-color: #058d2d;
-        color: white;
-        font-weight: bold;
-        font-size: 18px;
-        padding: 9px 24px;
-        border-radius: 7px;
-        cursor: pointer;
-        float: right;
-        margin-bottom: 32px;
-    }
-    .btn-clear:hover, .btn-checkout:hover { opacity: 0.83; }
-    /* Total row styling */
-    .cart-totals-row td {
-        border: none;
-        background: none;
-        padding: 18px 0 0 0;
-    }
-    .cart-totals-row td[colspan="4"] {
-        text-align: right;
-    }
-    .total-label-box {
-        display: inline-block;
-        background: #eef3fb;
-        color: #273755;
-        padding: 8px 23px 8px 23px;
-        border-radius: 7px;
-        font-weight: 700;
-        font-size: 20px;
-        margin-right: 8px;
-        min-width: 110px;
-        text-align: center;
-    }
-    .total-value-box {
-        display: inline-block;
-        background: #eef3fb;
-        color: #3556b7;
-        padding: 8px 23px 8px 23px;
-        border-radius: 7px;
-        font-weight: 700;
-        font-size: 20px;
-        min-width: 110px;
-        text-align: center;
-    }
-    body.dark-mode .total-label-box,
-    body.dark-mode .total-value-box {
-        background: #181e22;
-        color: #9bbcff;
-    }
-    .btn-delete i {
-    margin-right: 6px;
-    font-size: 1.1em;
-    color: #fff;
-    vertical-align: middle;
-}
-.cart-table-scroll thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #24262b; 
-  color: #fff;
-}
-body.dark-mode .cart-table-scroll thead th {
-  background: #232323;
-  color: #fff;
-}
+/* base */ body{font-family:'Inter',Arial,sans-serif;font-size:16px;background:#f5f5f5;} body.dark-mode{background:#181818;color:#fff;}
+/* top bar tweaks */ header.topbar{position:sticky;top:0;left:0;right:0;height:var(--header-h);z-index:1000;overflow:visible;padding:0 56px 0 24px;} header.topbar #theme-toggle{margin-right:8px;position:relative;} header.topbar .theme-tooltip{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);margin:0;z-index:2000;} main .page{margin-top:calc(var(--header-h) + 12px)!important;}
+/* containers (cart + wishlist share look) */ .cart-container,.wishlist-container{width:70vw;max-width:1900px;min-height:300px;margin:22px auto 0 auto;padding:12px 20px 20px;background:#fff;border-radius:12px;box-shadow:0 0 22px rgba(0,0,0,.13);} body.dark-mode .cart-container,body.dark-mode .wishlist-container{background:#232323;color:#fff;}
+/* cart head strip */ .cart-head{display:flex;align-items:center;gap:10px;padding:10px 6px 6px 6px;border-bottom:1px solid #ececec;margin:0 0 8px;} body.dark-mode .cart-head{border-bottom:1px solid #2b2b2b;} .cart-badge-icon{width:28px;height:28px;display:inline-grid;place-items:center;background:#e0ecff;border:1px solid #bfdbfe;border-radius:9999px;color:#2563eb;font-weight:900;} .cart-head-title{font-size:18px;font-weight:800;}
+/* list */ .cart-list{display:flex;flex-direction:column;margin:6px 0 14px;} .row-divider{height:1px;background:#ececec;margin:0 6px;} body.dark-mode .row-divider{background:#2b2b2b;}
+/* ORDER SUMMARY look reused */ .summary-item{display:grid;grid-template-columns:112px 1fr;grid-template-rows:auto auto;column-gap:16px;row-gap:8px;padding:18px 0;border-bottom:1px solid #ececec;} body.dark-mode .summary-item{border-bottom:1px solid #2b2b2b;} .summary-item img{grid-column:1;grid-row:1;width:112px;height:112px;object-fit:contain;border:0;background:transparent;border-radius:0;} .summary-item .details{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;gap:6px;} .summary-item .name{font-weight:800;} .summary-item .price-row{display:flex;align-items:center;gap:18px;margin:4px 0 8px;} .summary-item .price{display:block;margin:2px 0 2px;font-weight:900;}
+/* qty row like checkout */ .qty-row{grid-column:1;grid-row:2;justify-self:center;display:flex;align-items:center;gap:8px;margin-top:4px;} .qty-btn{width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #cbd5e1;color:#111;cursor:pointer;display:inline-grid;place-items:center;font-weight:900;line-height:1;box-shadow:0 6px 16px rgba(2,6,23,.08);} body.dark-mode .qty-btn{background:#0b1220;color:#e5e7eb;border-color:#374151;} .qty-num{min-width:28px;text-align:center;font-weight:800;}
+/* when disabled: light gray + not-allowed cursor (keep the “–” glyph) */ .qty-btn[disabled]{opacity:.55;cursor:not-allowed;pointer-events:auto;}
+/* actions inline */ .actions-inline{grid-column:2;grid-row:2;align-self:center;margin-top:0;display:flex;gap:16px;flex-wrap:wrap;}
+/* action buttons styled like checkout REMOVE */ .remove-btn{background:transparent;border:0;padding:0;margin:0;color:inherit;font-weight:800;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;line-height:1;} .remove-btn:hover{text-decoration:none;color:#ef4444;} .action-btn{background:transparent;border:0;padding:0;margin:0;color:inherit;font-weight:800;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;line-height:1;} .action-btn:hover{text-decoration:none;color:#ef4444;}
+/* totals */ .total-bar{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:6px;} .total-label-box{display:inline-block;background:#eef3fb;color:#273755;padding:8px 23px;border-radius:7px;font-weight:800;font-size:18px;min-width:110px;text-align:center;} .total-value-box{display:inline-block;background:#eef3fb;color:#3556b7;padding:8px 23px;border-radius:7px;font-weight:800;font-size:18px;min-width:110px;text-align:center;} body.dark-mode .total-label-box,body.dark-mode .total-value-box{background:#181e22;color:#9bbcff;} .btn-clear{border:none;background:#a200ff;color:#fff;font-weight:800;font-size:16px;padding:10px 18px;border-radius:8px;cursor:pointer;margin-right:auto;} .btn-checkout{border:none;background:#058d2d;color:#fff;font-weight:800;font-size:16px;padding:10px 18px;border-radius:8px;cursor:pointer;} .btn-clear:hover,.btn-checkout:hover{opacity:.88;}
+/* wishlist header (container matches cart above) */ .wish-head{display:flex;align-items:center;gap:10px;padding:10px 6px 6px 6px;border-bottom:1px solid #ececec;cursor:pointer;user-select:none;} body.dark-mode .wish-head{border-bottom:1px solid #2b2b2b;} .wish-heart{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:#fee2e2;border:1px solid #fca5a5;border-radius:9999px;} .wish-title{font-weight:800;font-size:18px;}
+/* wishlist body + rows (same grid as cart rows) */ .wish-body{display:none;padding-top:8px;} .wish-body.open{display:block!important;} .wish-row{display:grid;grid-template-columns:112px 1fr;grid-template-rows:auto auto;column-gap:16px;row-gap:8px;padding:18px 0;border-bottom:1px solid #ececec;} body.dark-mode .wish-row{border-bottom:1px solid #2b2b2b;} .wish-img{grid-column:1;grid-row:1;width:112px;height:112px;object-fit:contain;border:0;background:transparent;border-radius:0;} .wish-details{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;gap:6px;} .wish-title-line{font-weight:800;} .wish-price{font-weight:700;opacity:.9;} .wish-row .qty-row{grid-column:1;grid-row:2;justify-self:center;display:flex;align-items:center;gap:8px;margin-top:4px;} .wish-row .actions-inline{grid-column:2;grid-row:2;align-self:center;margin-top:0;display:flex;gap:16px;flex-wrap:wrap;}
+/* overlay spinner */ #loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);display:none;justify-content:center;align-items:center;z-index:2000;} .spinner{border:6px solid #f3f3f3;border-top:6px solid #3498db;border-radius:50%;width:50px;height:50px;animation:spin .8s linear infinite;} @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@media (max-width:900px){.cart-container,.wishlist-container{max-width:120vw;padding:0 2vw;} .summary-item,.wish-row{grid-template-columns:90px 1fr;} .summary-item img,.wish-img{width:90px;height:90px;}}
 
-    @media (max-width: 900px) {
-        .cart-container { max-width: 97vw; padding: 11px 2vw 18px 2vw; }
-        .fixed-back-btn { left: 10px; top: 16px; }
-    }
-    /* Full-screen overlay */
-#loading-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.4);
-  display: none; /* hidden initially */
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
+/* session modal – one-liners */ .session-actions{display:flex;gap:10px;margin-top:12px;} .btn-login{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none;} .btn-login:hover{filter:brightness(1.05);} .btn-why{background:transparent;color:var(--ink-soft);border:0;padding:0;cursor:pointer;}
+#session-expired-modal .btn-login{display:block;width:100%;text-align:center;justify-content:center;padding:14px 16px;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);} #session-expired-modal .btn-login:hover{filter:brightness(1.04);}
+.session-actions{display:flex;justify-content:center;} #session-modal .why a{text-decoration:none;color:inherit;} #session-modal .why a:hover{text-decoration:none;}
+#session-close-outside{font-size:28px;z-index:5002;} #session-modal .why a:hover{color:#2563eb;} #session-modal .why a.clicked{color:#ef4444;}
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;position:relative;z-index:1;} body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+#session-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:100000!important;} #session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);background:var(--paper,#fff);color:var(--ink,#0f172a);border:1px solid var(--line,#e5e7eb);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:100001!important;overflow:visible;}
+#session-modal header{position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;} #session-modal header h1,#session-modal header h2,#session-modal header h3,#session-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;color:var(--ink,#0f172a)!important;}
+#session-close-outside{position:absolute;top:-18px;right:-59px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;font-size:26px;line-height:1;background:var(--paper,#fff);color:var(--ink-soft,#64748b);border:1px solid var(--line,#e5e7eb);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;}
+.session-hero{display:block;margin:8px auto 12px;} .session-hero img{width:100%;height:auto;display:block;object-fit:contain;border-radius:8px;filter:none;}
+body.dark-mode #session-modal{background:#161616;color:#fff;border-color:#2a2a2a;} body.dark-mode #session-close-outside{background:#161616;color:#cbd5e1;border-color:#2a2a2a;box-shadow:0 6px 18px rgba(0,0,0,.6);} body.dark-mode #session-modal header h1,body.dark-mode #session-modal header h2,body.dark-mode #session-modal header h3,body.dark-mode #session-modal header h4{color:#fff!important;}
+.btn-login,.btn-login:link,.btn-login:visited,.btn-login:hover,.btn-login:active,.btn-login:focus{text-decoration:none!important;}
 
-/* Spinner animation */
-.spinner {
-  border: 6px solid #f3f3f3;
-  border-top: 6px solid #3498db;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 0.8s linear infinite;
-}
+/* keep your existing .qty-btn[disabled] rule */
+.qty-btn[disabled]{opacity:.55;cursor:not-allowed;pointer-events:auto;position:relative;}
+/* no emoji overlay on disabled qty button */
+.qty-btn[disabled]:hover::after{content:none !important;display:none !important;}
+/* duplicate kept on purpose, as requested */
+.qty-btn[disabled]{opacity:.55;cursor:not-allowed;pointer-events:auto;/* position:relative;  <-- remove this line if you like */}
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+/* no divider after the last cart item */ .cart-list > .summary-item:last-child{border-bottom:0;padding-bottom:0;}
+/* no divider after the last wishlist item */ .wish-body > .wish-row:last-child{border-bottom:0;padding-bottom:0;}
+/* dark mode (keeps behavior identical) */ body.dark-mode .cart-list > .summary-item:last-child,body.dark-mode .wish-body > .wish-row:last-child{border-bottom:0;}
+
+/* ---- Toast: centered, bottom ---- */
+#toast-stack{position:fixed;left:0;right:0;bottom:24px;display:flex;justify-content:center;align-items:flex-end;gap:10px;z-index:100000;pointer-events:none;}
+.toast{display:inline-flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #16a34a;color:#e5eeff;padding:12px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:min(92vw,520px);white-space:normal;pointer-events:auto;opacity:0;transform:translateY(12px);transition:opacity .18s,transform .18s;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast .icon{width:22px;height:22px;border-radius:9999px;background:#22c55e;display:grid;place-items:center;flex:none;}
+.toast .icon svg{width:14px;height:14px;display:block;}
+.toast .icon svg path{stroke:#fff;stroke-width:3;fill:none;}
+.toast .msg{font-weight:700;color:#fff;}
+.toast .dot{flex:0 0 auto;width:18px;height:18px;border-radius:9999px;background:#22c55e;display:grid;place-items:center;font-size:12px;color:#fff;margin-top:2px;}
+/* The stack shouldn't stretch its children */
+#toast-stack{justify-items:start;}
+/* Shrink toast to the message size, but cap it responsively */
+.toast{display:inline-flex;width:max-content;max-width:min(92vw,520px);white-space:normal;}
+
+.has-tip{position:relative;}
+.tip-bubble{display:none;position:absolute;left:50%;top:110%;transform:translateX(-50%);background:#232323;color:#fff;padding:7px 16px;border-radius:6px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.18);white-space:nowrap;margin-top:7px;z-index:99;pointer-events:none;opacity:0;transition:opacity .15s;}
+.has-tip:hover .tip-bubble{display:block;opacity:1;}
+.tip-bubble::before{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);border-width:0 7px 7px;border-style:solid;border-color:transparent transparent #232323;}
+
+#theme-toggle{font-size:20px;border:0;background:none;color:#fff;cursor:pointer;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+#theme-toggle:hover{background:rgba(255,255,255,.12);}
+/* Hand cursor when hovering the trash button and its tooltip */
+.has-tip,.has-tip *:not(.tip-bubble)::before{cursor:pointer;}
+.has-tip .tip-bubble{cursor:pointer;}
+/* Let wishlist height follow its content */
+.wishlist-container{min-height:0 !important;}
+/* Optional: when wishlist is truly empty, keep a comfy empty state height */
+.wishlist-container.is-empty{min-height:300px !important;}
+/* Wishlist empty state = image only */
+.wish-empty{display:block;min-height:260px;padding:0;border-radius:10px;background:#fafafa;border:1px dashed #e5e7eb;overflow:hidden;}
+.wish-empty img{display:block;width:100%;height:100%;object-fit:contain;}
+body.dark-mode .wish-empty{background:#1f1f1f;border-color:#343434;}
+
+/* Wishlist header right-aligned Close button */
+.wish-head{position:relative;}
+.wish-close{margin-left:auto;padding:6px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:800;font-size:12px;letter-spacing:.2px;cursor:pointer;}
+body.dark-mode .wish-close{background:#0b1220;border-color:#2b2b2b;color:#fff;}
+.wish-close.hidden{display:none;}
+/* Collapsed state = body hidden, header stays */
+.wishlist-container.collapsed #wishlistBody{display:none !important;}
+
+/* CLOSE button in wishlist header (only when empty) */
+.wish-close-btn{margin-left:auto;padding:6px 12px;font-weight:800;font-size:12px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;}
+body.dark-mode .wish-close-btn{background:#161616;border-color:#2a2a2a;color:#e5e7eb;}
+/* Collapsed state: hide body and the CLOSE button, shrink container */
+.wishlist-container.collapsed .wish-body{display:none !important;}
+.wishlist-container.collapsed .wish-close-btn{display:none !important;}
+.wishlist-container.collapsed{min-height:64px !important;}
+/* Show CLOSE only when empty; hide after collapsed */
+.wish-close{margin-left:auto;padding:6px 12px;font-weight:800;border:1px solid #e5e7eb;background:#fff;border-radius:10px;cursor:pointer;display:none;}
+.wishlist-container[data-empty="1"] .wish-close{display:inline-flex;}
+.wishlist-container.collapsed .wish-close{display:none;}
+/* Collapse behavior */
+.wishlist-container.collapsed .wish-body{display:none !important;}
+.wishlist-container.collapsed{padding-bottom:12px;}
+/* When wishlist is collapsed, hide the header divider line and tighten spacing so no faint line remains */
+.wishlist-container.collapsed .wish-head{border-bottom:0 !important;margin-bottom:0 !important;padding-bottom:8px;}
+/* Already collapsing the body; also trim container bottom padding */
+.wishlist-container.collapsed{padding-bottom:8px;}
+/* Safety: if you have any row dividers inside the body, ensure they’re hidden */
+.wishlist-container.collapsed .row-divider{display:none !important;}
+/* OPEN + EMPTY: header shouldn't look clickable; only CLOSE is */
+
+/* COLLAPSED: header is clickable again */
+.wishlist-container.collapsed .wish-head{cursor:pointer;pointer-events:auto;}
+/* When the wishlist is collapsed, shrink the bottom padding so the title looks centered */
+.wishlist-container.collapsed{padding-bottom:10px;}
+.wishlist-container.collapsed{padding-bottom:10px !important;}
+/* No divider when the wishlist is empty (whether collapsed or open) */
+.wishlist-container.is-empty .wish-head{border-bottom:0 !important;}
+/* Keep the divider only when there ARE items */
+.wishlist-container:not(.is-empty) .wish-head{border-bottom:1px solid #ececec;}
+/* --- wishlist header cursor logic --- */
+.wish-head{cursor:default;}
+.wishlist-container.is-empty.collapsed .wish-head{cursor:pointer;}
+/* hide the header divider when empty+collapsed */
+.wishlist-container.collapsed .wish-head{border-bottom:none !important;}
+/* shrink the container a bit when collapsed so the title sits visually centered */
+.wishlist-container.collapsed{padding-bottom:6px !important;}
+/* only show the CLOSE button when empty and opened */
+.wl-close-btn{margin-left:auto;background:#fff;border:1px solid #e5e7eb;border-radius:9999px;padding:6px 12px;font-weight:800;cursor:pointer;}
+body.dark-mode .wl-close-btn{background:#0b1220;color:#e5e7eb;border-color:#2b2b2b;}
+.wishlist-container.is-empty.collapsed .wl-close-btn{display:none;}
+/* keep the dark-mode divider consistent (same as your other headers) */
+body.dark-mode .wish-head{border-bottom:1px solid #2b2b2b;}
+/* force hand cursor on the CLOSE button */
+.wl-close-btn{cursor:pointer !important;}
+/* When empty + open: header is not clickable, but the CLOSE button must still be clickable */
+.wishlist-container.is-empty:not(.collapsed) .wish-head #wishlistClose,.wishlist-container.is-empty:not(.collapsed) .wish-head .wl-close-btn{pointer-events:auto !important;cursor:pointer !important;}
+/* Show the divider only when there ARE items */
+.wishlist-container:not(.is-empty) .wish-head{border-bottom:1px solid #ececec;}
+body.dark-mode .wishlist-container:not(.is-empty) .wish-head{border-bottom:1px solid #2b2b2b;}
+/* Hide the divider completely when empty (open OR collapsed) */
+.wishlist-container.is-empty .wish-head{border-bottom:0 !important;}
+body.dark-mode .wishlist-container.is-empty .wish-head{border-bottom:0 !important;}
+
+/* --- CART EMPTY (single, consolidated) ----------------------------------- */
+/* Container with small centered image + CTA */
+.cart-empty{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;padding:6px 0 16px;background:transparent;border:0;overflow:hidden;}
+/* Small, responsive illustration */
+.cart-illustration{width:320px;max-width:42vw;height:auto;object-fit:contain;display:block;}
+/* CTA button under/over the image (keeps hand cursor) */
+.cart-empty .empty-cta{margin-top:12px;display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:9999px;background:#fff;color:#111;border:2px solid #111;font-weight:800;letter-spacing:.2px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.18);}
+.cart-empty .empty-cta:hover{filter:brightness(.96);}
+.cart-empty .empty-cta svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;}
+/* Dark-mode adjustments (placed AFTER base so they win) */
+body.dark-mode .cart-empty .empty-cta{background:#0b1220;color:#e5e7eb;border-color:#e5e7eb;}
+body.dark-mode .cart-empty .empty-cta:hover{filter:brightness(1.08);}
+/* Hide the header divider when the cart is empty (both themes) */
+.cart-container.is-empty .cart-head{border-bottom:0 !important;margin-bottom:0 !important;padding-bottom:8px;}
+/* Safety: if any generic row dividers exist inside, hide them */
+.cart-container.is-empty .row-divider{display:none !important;}
+/* Phone size tweak */
+@media (max-width:760px){.cart-illustration{width:240px;max-width:70vw;}}
+/* was: width:320px; max-width:42vw; */
+.cart-illustration{width:540px;max-width:76vw;height:auto;object-fit:contain;display:block;}
+/* was: min-height:260px; */
+.cart-empty{min-height:320px;}
+/* Make cart/wishlist edges visible on light bg */
+.cart-container,.wishlist-container{border:1px solid #e5e7eb;box-shadow:0 16px 22px rgba(15,23,42,.10);margin-bottom:28px;}
+/* Match in dark, but with darker/softer shadow + dark border */
+body.dark-mode .cart-container,body.dark-mode .wishlist-container{border-color:#2b2b2b;box-shadow:0 16px 36px rgba(0,0,0,.45);}
+
+/* spinner */
+:root{--spin-color:#7c3aed;}
+#vo-spin{position:fixed;inset:0;z-index:99999;display:none;place-items:center;background:rgba(10,10,14,.35);backdrop-filter:blur(2px);}
+#vo-spin.show{display:grid;}
+#vo-spin .wrap{display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;}
+#vo-spin .ring{width:64px;height:64px;border-radius:50%;display:block;border:6px solid color-mix(in srgb,var(--spin-color) 20%,transparent);border-top-color:var(--spin-color);border-right-color:color-mix(in srgb,var(--spin-color) 60%,transparent);animation:vo-rot .8s linear infinite;}
+#vo-spin .txt{margin:0;font:700 14px/1.1 Inter,system-ui,Arial,sans-serif;color:#fff;letter-spacing:.2px;opacity:.95;text-shadow:0 1px 0 rgba(0,0,0,.25);}
+@keyframes vo-rot{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion:reduce){#vo-spin .ring{animation:none;}}
+html.vo-spinning,html.vo-spinning *{cursor:auto !important;}
+html.vo-spinning,html.vo-spinning body{overflow:hidden !important;overscroll-behavior:none;}
+html.vo-lock{overflow:hidden;}
+
+/* Orange checkout button (no underline) */
+a.btn-checkout{display:inline-block;padding:10px 18px;border-radius:8px;font-weight:800;background:#f97316;color:#fff;border:none;text-decoration:none;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12);}
+a.btn-checkout:hover{filter:brightness(.96);text-decoration:none;}
+a.btn-checkout:active{transform:translateY(1px);}
+
+/* --- Better Total look -------------------------------------------------- */
+.total-bar.pro{display:flex;align-items:center;gap:14px;justify-content:flex-end;margin-top:10px;}
+.total-chip{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.02));border:1px solid rgba(15,23,42,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 16px rgba(2,6,23,.08);}
+body.dark-mode .total-chip{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.01));border-color:#2b2b2b;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 26px rgba(0,0,0,.35);}
+.total-chip .chip-label{font-weight:800;letter-spacing:.2px;color:#64748b;}
+body.dark-mode .total-chip .chip-label{color:#9aa4b2;}
+.total-chip .chip-amount{display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:18px;color:#0f172a;font-variant-numeric:tabular-nums;}
+body.dark-mode .total-chip .chip-amount{color:#e5eeff;}
+.total-chip .chip-amount .fa-indian-rupee-sign{font-size:15px;opacity:.9;}
+a.btn-checkout{padding:10px 16px;}
+@media (max-width:560px){.total-bar.pro{flex-direction:column;align-items:stretch;gap:10px;}.total-chip{justify-content:space-between;}a.btn-checkout{width:100%;text-align:center;}}
+.remove-btn:hover{text-decoration:none;color:#ef4444;}
+.action-btn:hover{text-decoration:none;color:#3b5abe;}
+.action-btn:focus-visible{outline:2px solid #3b5abe;outline-offset:2px;}
+
+/* --- Proceed button --- */
+.btn-checkout{-webkit-appearance:none;appearance:none;border:0;outline:0;text-decoration:none;display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:9999px;font-weight:800;font-size:15px;letter-spacing:.2px;color:#fff;background:linear-gradient(135deg,#ff8a00 0%,#ff5e00 100%);box-shadow:0 10px 18px rgba(255,120,0,.22),0 2px 4px rgba(0,0,0,.08);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;cursor:pointer;}
+.btn-checkout:hover{transform:translateY(-1px);box-shadow:0 14px 24px rgba(255,120,0,.28),0 4px 8px rgba(0,0,0,.10);filter:saturate(1.05);}
+.btn-checkout:active{transform:translateY(0) scale(.99);box-shadow:0 8px 14px rgba(255,120,0,.22),0 2px 4px rgba(0,0,0,.10);}
+.btn-checkout:focus-visible{outline:3px solid #fed7aa;outline-offset:3px;box-shadow:0 0 0 3px rgba(255,255,255,.15),inset 0 0 0 1px rgba(255,255,255,.15);}
+.btn-checkout svg{width:16px;height:16px;flex:none;transition:transform .15s ease;}
+.btn-checkout:hover svg{transform:translateX(2px);}
+.btn-checkout[disabled],.btn-checkout.is-loading{filter:grayscale(.2) brightness(.9);cursor:not-allowed;box-shadow:none;}
+body.dark-mode .btn-checkout{box-shadow:0 12px 24px rgba(0,0,0,.35),0 6px 12px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.06);}
+
+/* --- Align item ETA with the checkout column --- */
+:root{--checkout-column-offset:260px;}
+.summary-item .price-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-right:var(--checkout-column-offset);}
+.summary-item .eta{font-weight:800;color:#0f172a;white-space:nowrap;}
+body.dark-mode .summary-item .eta{color:#e5eeff;}
+@media (max-width:640px){.summary-item .price-row{padding-right:0;flex-wrap:wrap;row-gap:6px;}.summary-item .eta{margin-left:auto;}}
+
+/* === Confirm modal: compact, boxy === */
+#confirm-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:420px;max-width:92vw;background:var(--paper,#fff);color:var(--ink,#0f172a);border:1px solid var(--line,#e5e7eb);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:200001 !important;display:none;}
+body.dark-mode #confirm-modal{background:#161616;color:#fff;border-color:#2a2a2a;}
+#confirm-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:200000 !important;display:none;}
+#confirm-modal header{display:flex;align-items:center;justify-content:center;margin:0 0 8px;}
+#confirm-modal header h4{margin:0;font:800 18px/1.25 Inter,system-ui,Arial,sans-serif;letter-spacing:.2px;}
+#confirm-close{position:absolute;top:-2px;right:-44px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;font-size:26px;line-height:1;background:var(--paper,#fff);color:var(--ink-soft,#64748b);border:1px solid var(--line,#e5e7eb);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;}
+body.dark-mode #confirm-close{background:#161616;color:#cbd5e1;border-color:#2a2a2a;}
+#confirm-text{margin:0 0 14px;text-align:center;}
+#confirm-modal .session-actions{justify-content:center;gap:10px;margin-top:2px;}
+#confirm-modal .btn-primary{-webkit-appearance:none;appearance:none;border:0;outline:0;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:800;font-size:14px;letter-spacing:.2px;color:#fff;background:#2563eb;box-shadow:none;cursor:pointer;}
+#confirm-modal .btn-primary:hover{filter:brightness(1.04);}
+#confirm-modal .btn-secondary{-webkit-appearance:none;appearance:none;padding:10px 16px;border-radius:10px;font-weight:800;font-size:14px;letter-spacing:.2px;background:#f3f4f6;color:#0f172a;border:1px solid #e5e7eb;cursor:pointer;}
+body.dark-mode #confirm-modal .btn-secondary{background:#0b1220;color:#e5e7eb;border-color:#2b2b2b;}
+#confirm-modal .btn-secondary:hover{filter:brightness(.98);}
+/* Hard scroll lock while confirm is open */
+html.modal-lock,body.modal-lock{overflow:hidden !important;height:100% !important;}
+html.vo-lock,body.vo-lock{overscroll-behavior:none;}
+#confirm-backdrop{touch-action:none;}
+
+/* The container should NOT clip overflow vertically */
+.cart-container{position:relative;overflow:visible;}
+/* make the totals/footer stick to the bottom of the card and span its full width */
+.cart-container{position:relative;}
+/* match the card’s side padding (you use 20px on the container) */
+.cart-sticky{position:sticky;bottom:0;z-index:40;margin-left:-20px;margin-right:-20px;padding:12px 20px;background:#fff;border-top:1px solid #e5e7eb;box-shadow:0 -8px 18px rgba(0,0,0,.06);}
+body.dark-mode .cart-sticky{background:#232323;border-top-color:#2b2b2b;box-shadow:0 -10px 24px rgba(0,0,0,.35);}
+.cart-sticky::before{content:"";position:absolute;left:0;right:0;top:-16px;height:16px;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,0.85),rgba(255,255,255,0));}
+body.dark-mode .cart-sticky::before{background:linear-gradient(to bottom,rgba(35,35,35,0.9),rgba(35,35,35,0));}
+.cart-sticky .total-bar.pro{margin:0;padding:0;display:flex;align-items:center;justify-content:flex-end;gap:14px;}
+.cart-sticky .total-chip{transform:translateY(1px);}
+.cart-sticky .btn-checkout{padding:12px 18px;}
+@media (max-width:560px){.cart-sticky .total-bar.pro{flex-direction:column;align-items:stretch;gap:10px;}.cart-sticky .btn-checkout{width:100%;}}
+/* kill the 1px seam */
+.cart-sticky{border-top:0 !important;}
+/* keep the nice “items slide under” fade without a hard edge */
+.cart-sticky::before{top:-14px;height:14px;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.90));}
+body.dark-mode .cart-sticky::before{background:linear-gradient(to bottom,rgba(35,35,35,0),rgba(35,35,35,.90));}
+/* container stays the same */
+.wish-empty{position:relative;}
+/* crisper, text-size–matched ghost button */
+.wish-empty .ghost-cta{position:absolute;left:50%;transform:translateX(-50%);bottom:35px;background:transparent;color:#fff;border:2px solid rgba(255,255,255,.92);border-radius:2px;box-shadow:none;font-family:Inter,system-ui,Arial,sans-serif;font-weight:800;font-size:13.5px;line-height:1;letter-spacing:.8px;text-transform:uppercase;padding:8px 14px;text-decoration:none;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+.wish-empty .ghost-cta:hover{filter:brightness(1.05);}
+.wish-empty .ghost-cta:focus-visible{outline:3px solid rgba(255,255,255,.6);outline-offset:3px;border-color:#fff;}
+@media (max-width:640px){.wish-empty .ghost-cta{bottom:42px;font-size:12.5px;padding:7px 12px;}}
+
 
 </style>
 {% endblock %}
 
 {% block content %}
-<button class="btn-back fixed-back-btn" onclick="location.href='/api/paginate/'">Get Back</button>
-<div class="cart-container">
-    <h1>Your Cart</h1>
-    {% if cartitems %}
-    <!-- Loading overlay -->
-<div id="loading-overlay">
-  <div class="spinner"></div>
-</div>
+      <!-- sentinel for session modal (same contract as checkout) -->
+      <div id="order-root" data-session-expired="{% if session_expired %}1{% else %}0{% endif %}" data-read-only="{{ read_only|default:0 }}" style="display:none;"></div>
 
-    <div class="cart-table-scroll">
-        <table>
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Name</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                    <th>Clear Item</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in cartitems %}
-                <tr>
-                    <td>
-                        <img src="{{ item.product.image }}" alt="{{ item.product.product_name }}">
-                    </td>
-                    <td>
-                        <h4>{{ item.product.product_name }}</h4>
-                    </td>
-                    <td>
-                        <div class="quantity">
-                            <button class="btn-quantity" onclick="location.href='/api/reducequantity?product_id={{ item.product_id }}'; return false;">-</button>
-                            <span>{{ item.quantity }}</span>
-                            <button class="btn-quantity" onclick="location.href='/api/addquantity?product_id={{ item.product_id }}'; return false;">+</button>
-                        </div>
-                    </td>
-                    <td>{{ item.product.price }}</td>
-                    <td>{{ item.total_price }}</td>
-                    <td><button class="btn-delete" onclick="location.href='/api/deleteproduct?product_id={{ item.product_id }}'; return false;">
-                        <i class="fa fa-trash"></i> Delete
-                    </button></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="cart-totals-row">
-                    <td colspan="3"></td>
-                    <td>
-                        <span class="total-label-box">Total:</span>
-                    </td>
-                    <td>
-                        <span class="total-value-box">Rs.{{ cart_total }}</span>
-                    </td>
-                    <td></td>
-                </tr>
-            </tfoot>
-        </table>
+      <div class="cart-container {% if not cartitems %}is-empty{% endif %}">
+      <!-- Cart header -->
+      <div class="cart-head">
+        <span class="cart-badge-icon"><i class="fa fa-shopping-cart"></i></span>
+
+        {% with count=cartitems|length %}
+          <span class="cart-head-title" aria-label="Cart{% if count %} ({{ count }}){% endif %}">
+            {% if count %}Cart ({{ count }}){% else %}Cart{% endif %}
+          </span>
+        {% endwith %}
+
+
+        {% if cartitems and cartitems|length > 0 %}
+        <form action="{% url 'clearcart' %}" method="post" style="margin-left:auto">
+          {% csrf_token %}
+          <button type="submit" class="has-tip" aria-label="Clear cart"
+                  style="background:#fff;border:1px solid #e5e7eb;border-radius:9999px;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;">
+            <i class="fa fa-trash" aria-hidden="true"></i>
+            <span class="tip-bubble">Clear cart</span>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+
+
+  <!-- ... rest of the cart markup ... -->
+  {% if cartitems %}
+
+  <div class="cart-list">
+    {% for item in cartitems %}
+    <div class="summary-item" id="cart-item-{{ item.product_id }}">
+      <img src="{{ item.product.image }}" alt="{{ item.product.product_name }}">
+      <div class="details">
+      <div class="name">{{ item.product.product_name }}</div>
+
+      <div class="price-row">
+        <span class="price">₹ {{ item.total_price }}</span>
+        <span class="eta">{{ item.eta_display|default_if_none:"" }}</span>
+      </div>
     </div>
-    <div style="margin-top: 28px;">
-        <button class="btn-clear" onclick="location.href='/api/clearcart?product_id={{ item.product_id }}';">Clear Cart</button>
 
-        <!-- CHANGED: add ?open=summary&seed=1 and anchor -->
-        <button class="btn-checkout" onclick="location.href='/api/checkout/?seed=1'">Proceed to Checkout</button>
+      <div class="qty-row">
+        <form action="/api/reducequantity" method="get">
+          <input type="hidden" name="product_id" value="{{ item.product_id }}">
+          {# minus shows not-allowed + disabled when qty == 1 #}
+          <button type="submit" aria-label="Decrease" class="qty-btn minus-btn" {% if item.quantity|default:1 <= 1 %}disabled{% endif %}>–</button>
+        </form>
+        <span class="qty-num">{{ item.quantity|default:"1" }}</span>
+        <form action="/api/addquantity" method="get">
+          <input type="hidden" name="product_id" value="{{ item.product_id }}">
+          <button type="submit" aria-label="Increase" class="qty-btn">+</button>
+        </form>
+      </div>
+
+        <div class="actions-inline">
+        <form action="{% url 'move_cart_to_wishlist' %}" method="post" class="save-form">
+          {% csrf_token %}
+          <input type="hidden" name="product_id" value="{{ item.product_id }}">
+          <button type="submit" class="action-btn">SAVE FOR LATER</button>
+      </form>
+
+          <form action="/api/deleteproduct" method="get" class="remove-form"><input type="hidden" name="product_id" value="{{ item.product_id }}"><button type="submit" class="remove-btn">REMOVE</button></form>
+        </div>
+      </div>
+      {% endfor %}
     </div>
-{% else %}
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-    <p style="font-size:2rem; font-weight:600; text-align:center; margin-top: 30px;">Your cart is empty</p>
-    <p style="font-size:1.35rem; font-weight:500; text-align:center;">
-        Please shop to add some products 
-        <i class="fa fa-shopping-cart" style="margin-left:6px; font-size:1.4em; vertical-align:middle;"></i>
-    </p>
-</div>
 
-{% endif %}
-</div>
+    <!-- was: <div class="total-bar pro"> -->
+    <div class="cart-sticky">
+      <div class="total-bar pro">
+        <div class="total-chip">
+          <span class="chip-label">Total</span>
+          <span class="chip-amount">
+            <i class="fa fa-indian-rupee-sign" aria-hidden="true"></i>
+            <span class="amt">{{ cart_total }}</span>
+          </span>
+        </div>
+
+        <button class="btn-checkout" id="proceedBtn" type="button" data-spin="checkout">
+          <span>Proceed to Checkout</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+      {% else %}
+      <div class="cart-empty">
+        <img src="{% static 'images/cart.png' %}" alt="Cart is empty" class="cart-illustration">
+        <button class="empty-cta" type="button" onclick="window.location.href='/api/paginate/?page=1'">
+          <!-- cart icon (stroke follows text color) -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 3h2l2.4 12.3a2 2 0 0 0 2 1.7h7.8a2 2 0 0 0 2-1.6l1.4-7.4H7.1"/>
+            <circle cx="10" cy="20" r="1.8"></circle>
+            <circle cx="18" cy="20" r="1.8"></circle>
+          </svg>
+          <span>Start shopping</span>
+        </button>
+      </div>
+    {% endif %}
+
+    </div>
+    </div>
+
+<!-- WISHLIST (now a container matching cart) -->
+    <div
+      class="wishlist-container {% if not wishlistitems %}is-empty{% endif %}"
+      id="wishlistCard"
+      data-empty="{% if not wishlistitems or wishlistitems|length == 0 %}1{% else %}0{% endif %}"
+      data-count="{{ wishlistitems|length|default:'0' }}">
+      <div class="wish-head" id="wishlistHeader">
+        <span class="wish-heart"><i class="fa fa-heart" style="color:#ef4444;"></i></span>
+        {% with wc=wishlistitems|length %}
+          <span class="wish-title" id="wishlistTitle">
+            {% if wc and wc > 0 %}Saved for later ({{ wc }}){% else %}Wishlist{% endif %}
+          </span>
+        {% endwith %}
+
+        {# SHOW CLOSE ONLY WHEN EMPTY #}
+        {% if not wishlistitems or wishlistitems|length == 0 %}
+          <button id="wishlistClose"
+                  class="wl-close-btn"
+                  type="button"
+                  aria-label="Close empty wishlist">CLOSE</button>
+        {% endif %}
+      </div>
+
+
+
+      <div class="wish-body" id="wishlistBody">
+        {% if wishlistitems and wishlistitems|length > 0 %}
+          {% for w in wishlistitems %}
+          <div class="wish-row">
+      <!-- image -->
+      <img class="wish-img" src="{{ w.product.image }}" alt="{{ w.product.product_name }}">
+
+      <!-- details -->
+      <div class="wish-details">
+        <div class="wish-title-line">{{ w.product.product_name }}</div>
+        <div class="wish-price">Rs. {{ w.product.price }}</div>
+      </div>
+
+      <!-- qty (disabled in wishlist) -->
+    <div class="qty-row">
+      <form action="/api/wishlist/reducequantity/" method="get" style="display:inline">
+        <input type="hidden" name="product_id" value="{{ w.product_id }}">
+        <button type="submit" class="qty-btn" aria-label="Decrease" {% if w.quantity|default:1 <= 1 %}disabled{% endif %}>–</button>
+      </form>
+
+      <span class="qty-num">{{ w.quantity|default:"1" }}</span>
+
+      <form action="/api/wishlist/addquantity/" method="get" style="display:inline">
+        <input type="hidden" name="product_id" value="{{ w.product_id }}">
+        <button type="submit" class="qty-btn" aria-label="Increase">+</button>
+      </form>
+    </div>
+
+
+  <!-- actions: MOVE TO CART + REMOVE (no “save for later” here) -->
+    <div class="actions-inline">
+        <form action="/api/move-wishlist-to-cart/" method="post" class="move-form">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ w.product_id }}">
+            <button type="submit" class="action-btn">MOVE TO CART</button>
+        </form>
+
+
+        <form action="/api/removewishlist/" method="get" class="remove-wish-form">
+        <input type="hidden" name="product_id" value="{{ w.product_id }}">
+        <button type="submit" class="remove-btn">REMOVE</button>
+        </form>
+    </div>
+    </div>
+
+    {% endfor %}
+    {% else %}
+        <div class="wish-empty">
+        <img src="{% static 'images/wishlist.png' %}" alt="Your wishlist is empty">
+        <a class="ghost-cta" href="/api/paginate/?page=1">START SHOPPING</a>
+      </div>
+
+      {% endif %}
+        </div>
+      </div>
+
+        
+      {% load static %}
+
+      <div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+      <div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+        <header>
+          <h4 id="session-title">Your session expired</h4>
+          <button id="session-close-outside" aria-label="Close">×</button>
+        </header>
+
+        <div class="session-hero" aria-hidden="true">
+          <img src="{% static 'images/sessionend.png' %}" alt="">
+        </div>
+
+        <div class="why" id="why-link-wrap">
+          <a href="#" id="why-link">Why did this happen?</a>
+        </div>
+        <div id="session-why-text">For security, we auto-sign out after inactivity or when your session token expires.</div>
+
+        <div class="session-actions">
+          <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+        </div>
+      </div>
+
+      <div id="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+      <!-- Global spinner overlay -->
+      <div id="vo-spin" aria-live="polite" aria-busy="true">
+        <div class="wrap">
+          <span class="ring"></span>
+          <span class="txt" id="vo-spin-text">Loading…</span>
+        </div>
+      </div>
+
+
+      <div id="confirm-backdrop" class="modal-backdrop" style="display:none;"></div>
+      <div id="confirm-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" style="display:none;">
+        <header>
+          <h4 id="confirm-title">Remove Item</h4>
+          <button id="confirm-close" aria-label="Close">×</button>
+        </header>
+
+        <p id="confirm-text">Are you sure you want to remove this item?</p>
+
+        <div class="session-actions">
+          <button id="confirm-remove" class="btn-primary" type="button">Remove</button>
+          <button id="confirm-cancel" class="btn-secondary" type="button">Cancel</button>
+        </div>
+      </div>
 <script>
+
+/* ================== WISHLIST TOGGLER (legacy header click + dynamic title) ==================
+Opens wishlist by default when it has items, otherwise toggles on header click.
+Updates header text between “Wishlist” and “Saved for later (N)”.
+Also re-opens when user clicks inside the body area.
+================================================================= */
 (function () {
-  const btn = document.querySelector('.btn-checkout');        // use the existing button
-  const overlay = document.getElementById('loading-overlay'); // your overlay div
-  if (!btn || !overlay) return;
-
-  // Capture phase so we beat the inline onclick handler
-  btn.addEventListener('click', function (e) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    // show spinner immediately
-    overlay.style.display = 'flex';
-
-    // small delay so spinner is visible before navigation
-    setTimeout(function () {
-      // CHANGED: keep Order Summary open + reseed snapshot
-      window.location.href = '/api/checkout/?seed=1';
-    }, 1200); // adjust (e.g., 800–1500ms) as you like
-  }, true);
+  const card  = document.getElementById('wishlistCard'),
+        head  = document.getElementById('wishlistHeader'),
+        body  = document.getElementById('wishlistBody'),
+        title = document.getElementById('wishlistTitle');
+  let hasItems = parseInt('{{ wishlistitems|length|default:"0" }}', 10) || 0;
+  function setOpen(open) {
+    body.classList.toggle('open', open);
+    title.textContent = hasItems > 0
+      ? (open ? `Saved for later (${hasItems})` : 'Wishlist')
+      : (open ? 'No items are saved for later' : 'Wishlist');
+  }
+  setOpen(hasItems > 0);
+  head.addEventListener('click', () => setOpen(!body.classList.contains('open')));
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.wish-body a, .wish-body button')) return;
+    if (!body.classList.contains('open')) setOpen(true);
+  });
 })();
+
+
+ /* ================== CHECKOUT BUTTON HANDLER ==================
+Disables the button, shows global spinner with friendly text, then navigates to /api/checkout/.
+Hides spinner on load or BFCache return.
+============================================================== */
+(function(){
+  const btn = document.getElementById('proceedBtn');
+  if(!btn) return;
+
+  btn.addEventListener('click', function(){
+    // visual loading state to prevent double clicks
+    btn.classList.add('is-loading');
+    btn.setAttribute('disabled','');
+
+    // show your global spinner with a friendly label (you already have showSpinner)
+    if (window.showSpinner) showSpinner('Taking you to checkout…');
+
+    // now navigate (same behavior you had)
+    window.location.href = '/api/checkout/?seed=1';
+  });
+
+  // If the page returns via bfcache or quick load, spinner JS should hide it on pageshow/load.
+  window.addEventListener('pageshow', (e)=>{ if(e.persisted && window.hideSpinner) hideSpinner(); });
+  window.addEventListener('load', ()=>{ if(window.hideSpinner) hideSpinner(); });
+})();
+
+
+/* ================== SESSION-EXPIRED MODAL ==================
+Shows a session-expired dialog if backend flagged it or /api/userview/ returns non-200.
+Includes “Why did this happen?” toggle and closes on backdrop/“×”.
+Locks page scroll while open using fixed-body technique.
+============================================================= */
+(function(){
+  const modal=document.getElementById('session-modal'),back=document.getElementById('session-backdrop'),closeBtn=document.getElementById('session-close-outside'),whyLink=document.getElementById('why-link'),whyBlock=document.getElementById('session-why-text');
+  function lockScroll(){
+  lockY = window.scrollY || document.documentElement.scrollTop || 0;
+  document.documentElement.classList.add('vo-spinning','vo-lock');
+  // no fixing/offsetting the body for spinner
+}
+function unlockScroll(){
+  document.documentElement.classList.remove('vo-spinning','vo-lock');
+  // restore the exact position (harmless if unchanged)
+  window.scrollTo(0, lockY || 0);
+}
+  function open(){modal.style.display='block';back.style.display='block';lockScroll();}
+  function shut(){modal.style.display='none';back.style.display='none';unlockScroll();}
+  function toggleWhy(e){e.preventDefault();const openState=whyBlock.style.display!=='block';whyBlock.style.display=openState?'block':'none';whyLink.classList.toggle('clicked',openState);whyLink.textContent=openState?'Hide details':'Why did this happen?';}
+  closeBtn?.addEventListener('click',shut); back?.addEventListener('click',shut); whyLink?.addEventListener('click',toggleWhy);
+
+  // Show immediately if the backend told us the session is bad
+  const initialExpired=(document.getElementById('order-root')?.dataset.sessionExpired==='1')||(document.body.dataset.sessionExpired==='1');
+  if(initialExpired){ open(); return; }
+
+  // Otherwise ping the same endpoint checkout uses
+  fetch('/api/userview/',{credentials:'same-origin'}).then(r=>{ if(r.status!==200) open(); }).catch(open);
+})();
+
+
+/* ================== READ-ONLY GUARD (EXPIRED SESSION) ==================
+When in read-only mode, prevents all cart/wishlist actions and opens the session modal.
+Disables qty buttons and blocks form submits/clicks for mutating endpoints.
+======================================================================= */
+(function () {
+  // read the flag without using template tags in JS
+  const readOnly = (document.getElementById('order-root')?.dataset.readOnly === '1');
+  if (!readOnly) return;
+
+  // Block all cart/wishlist actions (click + submit)
+  const selector = [
+    'form[action*="add"]',
+    'form[action*="reduce"]',
+    'form[action*="delete"]',
+    'form[action*="clear"]',
+    'form[action*="wishlist"]',
+    'button.qty-btn',
+    'button.remove-btn',
+    'a.action-btn'
+  ].join(',');
+
+  function openSessionModal() {
+    const modal = document.getElementById('session-modal');
+    const back  = document.getElementById('session-backdrop');
+    if (modal && back) { modal.style.display = 'block'; back.style.display = 'block'; }
+  }
+
+  // Clicks
+  document.querySelectorAll(selector).forEach(el => {
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      openSessionModal();
+      return false;
+    }, true);
+  });
+
+  // Form submits (keyboard/enter)
+  document.querySelectorAll('form').forEach(f => {
+    const a = f.getAttribute('action') || '';
+    if (/(add|reduce|delete|clear|wishlist)/i.test(a)) {
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openSessionModal();
+        return false;
+      }, true);
+    }
+  });
+  document.querySelectorAll('.qty-btn').forEach(b => b.setAttribute('disabled', ''));
+})();
+
+
+/* ================== TOAST SYSTEM ==================
+Lightweight queueable toasts; use __toast.queue(msg) before a redirect and __toast.flush() on load.
+Auto-dismiss, bottom-center stack, keyboard-safe.
+=================================================== */
+(function(){
+  const stack = document.getElementById('toast-stack');
+  function showToast(msg, ms=2400){
+    if(!stack) return;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 12l4 4 8-8"/></svg>
+      </span>
+      <span class="msg"></span>
+    `;
+    el.querySelector('.msg').textContent = msg;
+    stack.appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('show'));
+    setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 220); }, ms);
+  }
+  window.__toast = {
+    queue(msg){ sessionStorage.setItem('toast_msg', msg); },
+    flush(){ const m=sessionStorage.getItem('toast_msg'); if(m){ showToast(m); sessionStorage.removeItem('toast_msg'); } },
+    show: showToast
+  };
+})();
+
+
+/* ================== TOAST FLUSH ON FIRST PAINT ==================
+Renders any queued toast stored in sessionStorage.
+=============================================================== */
+
+window.addEventListener('DOMContentLoaded', ()=> window.__toast.flush());
+/* ---------- Extracts product name from data attribute, else from closest row title; falls back to “Item”. ---------- */
+function getNameFrom(el){
+  const d = el?.dataset?.productName; if (d) return d;
+  const row = el.closest('.summary-item, .wish-row');
+  const t = row?.querySelector('.name, .wish-title-line');
+  return (t?.textContent || 'Item').trim();
+}
+
+
+/* ----------Queues “saved for later” toast when cart→wishlist form submits, then page reload shows it ---------- */
+document.querySelectorAll('form[action$="move-cart-to-wishlist/"]').forEach(form=>{
+  form.addEventListener('submit', ()=>{
+    const name = getNameFrom(form);
+    window.__toast.queue(`${name} saved for later`);
+  });
+});
+
+
+
+/* ================== SAVE FOR LATER (AJAX BUTTON PATH) ==================
+Tries XHR to /api/addtowishlist-ajax/ with CSRF; on success queues toast and redirects to ?open=wishlist.
+Falls back to native form submit if XHR fails.
+======================================================================= */
+(function(){
+  const csrftoken=(document.cookie.split('; csrftoken=').pop()||'').split(';')[0];
+  document.querySelectorAll('.btn-save-later').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      const pid = btn.dataset.productId; if(!pid) return;
+      const name = getNameFrom(btn);
+      try{
+        const resp = await fetch('/api/addtowishlist-ajax/', {
+          method:'POST',
+          headers:{'X-CSRFToken':csrftoken,'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+          body:new URLSearchParams({product_id:pid}), credentials:'same-origin'
+        });
+        if(!resp.ok) throw 0;
+        // queue then go to wishlist view
+        window.__toast.queue(`${name} saved for later`);
+        window.location.href = '/api/cart/?open=wishlist';
+      }catch(_){
+        // fallback: let the form submit normally (listener below will queue toast)
+        btn.closest('form')?.submit();
+      }
+    });
+  });
+})();
+
+(function () {
+  // Helper: product name + current qty in the row
+  function getRowAndName(el){
+    const row = el.closest('.summary-item, .wish-row');
+    const name = (row?.querySelector('.name, .wish-title-line')?.textContent || 'Item').trim();
+    return { row, name };
+  }
+  function getQtyInRow(row){
+    const q = parseInt(row?.querySelector('.qty-num')?.textContent || '1', 10);
+    return isNaN(q) ? 1 : q;
+  }
+
+  // Attach to both cart and wishlist forms
+  const forms = document.querySelectorAll([
+    'form[action^="/api/addquantity"]',
+    'form[action^="/api/reducequantity"]',
+    'form[action^="/api/wishlist/addquantity"]',
+    'form[action^="/api/wishlist/reducequantity"]'
+  ].join(','));
+
+  forms.forEach(form => {
+    form.addEventListener('submit', () => {
+      const { row, name } = getRowAndName(form);
+      const now = getQtyInRow(row);
+
+      // Infer delta from action
+      const action = (form.getAttribute('action') || '').toLowerCase();
+      const delta = action.includes('addquantity') ? +1 : -1;
+
+      // Predict next qty (clamp to >=1)
+      let next = now + delta;
+      if (next < 1) next = 1;
+
+      // Flipkart-style message
+      window.__toast.queue(`You've changed '${name}' quantity to '${next}'`);
+    }, true);
+  });
+})();
+
+/* ---------- MOVE TO CART (wishlist) ---------- */
+/* Match your template action: "/api/move-wishlist-to-cart/" */
+document.querySelectorAll('form[action^="/api/move-wishlist-to-cart"]').forEach(form=>{
+  form.addEventListener('submit', ()=>{
+    const name = getNameFrom(form.querySelector('[data-product-name]') || form);
+    window.__toast.queue(`${name} moved to cart`);
+  });
+});
+
+
+/* ================== WISHLIST CARD (EMPTY STATE COLLAPSER) ==================
+Keeps wishlist always open when it has items.
+When empty, supports open via ?open=wishlist and CLOSE button to collapse.
+=============================================================== */
+
+(function(){
+  const card    = document.getElementById('wishlistCard');
+  const head    = document.getElementById('wishlistHeader');
+  const body    = document.getElementById('wishlistBody');
+  const title   = document.getElementById('wishlistTitle');
+  const closeBtn= document.getElementById('wishlistClose');
+  if (!card || !head || !body || !title) return;
+
+  const count     = parseInt(card.dataset.count || '0', 10);
+  const isEmpty   = card.dataset.empty === '1';          // '1' means empty
+  const qsOpens   = new URLSearchParams(location.search).get('open') === 'wishlist';
+
+  function open(){  body.classList.add('open');  card.classList.remove('collapsed'); }
+  function close(){ body.classList.remove('open'); card.classList.add('collapsed'); }
+  function syncTitle(opened){
+    if (count > 0) {
+      title.textContent = opened ? `Saved for later (${count})` : 'Wishlist';
+    } else {
+      title.textContent = 'Wishlist';
+    }
+  }
+
+  // -------- initial state --------
+  if (count > 0) {
+    // When there are items, wishlist is always open and header is not clickable
+    open();
+    head.style.pointerEvents = 'none';
+  } else {
+    // Empty: respect ?open=wishlist, otherwise start collapsed
+    qsOpens ? open() : close();
+  }
+  syncTitle(body.classList.contains('open'));
+
+  // -------- interactions --------
+  // Header click: ONLY reopen when EMPTY + collapsed
+  head.addEventListener('click', (e)=>{
+    if (count > 0) return;                           // not clickable when items exist
+    if (e.target.closest('#wishlistClose')) return;  // ignore clicks on the CLOSE button itself
+    if (card.classList.contains('collapsed')) {
+      open();
+      syncTitle(true);
+    }
+  });
+
+  // CLOSE button (empty state only)
+  closeBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    e.stopPropagation();  // don't let the header listener re-open it
+    if (count === 0) {
+      close();
+      syncTitle(false);
+    }
+  });
+})();
+
+
+
+/* ================== GLOBAL SPINNER OVERLAY ==================
+showSpinner(text)/hideSpinner() + hard page scroll lock via html.vo-spinning/vo-lock.
+Arms all mutating forms to show an action-specific loading label.
+============================================================== */
+
+(function(){
+  // cache nodes
+  const box = document.getElementById('vo-spin');
+  const labelEl = document.getElementById('vo-spin-text');
+  let lockY = 0;
+
+  function lockScroll(){
+    lockY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.documentElement.classList.add('vo-spinning','vo-lock');
+    document.body.style.top = `-${lockY}px`;
+  }
+  function unlockScroll(){
+    document.documentElement.classList.remove('vo-spinning','vo-lock');
+    document.body.style.top = '';
+    window.scrollTo(0, lockY || 0);
+  }
+
+  function showSpinner(msg){
+    if (msg && labelEl) labelEl.textContent = msg;
+    box.classList.add('show'); lockScroll();
+  }
+  function hideSpinner(){
+    box.classList.remove('show'); unlockScroll();
+  }
+  window.showSpinner = showSpinner;
+  window.hideSpinner  = hideSpinner;
+
+  // Hide when fully loaded or bfcache-restore
+  window.addEventListener('load', hideSpinner);
+  window.addEventListener('pageshow', (e)=>{ if(e.persisted) hideSpinner(); });
+  
+
+  // --- messages per action (form action URL) ---
+  const actionMessages = [
+    [/\/api\/addquantity\b/i,              'Updating quantity…'],
+    [/\/api\/reducequantity\b/i,           'Updating quantity…'],
+    [/\/api\/wishlist\/addquantity\b/i,    'Updating quantity…'],
+    [/\/api\/wishlist\/reducequantity\b/i, 'Updating quantity…'],
+    [/move-cart-to-wishlist\b/i,           'Saving for later…'],
+    [/move-wishlist-to-cart\b/i,           'Moving to cart…'],
+    [/\/api\/deleteproduct\b/i,            'Removing item from cart…'],
+    [/\/api\/removewishlist\b/i,           'Removing item from wishlist…'],
+    [/\/api\/clearcart\b/i,                'Clearing cart…'],
+    [/\/api\/checkout\b/i,                 'Loading checkout…'],
+    [/\/api\/pay\/|\/pay\/start\/|\/pay\/success\/|\/pay\/failure\/|\/pay\/timeout\//i, 'Placing order…']
+  ];
+  function messageFor(el){
+    // explicit override
+    const ds = el?.dataset?.spin; if (ds) return ds;
+
+    const form = el?.closest('form');
+    const action = (form?.getAttribute('action') || '').toLowerCase();
+    for (const [re,msg] of actionMessages){ if(re.test(action)) return msg; }
+
+    const txt = (el?.getAttribute?.('aria-label') || el?.textContent || '').toLowerCase();
+    if (/save for later/.test(txt)) return 'Saving for later…';
+    if (/move to cart/.test(txt))  return 'Moving to cart…';
+    if (/remove/.test(txt))        return 'Removing item…';
+    if (/clear/.test(txt))         return 'Clearing cart…';
+    if (/checkout|place order/.test(txt)) return 'Loading checkout…';
+    return 'Loading…';
+  }
+
+  // Arm a form: disable double submit + show spinner with inferred label
+  function armForm(form){
+    if (!form || form.__armed) return;
+    form.__armed = true;
+    form.addEventListener('submit', function(){
+      const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (btn){ btn.disabled = true; btn.style.pointerEvents='none'; btn.style.opacity='.6'; }
+      showSpinner(messageFor(btn||form));
+    }, true);
+  }
+  window.__armCartForm = armForm; // in case you later inject forms via AJAX
+
+  // Arm all relevant forms already in the DOM
+  const selectors = [
+    'form[action^="/api/addquantity"]',
+    'form[action^="/api/reducequantity"]',
+    'form[action^="/api/wishlist/addquantity"]',
+    'form[action^="/api/wishlist/reducequantity"]',
+    'form[action$="move-cart-to-wishlist/"]',
+    'form[action^="/api/move-wishlist-to-cart"]',
+    'form[action^="/api/deleteproduct"]',
+    'form[action^="/api/removewishlist"]',
+    'form[action^="/api/clearcart"]'
+  ].join(',');
+  document.querySelectorAll(selectors).forEach(armForm);
+
+  // Also show spinner when clicking the checkout button (if it’s a button)
+  document.querySelectorAll('.btn-checkout').forEach(btn=>{
+    btn.addEventListener('click', ()=> showSpinner('Loading checkout…'));
+  });
+})();
+
+
+/* ================== CONFIRM MODAL (REMOVE/CLEAR) — INTERCEPTOR ==================
+Disarms target forms (removes old listeners), then intercepts submit to show confirm dialog.
+On “Remove”, marks form as confirmed, shows spinner, and submits.
+Closes on Cancel/×/backdrop.
+========================================================================= */
+
+(function(){
+  // ---------- helpers ----------
+  function disarmForm(f){
+    const clone = f.cloneNode(true);
+    f.parentNode.replaceChild(clone, f);
+    return clone;
+  }
+
+  // ADD: hard scroll lock helpers (same style you used elsewhere)
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.documentElement.classList.add('vo-lock'); // overscroll guard you already have in CSS
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.documentElement.classList.remove('vo-lock');
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+
+  function showConfirm(form, mode){
+    pendingForm = form;
+    titleEl.textContent = (mode === 'clear') ? 'Clear Cart' : 'Remove Item';
+    const name = (typeof getNameFrom === 'function') ? getNameFrom(form) : 'this item';
+    textEl.textContent  = (mode === 'clear')
+      ? 'Are you sure you want to remove all items from your cart?'
+      : `Are you sure you want to remove '${name}'?`;
+    modal.style.display = 'block';
+    back.style.display  = 'block';
+    lockScroll();                     
+  }
+  function closeConfirm(){
+    modal.style.display = 'none';
+    back.style.display  = 'none';
+    unlockScroll();                  
+    pendingForm = null;
+  }
+
+/* ================== CONFIRM MODAL SCROLL LOCK (UX) ==================
+Applies fixed-body lock when confirm opens; restores scroll position on close.
+Exposes window.__openConfirm/__closeConfirm if needed elsewhere.
+==================================================================== */
+
+  const modal   = document.getElementById('confirm-modal');
+  const back    = document.getElementById('confirm-backdrop');
+  const btnOK   = document.getElementById('confirm-remove');
+  const btnNo   = document.getElementById('confirm-cancel');
+  const btnX    = document.getElementById('confirm-close');
+  const textEl  = document.getElementById('confirm-text');
+  const titleEl = document.getElementById('confirm-title');
+
+  let pendingForm = null;
+
+  btnNo?.addEventListener('click', closeConfirm);
+  btnX ?.addEventListener('click', closeConfirm);
+  back ?.addEventListener('click', closeConfirm);
+
+  btnOK?.addEventListener('click', ()=>{
+    if (!pendingForm) return closeConfirm();
+    pendingForm.dataset.confirmed = '1';
+    if (window.showSpinner) showSpinner(
+      pendingForm.matches('.remove-wish-form') ? 'Removing item from wishlist…'
+                                               : 'Removing item from cart…');
+    if (pendingForm.requestSubmit) pendingForm.requestSubmit();
+    else pendingForm.submit();
+    closeConfirm();                  // spinner will apply its own lock after submit
+  });
+
+  // ---------- target forms ----------
+  const removeForms = Array.from(document.querySelectorAll('form.remove-form, form.remove-wish-form'));
+  const clearForm   = document.querySelector('form[action$="/api/clearcart/"]');
+
+  const armed = removeForms.map(disarmForm);
+  const clear = clearForm ? [disarmForm(clearForm)] : [];
+
+  armed.forEach(form=>{
+    form.addEventListener('submit', (e)=>{
+      if (document.getElementById('order-root')?.dataset.readOnly === '1') return;
+      if (form.dataset.confirmed === '1') return;
+      e.preventDefault(); e.stopPropagation();
+      showConfirm(form, 'remove');
+    });
+  });
+
+  clear.forEach(form=>{
+    form.addEventListener('submit', (e)=>{
+      if (document.getElementById('order-root')?.dataset.readOnly === '1') return;
+      if (form.dataset.confirmed === '1') return;
+      e.preventDefault(); e.stopPropagation();
+      showConfirm(form, 'clear');
+    });
+  });
+})();
+
+
 </script>
 {% endblock %}

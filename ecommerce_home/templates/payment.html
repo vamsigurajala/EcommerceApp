@@ -1,15 +1,15 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Novacart Payments</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends 'changemode.html' %}
 
-<!-- Inter font -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% block title %}Novacart Payments Page{% endblock %}
+
+{% block extra_style %}
 
 <style>
-/* ===================== THEME TOKENS ===================== */
+/* ---------------------------------------------
+   Core fonts + CSS variables (light theme)
+--------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap');
+/* Default (light) tokens */
 :root{
   --brand:#4f46e5;
   --cta:#fbbf24;
@@ -27,7 +27,9 @@
   --header-h: 64px;
   --stepbar-h: 56px;
 }
-html.dark{
+
+/* Dark tokens (single selector) */
+:root[data-theme="dark"]{
   --ink:#e5e7eb;
   --ink-soft:#94a3b8;
   --paper:#0b1220;
@@ -36,259 +38,192 @@ html.dark{
   --success-50:#052e1a;
   --success-200:#14532d;
 }
+/* ---------------------------------------------
+   Dark theme variables (enable with html.dark or body.dark-mode or [data-theme="dark"])
+--------------------------------------------- */
+html.dark, body.dark-mode, [data-theme="dark"]{ --ink:#e5e7eb; --ink-soft:#94a3b8; --paper:#0b1220; --bg:#050a16; --line:#1f2937; --success-50:#052e1a; --success-200:#14532d;}
 
-/* ===================== BASE ===================== */
-*{box-sizing:border-box}
-html,body{height:100%}
+/* Redundant explicit dark variable set (kept as-is) */
+html.dark{--ink:#e5e7eb;--ink-soft:#94a3b8;--paper:#0b1220;--bg:#050a16;--line:#1f2937;--success-50:#052e1a;--success-200:#14532d}
+
+/* ---------------------------------------------
+   Global reset + base body styles
+--------------------------------------------- */
+*{box-sizing:border-box}html,body{height:100%}
 body{
   margin:0;
   font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  color:var(--ink); background:var(--bg);
-}
+  color:var(--ink);
+  background:var(--bg);font-feature-settings: "liga" 1, "kern" 1;}
 
-/* ===================== HEADER ===================== */
-header{position:static;top:0;z-index:40;background:#0f172a;color:#fff}
-html.dark header{background:#0b1220}
+/* ---------------------------------------------
+   Override base layout from changemode.html
+   (allow this page to scroll and own header/nav)
+--------------------------------------------- */
+ /* force normal flow + scrolling */
+ /* also ensure <main> spans the width */
+ /* hide global theme toggle, header, nav coming from parent layout */
+ /* keep page scroll behavior sane */
+ /* page header color in both themes */
+html,body{height:auto!important}body{display:block!important;overflow:auto!important}main{width:100%;height:auto;display:block}
+body>#theme-toggle{display:none}
+
+html,body{overflow-y:auto!important; overscroll-behavior:auto;}
+main{overflow:visible;}
+
+/* ---------------------------------------------
+   Header layout + brand + shared display fonts
+--------------------------------------------- */
 .header-inner{max-width:var(--max);margin:0 auto;display:flex;align-items:center;gap:14px;padding:12px 16px}
 .brand{font-weight:800;letter-spacing:.2px;font-size:22px}
+h1,h2,h3,h4,.brand,.btn,.secure-pill,.crumb,.totals-toggle,.offers-tab,.field-label{
+  font-family: "Manrope", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+h1,h2,h3,h4,.brand{font-weight:800}
+.btn{font-weight:800}
 .crumb{margin-left:6px;font-weight:700;opacity:.92}
 .spacer{flex:1}
-.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);cursor:pointer}
-.icon-btn svg{width:20px;height:20px;fill:#fff}
 
-header{ display:none; }
+/* ---------------------------------------------
+   (Legacy) #theme-toggle styling if used locally
+--------------------------------------------- */
+#theme-toggle{position:static;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position: relative; }
+html.dark #theme-toggle{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.10);color:#fff}
+.icon-btn svg,#theme-toggle svg{width:20px;height:20px}
 
-/* Optional: show it back on ultra-wide screens */
-@media (min-width:1400px){
-  header{ display:block; }
-}
+/* ---------------------------------------------
+   Main page container (card-like canvas)
+--------------------------------------------- */
+.page{max-width:var(--max);margin:16px auto 48px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px 16px 16px}
 
-/* ===================== ONE OUTER CONTAINER  ===================== */
-.page{
-  max-width: var(--max);
-  margin: 16px auto 48px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 12px;                 
-  box-shadow: var(--shadow);
-  padding: 12px 16px 16px;
-}
-
-/* Top bar INSIDE the same container */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  padding: 6px 0 12px;
-  border-bottom: none !important;
-  padding-bottom: 0 !important;
-  margin-bottom: 12px !important;}
-
+/* ---------------------------------------------
+   Topbar row (step + secure pill)
+--------------------------------------------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 12px;border-bottom:none!important;padding-bottom:0!important;margin-bottom:12px!important; overflow: visible; }
 .top-left{display:flex;align-items:center;gap:10px;font-weight:800}
-.back-btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:32px; height:32px;
-  border:1px solid var(--line); border-radius:999px;
-  background:#fff; color:#334155; text-decoration:none;
-}
-.back-btn:hover{ background:#f8fafc; }
-html.dark .back-btn{ background:#0f172a; border-color:#1f2937; color:#cbd5e1; }
 
-/* Back button: white fill, black border, black arrow */
-.back-btn{
-  background:#fff !important;
-  color:#000 !important;             /* arrow uses currentColor */
-  border:2px solid #000 !important;  /* crisp black ring */
-  box-shadow:none !important;
-}
-.back-btn:hover{ background:#fff !important; }
-.back-btn:focus-visible{
-  outline:2px solid #000;
-  outline-offset:2px;
-}
+/* Back button chip style */
+.back-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:2px solid #000!important;border-radius:999px;background:#fff!important;color:#000!important;text-decoration:none;box-shadow:none!important}
+.back-btn:hover{background:#fff!important}
+.back-btn:focus-visible{outline:2px solid #000;outline-offset:2px}
+html.dark .back-btn{background:#fff!important;color:#000!important;border-color:#000!important}
 
-/* keep same look in dark mode too */
-html.dark .back-btn{
-  background:#fff !important;
-  color:#000 !important;
-  border-color:#000 !important;
-}
-
+/* Right side content in topbar */
 .top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* “100% Secure” pill */
 .secure-pill{font-weight:700;font-size:14px;background:#eef3ff;border:1px solid #dfe7ff;padding:6px 10px;border-radius:999px}
 html.dark .secure-pill{background:#0f172a;border-color:#1f2937;color:#cbd5e1}
+
+/* ---------------------------------------------
+   Generic button styles
+--------------------------------------------- */
 .btn-verify{background:#2a55e5;color:#fff;padding:0 16px}
 .btn{height:48px;border:none;border-radius:10px;font-weight:800;font-size:15px;cursor:pointer}
 
+/* ---------------------------------------------
+   Two-column grid (methods + price summary)
+--------------------------------------------- */
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:20px;margin-top:12px}
+.grid>*{min-width:0}
+@media (max-width:1276px){.grid{grid-template-columns:1fr}}
 
-/* ===================== LAYOUT ===================== */
-/* Columns that are allowed to shrink inside the page */
-.grid{
-  display:grid;
-  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
-  gap:20px;
-  margin-top:12px;
-}
-
-/* Also let grid children shrink (important for long rows/buttons) */
-.grid > *{ min-width:0; }
-@media (max-width:1276px){
-  .grid{ grid-template-columns:1fr; }
-}
+/* ---------------------------------------------
+   Card container used by sections/panels
+--------------------------------------------- */
 .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 
-/* ===================== SECTION / ACCORDION ===================== */
+/* ---------------------------------------------
+   Section (accordion) shell
+--------------------------------------------- */
 .section+.section{margin-top:12px}
 .section .head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
 .section .head h3{margin:0;font-size:16px;font-weight:700}
-.chev{transition:transform .25s var(--ease);opacity:.8}
-.section.open .chev{transform:rotate(180deg)}
+
 .section .body{padding:16px 18px 18px;display:grid;gap:10px}
-.input,.select{height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:15px;background:#fff;outline:none}
-html.dark .input, html.dark .select{background:#0f172a;color:#e5e7eb;border-color:#1f2937}
+
+/* ---------------------------------------------
+   Inputs/selects (light + dark variants)
+--------------------------------------------- */
+.input,.select{height:44px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:15px;background-color:#fff;outline:none}
+html.dark .input,html.dark .select{background-color:#0f172a;color:#e5e7eb;border-color:#1f2937}
+
+/* Primary “Pay” button + ghost variant */
 .btn-pay{background:var(--cta);color:#111}
 .btn-ghost{background:#f3f4f6;color:#111}
 
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:60}
+/* ---------------------------------------------
+   Generic modal backdrop + dialog container
+--------------------------------------------- */
+/* raise above header/topbar & tooltips */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:3000}
 .modal-backdrop.show{display:flex}
-.step{display:flex;gap:12px;align-items:flex-start}
-.appicon.logo{width:28px;height:28px;object-fit:contain;border-radius:6px}
-.upi-help{color:var(--brand);font-weight:800;text-decoration:none}
-.upi-help:hover{text-decoration:underline}
-/* Replace the old .step flex rule with this */
-.step{
-  display: grid;
-  grid-template-columns: 28px 1fr;  /* icon | content */
-  column-gap: 12px;
-  align-items: start;               /* align to the title's top */
-}
+/* ensure the white dialog itself sits atop its own backdrop stacking context */
+.modal-backdrop .modal{z-index:3001}
 
-/* Make sure the icon matches the title row */
-.step .logo{
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  align-self: start;                /* pin to top of the content block */
-  margin-top: -2px;                  /* tiny nudge for perfect alignment */
-}
+/* ---------------------------------------------
+   “Steps” list used inside help modals
+--------------------------------------------- */
+.step{display:grid;grid-template-columns:28px 1fr;column-gap:12px;align-items:start}
+.step .logo{width:26px;height:26px;object-fit:contain;align-self:start;margin-top:-2px}
+.step h5{margin:0 0 6px;font-size:16px;line-height:1.2}
 
-/* Tidy the heading spacing so the icon lines up cleanly */
-.step h5{
-  margin: 0 0 6px;
-  font-size: 16px;
-  line-height: 1.2;
-}
-
-/* CSS slide container */
+/* ---------------------------------------------
+   Accordion body show/hide animation
+--------------------------------------------- */
 .collapsible{overflow:hidden;max-height:0;transition:max-height .35s var(--ease)}
 .collapsible.open{max-height:1000px}
 
-/* RIGHT COLUMN */
+/* ---------------------------------------------
+   Right column (price summary) basics
+--------------------------------------------- */
 .price-col{display:flex;flex-direction:column;gap:10px}
 
-/* Desktop: outer wrapper should be invisible */
-.price-card{
-  position: sticky;
-  top: 12px;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
+/* Sticky price card on desktop, plain on mobile */
+.price-card{position:sticky;top:12px;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+@media (max-width:1276px){.price-card{position:static;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px}}
 
-/* Keep the card look on narrow screens (your existing rule is fine) */
-@media (max-width:1276px){
-  .price-card{
-    position: static;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 12px;
-  }
-}
-
-
-
-/* Totals panel (Novacart-like) */
-.totals-panel{
-  background:#eef2ff;              
-  border:1px solid #dfe7ff;
-  border-radius:12px;
-  overflow:hidden;
-}
-.totals-body{max-height:0;overflow:hidden;padding:0 16px;transition:max-height .3s var(--ease), padding .3s var(--ease);}
-.totals-panel.is-open .totals-body{ padding:12px 16px 0;}
+/* ---------------------------------------------
+   Total amount panel (expandable lines)
+--------------------------------------------- */
+.totals-panel{background:#eef2ff;border:1px solid #dfe7ff;border-radius:12px;overflow:hidden}
+.totals-body{max-height:0;overflow:hidden;padding:0 16px;transition:max-height .3s var(--ease),padding .3s var(--ease)}
+.totals-panel.is-open .totals-body{padding:12px 16px 0}
 .totals-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;font-size:14px}
 .totals-sep{height:1px;background:#e2e8f0;margin:8px 0 0}
-.totals-toggle{
-  width:100%;display:flex;justify-content:space-between;align-items:center;
-  padding:14px 16px;background:transparent;border:none;border-top:1px solid #e2e8f0;cursor:pointer;
-  color:#4f46e5;font-size:16px;font-weight:400;
-}
+.totals-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:transparent;border:none;border-top:1px solid #e2e8f0;cursor:pointer;color:#4f46e5;font-size:16px;font-weight:400}
 .total-left,.total-right{display:inline-flex;align-items:center;gap:8px;line-height:1}
-.caret{
-  width:9px;                   /* bigger arrow */
-  height:9px;
-  border-right:2.25px solid currentColor;
-  border-bottom:2.25px solid currentColor;
-  display:inline-block;
-  vertical-align:-1px;          /* nudge so it sits on the text line */
-  transform:rotate(45deg);      /* “closed” = down */
-  transition:transform .2s var(--ease);
-}
-
-/* “open” = up */
-#totalsToggle[aria-expanded="true"] .caret{
-  transform:rotate(-135deg);
-}
+.caret{width:12px;height:12px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;display:inline-block;vertical-align:middle;transform:rotate(45deg) scale(1.25);transform-origin:center;transition:transform .2s var(--ease)}
+#totalsToggle[aria-expanded="true"] .caret{transform:rotate(-135deg) scale(1.25)}
 .amount-val{font-weight:600;font-size:18px}
 
-/* Hide both chevrons by default */
-#totalsToggle .total-left .caret,
-#totalsToggle .total-right .caret{
-  display:none;
-  margin-left:8px; 
-  gap:6px;                 
-  white-space:nowrap;      
-  line-height:1;  
-  width: 6px;
-  height: 6px;  
-}
-@media (min-width:1277px){#totalsToggle .total-right .caret{ display:inline-block; }}
-@media (max-width:1276px){#totalsToggle .total-left .caret{ display:inline-block; }}
-
-
-/* tighter gap + perfect baseline alignment */
-.totals-toggle .total-left{
-  display:inline-flex;
-  align-items:center;      /* aligns arrow to text cap height */
-  gap:2px;                 /* reduce the space */
-  line-height:1;
+/* Tabular numeric alignment for amounts/inputs */
+.amount-val,
+.totals-row span:last-child,
+.chip,
+.input,
+.select {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
-/* chevron that looks larger WITHOUT changing its layout size */
-.totals-toggle .caret{
-  display:inline-block;
-  width:12px;              /* keep the layout box small */
-  height:12px;
-  border-right:2.5px solid currentColor;  /* thicker stroke => bigger look */
-  border-bottom:2.5px solid currentColor;
-  transform: rotate(45deg) scale(1.25);   /* scales visually only */
-  transform-origin:center;                /* keeps it centered */
-  vertical-align:middle;                  /* baseline alignment with text */
-}
+/* Show caret differently on desktop vs mobile */
+#totalsToggle .total-left .caret,#totalsToggle .total-right .caret{display:none;margin-left:8px;gap:6px;white-space:nowrap;line-height:1;width:6px;height:6px}
+@media (min-width:1277px){#totalsToggle .total-right .caret{display:inline-block}}
+@media (max-width:1276px){#totalsToggle .total-left .caret{display:inline-block}}
+.totals-toggle .total-left{display:inline-flex;align-items:center;gap:2px;line-height:1}
 
-/* rotated state (open) – keep the same “visual” size */
-#totalsToggle[aria-expanded="true"] .caret{
-  transform: rotate(-135deg) scale(1.25);
-}
-
-/* ===================== DISCOUNT BUTTON ===================== */
+/* ---------------------------------------------
+   Green “offers available” callout
+--------------------------------------------- */
 .line-callout{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;border:1px solid var(--success-200);background:var(--success-50);cursor:pointer;box-shadow:var(--shadow)}
 .line-callout:active{transform:translateY(1px)}
 .chip{display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1;padding:6px 8px;border:1px solid var(--line);border-radius:999px;margin-left:6px;background:#fff}
 html.dark .chip{background:#0f172a}
 
-/* ===================== MODAL (Offers + Banks) ===================== */
+/* ---------------------------------------------
+   Generic modal container + internals
+--------------------------------------------- */
 .modal{width:min(720px,92vw);max-height:84vh;overflow:auto;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
 .modal header{position:sticky;top:0;background:inherit;border-bottom:1px solid var(--line);padding:14px 16px;border-top-left-radius:16px;border-top-right-radius:16px}
 .modal h4{margin:0;font-size:16px}
@@ -300,804 +235,603 @@ html.dark .chip{background:#0f172a}
 .btn-secondary{background:#eef2ff;border:1px solid #dbeafe;color:#111;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 .btn-primary{background:var(--brand);border:1px solid var(--brand);color:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
 
-/* offers tabs */
+/* ---------------------------------------------
+   Generic tab control (if used elsewhere)
+--------------------------------------------- */
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
 .tab{appearance:none;border:none;outline:none}
-.tab+label{
-  padding:8px 12px;border-radius:999px;font-weight:700;font-size:13px;background:#f1f5f9;color:#0f172a;cursor:pointer;display:inline-flex;gap:6px;align-items:center
-}
+.tab+label{padding:8px 12px;border-radius:999px;font-weight:700;font-size:13px;background:#f1f5f9;color:#0f172a;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
 .tab:checked+label{background:var(--brand);color:#fff}
-
-
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#0f766e}
-.no-scrollbar::-webkit-scrollbar{display:none}
-.no-scrollbar{scrollbar-width:none;-ms-overflow-style:none}
 
-/* Payment section icons */
+/* ---------------------------------------------
+   Utility: hide scrollbars (cosmetic)
+--------------------------------------------- */
+.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none;-ms-overflow-style:none}
+
+/* ---------------------------------------------
+   Section icon sprites (UPI/Card/Bank/Cash/Gift/EMI)
+--------------------------------------------- */
 .section[data-icon] .head h3{display:flex;align-items:center;gap:10px}
 .section[data-icon] .head h3::before{content:"";width:22px;height:22px;background-size:contain;background-repeat:no-repeat;background-position:center}
-.section[data-icon="upi"]  .head h3::before  { background-image:url("/static/images/upi.png"); }
-.section[data-icon="card"] .head h3::before  { background-image:url("/static/images/card.png"); }
-.section[data-icon="bank"] .head h3::before  { background-image:url("/static/images/bank.png"); }
-.section[data-icon="cash"] .head h3::before  { background-image:url("/static/images/cash.png"); }
-.section[data-icon="gift"] .head h3::before  { background-image:url("/static/images/giftcard.png"); }
-.section[data-icon="emi"]  .head h3::before  { background-image:url("/static/images/emi.png"); }
-html.dark .section[data-icon] .head h3::before{ filter:brightness(.92); }
+.section[data-icon="upi"] .head h3::before{background-image:url("/static/images/upi.png")}
+.section[data-icon="card"] .head h3::before{background-image:url("/static/images/card.png")}
+.section[data-icon="bank"] .head h3::before{background-image:url("/static/images/bank.png")}
+.section[data-icon="cash"] .head h3::before{background-image:url("/static/images/cash.png")}
+.section[data-icon="gift"] .head h3::before{background-image:url("/static/images/giftcard.png")}
+.section[data-icon="emi"] .head h3::before{background-image:url("/static/images/emi.png")}
+html.dark .section[data-icon] .head h3::before{filter:brightness(.92)}
 
-/* UPI header block like Novacart */
+/* ---------------------------------------------
+   UPI section typography + link styles
+--------------------------------------------- */
 .upi-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:4px}
 .upi-title{font-weight:700;color:var(--ink)}
 .upi-help{color:#2563eb;font-weight:700;font-size:12px;text-decoration:none!important}
-.upi-help:hover{ text-decoration:underline; }
-.upi-hint{ color:#16a34a; font-weight:600; font-size:14px; margin-bottom:10px; }
+.upi-help:hover{text-decoration:underline}
+.upi-hint{color:#16a34a;font-weight:600;font-size:14px;margin-bottom:10px}
 
-/* field label + errors */
-.field { margin:0 0 10px; display:flex; flex-direction:column;}
-.field-label{ display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin:0 0 6px; }
-.error-text{ color:#dc2626; font-size:12px; margin:2px 2px 0; line-height:1.35; }
-.error-text:empty{ display:block; height:0; margin:0; padding:0; overflow:hidden; }
-.fields-row > .field { align-self:start; }
+/* ---------------------------------------------
+   Generic form field group + labels + errors
+--------------------------------------------- */
+.field{margin:0 0 10px;display:flex;flex-direction:column}
+.field-label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin:0 0 6px}
+.error-text{color:#dc2626;font-size:12px;margin:2px 2px 0;line-height:1.35}
+.error-text:empty{display:block;height:0;margin:0;padding:0;overflow:hidden}
+.fields-row>.field{align-self:start}
 
+/* Reserve vertical space for error line */
+:root{--err-line:16px}
+.error-text{display:block;min-height:var(--err-line);color:#dc2626;font-size:12px;line-height:1.35;margin:4px 2px 0}
+.error-text{font-weight:600}
+.upi-hint,.pay-hint{font-weight:700}
+.error-text:empty{visibility:hidden}
 
-.field{ margin:0 0 10px; display:flex; flex-direction:column;}
-:root { --err-line: 16px; }         
-.error-text{ display:block; min-height:var(--err-line); color:#dc2626; font-size:12px; line-height:1.35; margin:4px 2px 0;}
-.error-text:empty{ visibility:hidden;}
-.fields-row > .field { align-self:start; }
-
-/* Inputs + focus + disabled */
+/* Focus rings for inputs/buttons (light & dark) */
 .input:focus,.select:focus,.btn:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.18);border-color:#3b82f6}
-html.dark .input,html.dark .select{background:#0f172a;border-color:#1f2937;color:#e5e7eb}
 html.dark .input:focus,html.dark .select:focus,html.dark .btn:focus{box-shadow:0 0 0 3px rgba(59,130,246,.16);border-color:#3b82f6}
+
+/* Disabled state for verify/pay buttons */
 .btn-pay:disabled,.btn-verify:disabled{background:#e5e7eb!important;color:#9ca3af!important;cursor:not-allowed!important;box-shadow:none!important;border-color:#e5e7eb!important}
 
-/* Card input helpers */
-/* Card number: leave room for the brand logo and pin it to the far right */
-.has-icon{ position: relative; }
-.has-icon > input.input{ padding-right:56px; }      /* more room so text never hits the logo */
-#cardBrand{
-  position:absolute;
-  right:10px;                                      /* visually “far right” */
-  top:50%;
-  transform:translateY(-50%);
-  width:36px;                                      /* slightly larger but controlled */
-  height:24px;
-  object-fit:contain;
-  opacity:.9;
-  pointer-events:none;
-}
+/* ---------------------------------------------
+   Card number field with trailing brand icon
+--------------------------------------------- */
+.has-icon{position:relative}
+.has-icon>input.input{padding-right:56px}
+#cardBrand{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:36px;height:24px;object-fit:contain;opacity:.9;pointer-events:none}
 
-/* NetBanking search and list tweaks */
-.nb-search-wrap { position: relative; }
-.nb-search:focus::placeholder{ color:transparent; }
-#nbNoResults { text-align:center; padding:24px 0; }
-#nbNoResults img { width:100%; max-width:360px; height:auto; opacity:.95; }
+/* ---------------------------------------------
+   Net banking search + no-results artwork
+--------------------------------------------- */
+.nb-search-wrap{position:relative}
+.nb-search:focus::placeholder{color:transparent}
+#nbNoResults{text-align:center;padding:24px 0}
+#nbNoResults img{width:100%;max-width:360px;height:auto;opacity:.95}
 
-/* Sticky right stack: totals + discount */
-.price-stack{ position:sticky; display:flex; flex-direction:column; gap:8px; }
-.price-stack #offersOpen{
-  background:var(--paper);
-  border:1px solid var(--line);
-  border-radius:12px;
-  box-shadow:var(--shadow);
-  padding:12px;
-}
+/* ---------------------------------------------
+   Right column stack: offers button + totals
+--------------------------------------------- */
+.price-stack{position:sticky;display:flex;flex-direction:column;gap:8px}
+.price-stack #offersOpen{background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px}
 
+/* ---------------------------------------------
+   Generic media defaults
+--------------------------------------------- */
+img{max-width:100%;height:auto}
+.totals-toggle,.line-callout{min-width:0}
 
-/* Chevrons on section headers */
-.section .head .chev{
-  display:inline-block;
-  width:10px;height:10px;
-  border-right:2px solid currentColor;border-bottom:2px solid currentColor;
-  transform: rotate(45deg);transition: transform .25s var(--ease), color .25s var(--ease);
-  color: var(--ink-soft);
-}
-.section.open .head .chev{ transform: rotate(-135deg); color: var(--ink); }
+/* 2-column card form layout in Card section */
+.card-2col{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;align-items:end}
+@media (max-width:560px){.card-2col{grid-template-columns:1fr}}
 
-/* Keep images from widening their containers */
-img{ max-width:100%; height:auto; }
-
-/* Make long inline blocks wrap instead of stretching columns */
-.totals-toggle, .line-callout { min-width:0; }
-
-/* Card section: wider Expiry & CVV, keep in one line on desktop */
-.card-2col{
-  display:grid;
-  grid-template-columns: 1.2fr 0.8fr;   /* wider boxes overall */
-  gap:12px;
-  align-items:end;
-}
-
-/* If you still want mobile to stack nicely, keep this.
-   If you truly want “one line only everywhere”, remove this media rule. */
-@media (max-width: 560px){
-  .card-2col{ grid-template-columns: 1fr; }
-}
-
-/* Bank row layout + logo sizing */
-/* Bank rows container — scrollable */
-.bank-list{
-  display: grid;
-  gap: 6px;
-  padding-top: 10px;
-  max-height: min(56vh, 520px);   
-  overflow: auto;
-  padding-right: 6px;             /* room for scrollbar */
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-/* row layout: allow wrapping so the CTA can go under */
-.bank-item{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;                 /* NEW */
-  padding:10px;
-  border-radius:10px;
-  border:1px solid var(--line);
-  background:transparent;
-}
+/* ---------------------------------------------
+   Bank list (popular/all) with radio + CTA
+--------------------------------------------- */
+.bank-list{display:grid;gap:3px;max-height:min(56vh,520px);overflow:auto;padding-right:6px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.bank-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent}
 .bank-item:hover{background:#f8fafc}
 html.dark .bank-item:hover{background:#0f172a}
+.bank-item .bank-name{flex:1 1 auto}
+.nb-other .bank-list{max-height:min(56vh,520px);overflow:auto}
+.bank-item .bank-logo{width:24px;height:24px;margin-left:auto;object-fit:contain}
+.bank-item .bank-cta{flex-basis:100%;margin-top:10px}
+.bank-item .bank-cta .btn{width:100%}
 
-/* let the text grow, logo stay at right */
-.bank-item .bank-name{ flex:1 1 auto; }
+/* ---------------------------------------------
+   Card section field sizing + logo image
+--------------------------------------------- */
+#cardSection .input,#cardSection .select{width:100%}
+#cardSection .has-icon{position:relative}
+#cardSection .has-icon>input.input{padding-right:52px}
+#cardBrand{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:28px;height:20px;object-fit:contain;opacity:.9;pointer-events:none}
+#cardSection .fields-row{display:grid;grid-template-columns:1.15fr .95fr;gap:10px}
+@media (max-width:420px){#cardSection .fields-row{grid-template-columns:1fr 1fr}}
 
-/* only the "All other banks" list */
-.nb-other .bank-list { max-height: min(56vh, 520px); overflow: auto; }
+/* ---------------------------------------------
+   Bank item flex + logo sizing duplicates (kept)
+--------------------------------------------- */
+.bank-item{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.bank-logo{width:28px;height:28px;flex:0 0 28px;object-fit:contain;margin-left:12px}
 
-/* keep logos neat and at the edge */
-.bank-item .bank-logo{ width:24px; height:24px; margin-left:auto; object-fit:contain; }
+/* Search input skin for bank list (light/dark) */
+.nb-search-wrap{position:relative;display:block;width:100%;min-width:0}
+.nb-search{width:100%;box-sizing:border-box;padding-left:40px;background-image:url("/static/images/magnifier.png");background-repeat:no-repeat;background-position:12px center;background-size:18px;background-color:var(--paper)}
+html.dark .nb-search{width:100%;box-sizing:border-box;padding-left:40px;background-image:url("/static/images/magnifier.png");background-color:#0f172a;background-repeat:no-repeat;background-position:12px center;background-size:18px}
+html.dark .nb-search::placeholder{color:#94a3b8}
+.nb-search:focus::placeholder{color:transparent}
 
-/* CTA under the selected bank row */
-.bank-item .bank-cta{ flex-basis:100%; margin-top:10px; }
-.bank-item .bank-cta .btn{ width:100%; }
+/* No-results compact artwork for narrow lists */
+#nbNoResults{text-align:center;padding:18px 0}
+#nbNoResults img{display:block;margin:10px auto 0;height:auto;width:clamp(160px,40vw,280px);opacity:.95}
 
-/* ====== CARD SECTION: make it like Novacart ====== */
-/* Make all inputs in the card section span the full line */
-#cardSection .input,
-#cardSection .select {
-  width: 100%;
-}
+/* ---------------------------------------------
+   Gift card inputs spacing + error line height
+--------------------------------------------- */
+#giftBody .field{margin:0}#giftBody .field+.field{margin-top:8px}#giftBody .field-label{margin-bottom:6px}#giftBody .error-text{margin-top:6px;min-height:18px}
 
-/* Card number: icon inside the input on the far right */
-#cardSection .has-icon { position: relative; }
-#cardSection .has-icon > input.input { padding-right: 52px; }  /* room for the brand icon */
-#cardBrand {
-  position: absolute;         /* keep it inside the input */
-  right: 12px;                /* far right */
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 20px;
-  object-fit: contain;
-  opacity: .9;
-  pointer-events: none;
-}
+/* ---------------------------------------------
+   Custom radio buttons (bank/emi options)
+--------------------------------------------- */
+:root{--rb-size:20px;--rb-ring:2px;--rb-dot:10px}
+.bank-list .bank-item input[type="radio"],#emiSection .body input[type="radio"]{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:var(--rb-size);height:var(--rb-size);border:var(--rb-ring) solid var(--line,#cfd4dc);border-radius:50%;background:var(--surface,#fff);display:inline-grid;place-content:center;margin-right:12px;flex:0 0 var(--rb-size);cursor:pointer;position:relative}
+.bank-list .bank-item input[type="radio"]:checked,#emiSection .body input[type="radio"]:checked{border-color:var(--brand,#2a55e5);background-color:#fff}
+.bank-list .bank-item input[type="radio"]::after,#emiSection .body input[type="radio"]::after{content:"";width:var(--rb-dot);height:var(--rb-dot);border-radius:50%;background:transparent;transition:transform .12s ease-out,background-color .12s ease-out;transform:scale(.6)}
+.bank-list .bank-item input[type="radio"]:checked::after,#emiSection .body input[type="radio"]:checked::after{background:var(--brand,#2a55e5);transform:scale(1)}
+.bank-list .bank-item input[type="radio"]:focus-visible,#emiSection .body input[type="radio"]:focus-visible{outline:2px solid color-mix(in oklab,var(--brand,#2a55e5),#fff 40%);outline-offset:2px;box-shadow:0 0 0 3px color-mix(in oklab,var(--brand,#2a55e5),#fff 75%)}
+.bank-list .bank-item, #emiSection .body label{display:flex;align-items:center;gap:10px;cursor:pointer}
 
-/* Valid Thru + CVV on one line, wider boxes, small gap */
-#cardSection .fields-row {
-  display: grid;
-  grid-template-columns: 1.15fr 0.95fr;  /* widen both, CVV slightly smaller */
-  gap: 10px;                              /* reduce the whitespace between them */
-}
+/* EMI summary rows: clean left/right alignment */
+#emiSection .krow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;font-size:14px}
+#emiSection .krow span:first-child{flex:1;color:var(--ink-soft)}
+#emiSection .krow span:last-child{margin-left:12px;font-variant-numeric:tabular-nums}
+#emiSection .krow:last-of-type span:first-child{color:var(--ink);font-weight:800}
 
-/* On very narrow screens keep them on one line until it's impossible */
-@media (max-width: 420px) {
-  #cardSection .fields-row { grid-template-columns: 1fr 1fr; }
-}
+/* === EMI radios: tighter spacing + pointer cursor (override) === */
+#emiSection .body input[type="radio"]{ margin-right:0; }             
+#emiSection .body label{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+#emiSection .body label *{ cursor:pointer; }                          
 
-/* ====== NET BANKING: keep logos small and pinned to the right ====== */
-.bank-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: space-between;
-}
+/* === EMI dropdown polish (closed state) === */
+#emiSection .select{ appearance:none; -webkit-appearance:none; -moz-appearance:none; height:44px; line-height:44px; border-radius:10px; padding:0 40px 0 12px;                         
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364758b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat:no-repeat; background-position:right 12px center; background-size:14px 14px;}
+#emiSection .select:focus{ box-shadow:0 0 0 3px rgba(59,130,246,.18); border-color:#3b82f6; }
+html.dark #emiSection .select{ background-color:#0f172a; color:#e5e7eb; border-color:#1f2937;background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");}
+#emiSection .select::-ms-expand{ display:none; }  
 
-.bank-logo {
-  width: 28px;            /* hard cap the logo size */
-  height: 28px;
-  flex: 0 0 28px;
-  object-fit: contain;
-  margin-left: 12px;      
-}
-/* wrapper remains the same */
+/* ---------------------------------------------
+   Responsive adjustments for price stack on mobile
+--------------------------------------------- */
+@media (max-width:1276px){.price-stack{position:static;gap:16px;margin-bottom:12px}.price-stack .price-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px}.price-stack #offersOpen{padding:12px}}
+
+/* ---------------------------------------------
+   Full-screen “offers” modal (custom)
+--------------------------------------------- */
+.offers-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:2000}
+.offers-modal.show{display:flex}
+.offers-dialog{position:relative;width:min(900px,92vw);max-height:84vh;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:visible;display:flex;flex-direction:column}
+.offers-header{position:sticky;top:0;z-index:2;display:flex;align-items:center;flex:0 0 auto;min-height:52px;padding:10px 16px;border-bottom:1px solid var(--line);border-top-left-radius:14px;border-top-right-radius:14px;background:var(--paper)}
+.offers-header h4{margin:0;font-size:16px;font-weight:800}
+.offers-close{position:absolute;top:26px;right:-48px;transform:translateY(-50%);z-index:3;width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;box-shadow:var(--shadow)}
+.offers-layout{display:flex;flex-direction:column;gap:12px;padding:12px 16px 16px;max-height:calc(84vh - 52px);overflow:hidden}
+.offers-tabs{display:flex;align-items:center;gap:8px;border-bottom:0!important;padding-bottom:0!important;border-right:0;padding-right:0;flex-direction:row;overflow:auto}
+.offers-tab{display:flex;align-items:center;gap:8px;width:auto;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#f8fafc;font-weight:700;font-size:13px;cursor:pointer;user-select:none}
+.offers-tab.is-active{background:#4f46e5;border-color:#4f46e5;color:#fff}
+.offers-tab .brand-logo{width:18px;height:18px;object-fit:contain}
+.offers-list{overflow:auto;padding-right:4px;display:grid;gap:12px}
+.offer{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper)}
+.offer-title{display:flex;align-items:center;gap:8px;color:#16a34a;font-weight:800}
+.offer-title img{width:18px;height:18px;object-fit:contain}
+.offer-desc{color:var(--ink-soft);font-size:13px;margin:6px 0 8px}
+.offer-link{color:var(--brand);font-weight:800;font-size:12px;text-decoration:none}
+.offer-link:hover{text-decoration:underline}
+@media (max-width:768px){.offers-layout{grid-template-columns:1fr;gap:12px}.offers-tabs{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;gap:8px;padding-bottom:12px}}
+.offers-dialog img{max-width:100%;height:auto}
+.offers-dialog .offers-header{background:var(--paper)!important;color:var(--ink)!important}
+.offers-dialog .offers-header h4{color:inherit}
+
+/* ---------------------------------------------
+   Light + dark color tokens for “offers” callout
+--------------------------------------------- */
+.line-callout{background:#ecfdf5;border-color:#cdeccb;gap:12px;cursor:pointer}
+.line-callout>:first-child{color:#065f46;font-weight:600}
+.line-callout>:first-child strong{color:#059669;font-weight:700}
+.line-callout>:last-child{display:flex;gap:6px;flex-wrap:nowrap;white-space:nowrap}
+.chip{margin-left:0;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;font-size:13px;line-height:1;border-radius:999px;background:#fff;border:1px solid #cdeccb}
+html.dark .line-callout{background:#052e1a;border-color:#14532d}
+html.dark .line-callout>:first-child{color:#a7f3d0}
+html.dark .line-callout>:first-child strong{color:#34d399}
+html.dark .chip{background:#0f172a;border-color:#14532d}
+
+/* Button card holding the callout in right column */
+.price-stack #offersOpen{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46}
+.price-stack{position:sticky;top:12px;display:flex;flex-direction:column;gap:16px}
+.price-card{position:static;z-index:auto}
+#offersOpen .lc-text{line-height:1.15}
+#offersOpen .lc-title{font-weight:700}
+#offersOpen .lc-sub{font-size:12px;color:#0f766e;margin-top:2px}
+#offersOpen .lc-chips{display:flex;gap:6px;white-space:nowrap}
+
+/* Totals toggle borders alignment tweaks */
+.totals-toggle{border-top:0!important}
+.totals-panel.is-open .totals-toggle{border-top:1px solid #e2e8f0}
+html.dark .totals-panel.is-open .totals-toggle{border-top:1px solid #1f2937}
+.totals-sep{height:1px;background:#e2e8f0;opacity:0;transition:opacity .2s var(--ease)}
+.totals-panel.is-open .totals-sep{opacity:1}
+html.dark .totals-sep{background:#1f2937}
+html.dark .totals-panel{background:#0f172a;border-color:#1f2937}
+html.dark .totals-body,html.dark .totals-row,html.dark .totals-toggle{color:#e5e7eb}
+html.dark .totals-row .muted{color:#94a3b8}
+html.dark .amount-val{color:#c7d2fe}
+html.dark #offersOpen{background:#052e1a;border-color:#14532d;color:#a7f3d0}
+html.dark #offersOpen strong{color:#34d399}
+html.dark #offersOpen .lc-sub{color:#86efac}
+html.dark #offersOpen .chip{background:#0b1220;color:#e5e7eb;border-color:#14532d}
+
+/* ---------------------------------------------
+   Mobile stacking for grid
+--------------------------------------------- */
+@media (max-width:1276px){.grid{grid-template-columns:1fr}.price-col{grid-row:1}.grid>:not(.price-col){grid-row:2}.price-card{position:static}}
+
+/* ---------------------------------------------
+   Left column container neutralization
+--------------------------------------------- */
+.pay-col{background:transparent;border:0;box-shadow:none;padding:0}
+
+/* ---------------------------------------------
+   Full-screen spinner overlay during navigation
+--------------------------------------------- */
+#nav-loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:99999;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px)}
+#nav-loading.is-on{display:flex}
+#nav-loading .nav-card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 20px;border-radius:12px;background:#0b0f19;color:#e5e7eb;border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 36px rgba(0,0,0,.55)}
+#nav-loading .nav-spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.30);border-top-color:#fff;animation:nav-spin .45s linear infinite}
+#nav-loading .nav-msg{font-weight:800;letter-spacing:.2px}
+@keyframes nav-spin{to{transform:rotate(360deg)}}
+body.is-busy{pointer-events:none;overflow:hidden}body.is-busy #nav-loading{pointer-events:all}
+
+/* Minor spacing adjustments for NB section */
+#nbPopularHeader{margin-bottom:12px!important}#nbDivider{margin:14px 0 8px!important}
+
+/* ---------------------------------------------
+   Hide base theme button; payments header toggle
+--------------------------------------------- */
+body>#theme-toggle{display:none} /* hide base button so it doesn't overlay clicks */
+#theme-toggle-header{width:40px;height:40px;border-radius:999px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.14);color:#0f172a;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+html.dark #theme-toggle-header{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.10);color:#fff}
+
+/* ---------------------------------------------
+   Hide the page header only at short view heights
+   (use this to approximate “100% zoom” on your device)
+--------------------------------------------- */
+@media (max-height: 630px) { #pageHeader { display: none !important; } .page { margin-top: 0 !important; }}
+#pageHeader{display:none!important}
+#payPage { max-width: 1360px; margin: 16px auto 48px; }
+
+/* Dark only for this page */
+body.dark-mode .pay-page{ --ink:#e5e7eb; --ink-soft:#94a3b8; --paper:#0b1220; --bg:#050a16; --line:#1f2937; --success-50:#052e1a; --success-200:#14532d;}
+
+/* Page canvas */
+.pay-page .page-card{ max-width: var(--max); margin: 16px auto 48px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 16px 16px;}
+
+/* Step row (left text + right pill) */
+.pay-page .pay-topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0 8px;}
+.pay-page .top-left{display:flex; align-items:center; gap:10px; font-weight:800;}
+.pay-page .back-btn{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:2px solid #000; border-radius:999px; background:#fff; color:#000; text-decoration:none;}
+body.dark-mode .pay-page .back-btn{ background:#fff; color:#000; border-color:#000; }
+
+.pay-page .secure-pill{ font-weight:700; font-size:14px; padding:6px 10px; border-radius:999px; background:#eef3ff; border:1px solid #dfe7ff; color:#0f172a;}
+body.dark-mode .pay-page .secure-pill{ background:#0f172a; border-color:#1f2937; color:#cbd5e1; }
+
+/* —— from here, keep your existing section/grid styles BUT prefix with .pay-page — */
+.pay-page .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:20px;margin-top:12px}
+@media (max-width:1276px){.pay-page .grid{grid-template-columns:1fr}}
+.pay-page .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pay-page .section+.section{margin-top:12px}
+.pay-page .section .head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.pay-page .section .head h3{margin:0;font-size:16px;font-weight:700}
+.pay-page .chev{transition:transform .25s var(--ease);opacity:.8}
+.pay-page .section.open .chev{transform:rotate(180deg)}
+.pay-page .section .body{padding:16px 18px 18px;display:grid;gap:10px}
+/* …(keep the rest of your rules, but prefix each selector with .pay-page )… */
+
+.theme-tooltip{ display:none; position:absolute; left:50%;top: calc(100% + 8px); transform: translateX(-50%);  background:#232323; color:#fff; padding:7px 12px; border-radius:6px; font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,.18); white-space:nowrap; margin:0; z-index: 2000;pointer-events:none; opacity:0; transition:opacity .15s; }
+#theme-toggle:hover .theme-tooltip{ display:block; opacity:1; }
+.theme-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
+
+/* Make the blue topbar fixed, let tooltip hang below, and leave some space on the right so the moon/sun icon sits a bit left. */ 
+header.topbar{ position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); z-index: 1000; overflow: visible; padding-right: 72px; }
+
+/* Nudge the icon a touch further left if you want */ 
+header.topbar #theme-toggle{ margin-right: 8px;}
+
+/* Keep the tooltip directly **under** the icon */ 
+header.topbar #theme-toggle { position: relative; }
+header.topbar .theme-tooltip{ position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); margin: 0; z-index: 2000; }
+
+/* Push the page content down so it doesn't hide under the fixed bar */ 
+main .page{ margin-top: calc(var(--header-h) + 16px) !important; }
+/* Payments page: increase left padding of the blue bar */ 
+header.topbar{ padding-left: 32px !important; /* adjust value to taste */ }
+header.topbar{ position: sticky; top:0; }
+main{ padding-top: 0; } /* not needed with sticky */
+
+body.dark-mode { --ink: #e5e7eb; --ink-soft:#94a3b8; --paper:#0b1220; --bg:#050a16; --line:#1f2937; }
+
+/* Inputs */ 
+body.dark-mode .input, body.dark-mode .select { background: #0f172a; /* field surface */ border-color: #1f2937; /* outline */ color: var(--ink); }
+body.dark-mode .input::placeholder, body.dark-mode .select::placeholder { color: var(--ink-soft); opacity: 1; }
+
+/* Focus ring in dark */ 
+body.dark-mode .input:focus, body.dark-mode .select:focus, body.dark-mode .btn:focus { box-shadow: 0 0 0 3px rgba(59,130,246,.16); border-color: #3b82f6; }
+
+/* Disabled buttons in dark (keep readable) */ 
+body.dark-mode .btn-pay:disabled, body.dark-mode .btn-verify:disabled{ background:#111827 !important; border-color:#374151 !important; color:#6b7280 !important; }
+
+/* ---- Totals (price) card ---- */ 
+body.dark-mode .totals-panel{ background:#0f172a; /* replace lavender */ border-color:#1f2937; color: var(--ink); }
+body.dark-mode .totals-body, body.dark-mode .totals-row, body.dark-mode .totals-toggle{ color: var(--ink); }
+body.dark-mode .totals-row .muted{ color: var(--ink-soft); }
+
+/* Amount value—give it some pop but readable */ 
+body.dark-mode .amount-val{ color:#c7d2fe; }
+
+/* Divider + toggle border in dark */ 
+body.dark-mode .totals-sep{ background:#1f2937; }
+body.dark-mode .totals-panel.is-open .totals-toggle{ border-top:1px solid #1f2937; }
+
+/* Offers callout chip keeps contrast in dark */ 
+body.dark-mode .line-callout{ background:#052e1a; border-color:#14532d; }
+body.dark-mode .line-callout > :first-child{ color:#a7f3d0; }
+body.dark-mode .chip{ background:#0b1220; color:var(--ink); border-color:#14532d; }
+
+/* Dark surface + borders for bank rows */ 
+body.dark-mode .bank-list .bank-item{ background:#0b1220; /* row surface */ border-color:#1f2937; color:var(--ink); }
+body.dark-mode .bank-list .bank-item:hover{ background:#0f172a; }
+body.dark-mode .bank-list .bank-item:has(input[type="radio"]:checked){ background:#111827; border-color:#3b82f6; }
+
+/* Custom radio: make ring and dot visible on dark */ 
+body.dark-mode .bank-list .bank-item input[type="radio"]{ background:#0b1220; border-color:#334155; /* visible ring */ }
+body.dark-mode .bank-list .bank-item input[type="radio"]:checked{ border-color:#60a5fa; }
+body.dark-mode .bank-list .bank-item input[type="radio"]:checked::after{ background:#60a5fa; /* inner dot */ }
+
+/* Make the “All other banks” link readable */ 
+body.dark-mode .nb-other a{ color:#93c5fd; }
+body.dark-mode .nb-other a:hover{ color:#bfdbfe; }
+
+/* === Net-banking search: light & dark, consistent === */ /* Base (works for both themes) */ 
 .nb-search-wrap{ position:relative; display:block; width:100%; min-width:0; }
+.nb-search{ width:100%; box-sizing:border-box; padding-left:40px; /* room for the icon */ 
+background-image:url("/static/images/magnifier.png") !important; background-repeat:no-repeat; background-position:12px center; background-size:18px; background-color:var(--paper); color:var(--ink); /* kill native search field chrome so the blue arcs don’t show */ appearance:none; -webkit-appearance:none; }
 
-/* REMOVE the separate icon completely */
-.nb-icon{ display:none !important; }
+/* Use the actual theme class the page toggles: body.dark-mode */ 
+body.dark-mode .nb-search{background-image:url("/static/images/magnifier.png") !important;background-repeat:no-repeat;background-position:12px 50%;background-size:18px 18px;background-color:var(--paper);color:var(--ink);}
 
-/* keep the icon only as a background inside the input */
-.nb-search{
-  width:100%;
-  box-sizing:border-box;
-  padding-left:40px;
-  background: url("/static/images/magnifier.png") no-repeat 12px 50% / 18px 18px, #fff;
+/* Softer placeholder in dark; hide on focus */
+body.dark-mode .nb-search::placeholder{ color:#94a3b8; }
+.nb-search:focus::placeholder{ color:transparent; }
+
+/* Remove WebKit search decorations (the cause of the blue shapes) */ 
+.nb-search::-webkit-search-decoration, .nb-search::-webkit-search-cancel-button, .nb-search::-webkit-search-results-button, .nb-search::-webkit-search-results-decoration{ -webkit-appearance:none; appearance:none; display:none; }
+
+/* Neutralize autofill paint (Edge/Chrome) so it doesn’t tint the field */ 
+.nb-search:-webkit-autofill{ -webkit-text-fill-color:var(--ink); -webkit-box-shadow:0 0 0 1000px var(--paper) inset !important; box-shadow:0 0 0 1000px var(--paper) inset !important; }
+
+/* Chevron for section headers */ 
+.section .head .chev{ display:inline-block; width:10px; height:10px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); transform-origin:center; /* ensures full, smooth rotation */ transition:transform .22s var(--ease), color .22s var(--ease); color:var(--ink-soft); }
+.section.open .head .chev{ transform:rotate(-135deg); color:var(--ink); }
+
+/* Hide the header when the viewport is tall (↑ size) */ 
+@media (max-height: 650px) { header.topbar { display: none !important; } main { padding-top: 0 !important; } /* pull page up */ }
+
+/* --- Payment Timeout modal: new look --- */
+#payTimeoutModal{ z-index:3000; } /* above page */
+#payTimeoutModal .modal{ width:min(560px,92vw); border-radius:18px; border:1px solid color-mix(in oklab, var(--ink-soft), #fff 65%); background:linear-gradient(180deg, color-mix(in oklab, var(--paper), #fff 6%), var(--paper)); box-shadow:0 20px 60px rgba(2,8,23,.40), 0 0 0 1px rgba(2,8,23,.08) inset; overflow:hidden; }
+#payTimeoutModal header{ border:0; padding:18px 20px 0; background:transparent; }
+#payTimeoutModal .t-wrap{ padding:6px 20px 20px; display:grid; grid-template-columns:56px 1fr; column-gap:14px; align-items:start; }
+#payTimeoutModal .t-icon{ width:56px; height:56px; border-radius:14px; display:grid; place-items:center; background:radial-gradient(55% 55% at 50% 45%, #fde68a 0%, #fbbf24 70%, #f59e0b 100%); box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); color:#1f2937; }
+#payTimeoutModal .t-title{ margin:0 0 4px; font-size:18px; font-weight:800; letter-spacing:.2px; }
+#payTimeoutModal .t-desc{ margin:0; color:var(--ink-soft); }
+#payTimeoutModal .t-note{ margin:10px 0 0; font-size:13px; color:var(--ink-soft); }
+#payTimeoutModal .t-bar{ height:8px; border-radius:999px; background:#f3f4f6; margin:14px 0 0; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); }
+#payTimeoutModal .t-fill{ height:100%; width:0%; background:linear-gradient(90deg,#f59e0b,#ef4444); transition:width .25s linear; }
+#payTimeoutModal .m-actions{ border-top:1px solid var(--line); padding:12px 16px; gap:8px; justify-content:space-between; }
+#payTimeoutModal .m-actions .left{ display:flex; align-items:center; gap:8px; color:var(--ink-soft); font-size:12px; }
+#payTimeoutModal .btn-secondary{ background:#111827; color:#fff; border-color:transparent; }
+#payTimeoutModal .btn-primary{ background:#ef4444; border-color:#ef4444; color:#fff; }
+html.dark #payTimeoutModal .t-bar{ background:#0f172a; }
+html.dark #payTimeoutModal .t-icon{ color:#0b1220; }
+/* wider dialog + softer backplate */
+#payTimeoutModal{ z-index:3000; backdrop-filter:blur(2px); }
+#payTimeoutModal .modal{ width:min(720px,94vw); /* ⬅wider */ border-radius:20px; background:radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--paper), #fff 6%), transparent 60%), var(--paper); box-shadow:0 24px 80px rgba(2,8,23,.45), 0 0 0 1px rgba(2,8,23,.08) inset; }
+/* header/body spacing polish */
+#payTimeoutModal header{ border:0; padding:22px 24px 0; background:transparent; }
+#payTimeoutModal .t-wrap{ padding:10px 24px 20px; grid-template-columns:64px 1fr; column-gap:16px; }
+#payTimeoutModal .t-icon{ width:64px; height:64px; border-radius:16px; }
+#payTimeoutModal .t-title{ font-size:20px; }
+/* progress bar */
+#payTimeoutModal .t-bar{ height:10px; border-radius:999px; margin-top:14px; }
+/* actions area → help text ABOVE buttons */
+#payTimeoutModal .m-actions{ display:grid; grid-template-rows:auto auto; gap:12px; border-top:1px solid var(--line); padding:14px 16px 16px; }
+#payTimeoutModal .m-actions .help{ color:var(--ink-soft); font-size:12.5px; line-height:1.35; padding:0 4px; }
+/* buttons row */
+#payTimeoutModal .m-actions .buttons{ display:flex; gap:10px; justify-content:flex-end; align-items:center; flex-wrap:wrap; }
+/* remove underlines, nicer hover/focus */
+#payTimeoutModal .m-actions a{ text-decoration:none !important; }
+#payTimeoutModal .btn-secondary, #payTimeoutModal .btn-primary{ border-radius:12px; box-shadow:0 1px 0 rgba(0,0,0,.04); transition:transform .06s ease, box-shadow .15s ease, background .15s ease, opacity .15s ease; }
+#payTimeoutModal .btn-secondary{ background:#0f172a; color:#fff; border:1px solid rgba(255,255,255,.06); }
+#payTimeoutModal .btn-secondary:hover{ transform:translateY(-1px); }
+#payTimeoutModal .btn-secondary:focus-visible, #payTimeoutModal .btn-primary:focus-visible{ outline:2px solid color-mix(in oklab, var(--brand), #fff 40%); outline-offset:2px; }
+#payTimeoutModal .btn-primary{ background:#ef4444; border-color:#ef4444; color:#fff; }
+#payTimeoutModal .btn-primary:hover{ background:#dc2626; transform:translateY(-1px); }
+/* mobile: stack buttons full-width */
+@media (max-width:520px){ #payTimeoutModal .m-actions .buttons{ flex-direction:column; align-items:stretch; } #payTimeoutModal .m-actions .buttons a{ width:100%; text-align:center; } }
+:root[data-theme="dark"] #payTimeoutModal .t-bar{ background:#0f172a; }
+
+
+.session-actions{ display:flex; gap:10px; margin-top:12px; }
+.btn-login{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
+  border-radius:8px; background:#2563eb; color:#fff; font-weight:800; text-decoration:none;
 }
+.btn-login:hover{ filter:brightness(1.05); }
+.btn-why{ background:transparent; color:var(--ink-soft); border:0; padding:0; cursor:pointer; }
 
-/* optional: tidy the “no results” block */
-#nbNoResults{ text-align:center; padding:18px 0; }
-#nbNoResults img{
-  display:block; margin:10px auto 0; height:auto;
-  width:clamp(160px,40vw,280px); opacity:.95;
-}
+#session-expired-modal .btn-login{display:block;width:100%;text-align:center;justify-content:center;padding:14px 16px;border-radius:10px;
+  background:#2563eb;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+#session-expired-modal .btn-login:hover{filter:brightness(1.04);}
 
-/* Compact spacing just for the Gift Card section */
-/* Gift Card: tighten the two inputs only */
-#giftBody .field { margin: 0; }                /* neutralize any global margin */
-#giftBody .field + .field { margin-top: 8px; }  /* space only between the two fields */
+/* center the CTA row (if not already) */ 
+.session-actions{display:flex;justify-content:center;}
 
-#giftBody .field-label { margin-bottom: 6px; }  /* tighter label → input */
-#giftBody .error-text { margin-top: 6px; min-height: 18px; } /* no jump when errors show */
+/* remove underline for "Why did this happen?" */ 
+#session-modal .why a{text-decoration:none;color:inherit;} 
+#session-modal .why a:hover{text-decoration:none;}
 
-/* sizes & colors you can tweak */
-:root{
-  --rb-size: 20px;      /* overall radio size (Novacart-ish) */
-  --rb-ring: 2px;       /* outer ring thickness */
-  --rb-dot: 10px;       /* inner filled dot size */
-}
+/* if you use an outside X, give it a bit more too */ 
+#session-close-outside{font-size:28px;z-index:5002;}
 
-/* Scope to only NetBanking list and EMI section */
-.bank-list .bank-item input[type="radio"],
-#emiSection .body input[type="radio"]{
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+/* link highlight states */
+ #session-modal .why a:hover{color:#2563eb;}
+ #session-modal .why a.clicked{color:#ef4444;}
 
-  width: var(--rb-size);
-  height: var(--rb-size);
-  border: var(--rb-ring) solid var(--line, #cfd4dc);
-  border-radius: 50%;
-  background: var(--surface, #fff);
+/* yellow info block, always below the link */ 
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;position:relative;z-index:1;} 
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
 
-  display: inline-grid;
-  place-content: center;
+#session-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:5000;}
+#session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:5001;overflow:visible;}
+#session-modal header{position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;}
+#session-modal header h4{margin:0;text-align:center;}
+#session-close-outside{position:absolute;top:-18px;right:-59px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;font-size:26px;line-height:1;background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;}
+.session-hero{display:block;margin:8px auto 12px;}
+.session-hero img{width:100%;height:auto;display:block;object-fit:contain;border-radius:8px;filter:none;}
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;}
+body.dark-mode #session-modal{background:#161616;color:#fff;border-color:#2a2a2a;}
+body.dark-mode #session-close-outside{background:#161616;color:#cbd5e1;border-color:#2a2a2a;box-shadow:0 6px 18px rgba(0,0,0,.6);}
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
 
-  /* keep layout tidy */
-  margin-right: 12px;
-  flex: 0 0 var(--rb-size);
-  cursor: pointer;
-  position: relative;
-}
+/* Force the small, bold session title like other pages */
+#session-modal header h1,
+#session-modal header h2,
+#session-modal header h3,
+#session-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;color:var(--ink,#0f172a)!important;}
+/* If you still use the old wrapper id anywhere, cover it too */
+#session-expired-modal header h1,
+#session-expired-modal header h2,
+#session-expired-modal header h3,
+#session-expired-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;}
+/* Dark mode title color */
+body.dark-mode #session-modal header h1,
+body.dark-mode #session-modal header h2,
+body.dark-mode #session-modal header h3,
+body.dark-mode #session-modal header h4{color:#fff!important;}
 
-/* filled dot when checked */
-.bank-list .bank-item input[type="radio"]:checked,
-#emiSection .body input[type="radio"]:checked{
-  border-color: var(--brand, #2a55e5);
-  background-color: #fff;
-}
+.page{overflow: hidden}
 
-.bank-list .bank-item input[type="radio"]::after,
-#emiSection .body input[type="radio"]::after{
-  content: "";
-  width: var(--rb-dot);
-  height: var(--rb-dot);
-  border-radius: 50%;
-  background: transparent;       /* hidden by default */
-  transition: transform .12s ease-out, background-color .12s ease-out;
-  transform: scale(0.6);         /* tiny nudge for nicer look */
-}
-
-.bank-list .bank-item input[type="radio"]:checked::after,
-#emiSection .body input[type="radio"]:checked::after{
-  background: var(--brand, #2a55e5);
-  transform: scale(1);
-}
-
-/* keyboard/focus ring */
-.bank-list .bank-item input[type="radio"]:focus-visible,
-#emiSection .body input[type="radio"]:focus-visible{
-  outline: 2px solid color-mix(in oklab, var(--brand, #2a55e5), #fff 40%);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand, #2a55e5), #fff 75%);
-}
-
-/* make the whole label a comfy tap target */
-.bank-list .bank-item,
-#emiSection .body label{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-@media (max-width:1276px){
-  .price-stack{
-    position: static;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .price-stack .price-card{
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 12px;
-  }
-  /* keep offersOpen green; only add spacing */
-  .price-stack #offersOpen{ padding:12px; }
-}
-
-
-
-/* ===== OFFERS MODAL (Novacart-like): centered, left rail + right list ===== */
-
-.offers-modal{
-  position: fixed; inset: 0;
-  display: none;                    /* toggle with .show */
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,.55);
-  z-index: 2000;
-}
-.offers-modal.show{ display: flex; }
-
-.offers-dialog{
-  position: relative;
-  width: min(900px, 92vw);
-  max-height: 84vh;
+/* The page is a rounded card; clip its children */
+.page{
+  max-width: var(--max);
+  margin: 16px auto 48px;
   background: var(--paper);
-  color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: var(--shadow);
-  overflow: visible;                 
-  display: flex; flex-direction: column;
-}
-
-/* Uniform title bar */
-.offers-header{
-  position: sticky; top: 0; z-index: 2;
-  display: flex; align-items: center;
-  flex: 0 0 auto;
-  min-height: 52px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-  border-top-left-radius:14px;
-  border-top-right-radius:14px;
-  background: var(--paper);
-}
-.offers-header h4{ margin: 0; font-size: 16px; font-weight: 800; }
-
-/* Close “×” OUTSIDE the dialog */
-.offers-close{
-  position: absolute;
-  top: 26px;                  
-  right: -48px;               
-  transform: translateY(-50%);
-  z-index: 3;
-  width: 36px; height: 36px;
-  display: grid; place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--paper);
-  color: var(--ink);
-  font-size: 22px; line-height: 1;
-  cursor: pointer;
-  box-shadow: var(--shadow);
-}
-
-
-/* Layout: TOP tabs + list below (tabs side-by-side) */
-.offers-layout{
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   padding: 12px 16px 16px;
-  max-height: calc(84vh - 52px);
-  overflow: hidden;
+  overflow: hidden;                 /* <-- important */
 }
 
-/* horizontal pill tabs */
-.offers-tabs{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-bottom: 0 !important;
-  padding-bottom: 0 !important;
-  border-right: 0;
-  padding-right: 0;
-  flex-direction: row;
-  overflow: auto;
-}
+/* Remove the rule that made it visible on desktop:
+   @media (min-width:1360px){ .page, .page > .container { overflow: visible; } }
+*/
 
-.offers-tab{
-  display: flex; align-items: center; gap: 8px;
-  width: auto;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f8fafc;
-  font-weight: 700; font-size: 13px;
-  cursor: pointer; user-select: none;
-}
-.offers-tab.is-active{ background: #4f46e5; border-color:#4f46e5; color:#fff; }
-.offers-tab .brand-logo{ width: 18px; height: 18px; object-fit: contain; }
-
-/* Right list */
-.offers-list{
-  overflow: auto;
-  padding-right: 4px;               /* room for scrollbar */
-  display: grid; gap: 12px;
-}
-
-/* Offer cards (green title like Novacart) */
-.offer{
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px;
-  background: var(--paper);
-}
-.offer-title{
-  display: flex; align-items: center; gap: 8px;
-  color: #16a34a; font-weight: 800;
-}
-.offer-title img{ width: 18px; height: 18px; object-fit: contain; }
-.offer-desc{ color: var(--ink-soft); font-size: 13px; margin: 6px 0 8px; }
-.offer-link{ color: var(--brand); font-weight: 800; font-size: 12px; text-decoration: none; }
-.offer-link:hover{ text-decoration: underline; }
-
-/* Small screens: stack, tabs become a horizontal bar */
-@media (max-width: 768px){
-  .offers-layout{ grid-template-columns: 1fr; gap: 12px; }
-  .offers-tabs{
-    border-right: 0; border-bottom: 1px solid var(--line);
-    flex-direction: row; flex-wrap: wrap; gap: 8px; padding-bottom: 12px;
-  }
-}
-
-/* Safety: keep images sane inside dialog even if global rules exist */
-.offers-dialog img{ max-width: 100%; height: auto; }
-/* put this AFTER the global header rule */
-.offers-dialog .offers-header{
-  background: var(--paper) !important;
-  color: var(--ink) !important;
-}
-.offers-dialog .offers-header h4{ color: inherit; }
-
-/* Novacart-style green promo box */
-.line-callout{
-  /* colors */
-  background: #ecfdf5;           /* light green */
-  border-color: #cdeccb;         /* soft green border */
-  /* layout polish */
-  gap: 12px;
-  cursor: pointer;
-}
-
-/* Make the text a darker green */
-.line-callout > :first-child{
-  color: #065f46;                /* dark green text */
-  font-weight: 600;
-}
-.line-callout > :first-child strong{
-  color: #059669;                /* brighter green for the % text */
-  font-weight: 700;
-}
-
-/* Chips on ONE line (no wrapping) */
-.line-callout > :last-child{
-  display: flex;                 /* put chips in a row */
-  gap: 6px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-/* Chip styling */
-.chip{
-  margin-left: 0;                /* kill the old individual spacing */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 8px;
-  font-size: 13px;
-  line-height: 1;
-  border-radius: 999px;
-  background: #ffffff;
-  border: 1px solid #cdeccb;     /* match the box */
-}
-
-/* Dark mode tweaks (optional) */
-html.dark .line-callout{ background:#052e1a; border-color:#14532d; }
-html.dark .line-callout > :first-child{ color:#a7f3d0; }
-html.dark .line-callout > :first-child strong{ color:#34d399; }
-html.dark .chip{ background:#0f172a; border-color:#14532d; }
-
-/* 1) Make the discount box green (override the more specific rule) */
-.price-stack #offersOpen{
-  background:#ecfdf5;      /* light green */
-  border:1px solid #bbf7d0;/* soft green */
-  color:#065f46;           /* dark green text */
-}
-
-/* 2) Keep both pieces together without overlap:
-      make the wrapper sticky, not the card  */
-.price-stack{
-  position: sticky;
-  top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Cancel the sticky on the card so it won't cover the green box */
-.price-card{
-  position: static;
-  z-index: auto;
-}
-
-/* 3) Novacart-style title + subline you already added.
-      Keep the styling here for the split lines */
-#offersOpen .lc-text{ line-height:1.15; }
-#offersOpen .lc-title{ font-weight:700; }
-#offersOpen .lc-sub{ font-size:12px; color:#0f766e; margin-top:2px; }
-#offersOpen .lc-chips{ display:flex; gap:6px; white-space:nowrap; }
-@media (max-width:1276px){
-  .price-stack{ position: static; gap:12px; margin-bottom:12px; }
-}
-
-/* 1) Remove the default divider on the toggle */
-.totals-toggle{
-  border-top: 0 !important;     /* no line when collapsed */
-}
-
-/* 2) Show the divider ONLY when expanded */
-.totals-panel.is-open .totals-toggle{
-  border-top: 1px solid #e2e8f0;          /* light */
-}
-html.dark .totals-panel.is-open .totals-toggle{
-  border-top: 1px solid #1f2937;          /* dark */
-}
-
-/* 3) (Optional) Hide the inner separator unless expanded */
-.totals-sep{
-  height: 1px;
-  background: #e2e8f0;
-  opacity: 0;                             /* fade by default */
-  transition: opacity .2s var(--ease);
-}
-.totals-panel.is-open .totals-sep{ opacity: 1; }
-html.dark .totals-sep{ background:#1f2937; }
-
-/* 4) Make sure the body collapses without leaving space */
-.totals-body{
-  max-height: 0;
-  padding: 0 16px;                        /* no vertical padding when closed */
-  overflow: hidden;
-  transition: max-height .3s var(--ease), padding .3s var(--ease);
-}
-.totals-panel.is-open .totals-body{
-  max-height: 320px;                      /* big enough for content */
-  padding: 12px 16px 0;
-}
-
-
-/* ==== DARK MODE FIXES ==== */
-
-/* Totals card (right price panel) */
-html.dark .totals-panel{
-  background:#0f172a;          /* dark surface */
-  border-color:#1f2937;
-}
-html.dark .totals-body,
-html.dark .totals-row,
-html.dark .totals-toggle{
-  color:#e5e7eb;               /* primary text */
-}
-html.dark .totals-row .muted{   /* labels like “Price (1 item)” */
-  color:#94a3b8;
-}
-html.dark .totals-sep{ background:#1f2937; }
-html.dark .amount-val{ color:#c7d2fe; }     /* ₹ amount accent */
-
-/* Green promo (“10% instant discount”) */
-html.dark #offersOpen{
-  background:#052e1a;          /* dark green surface */
-  border-color:#14532d;
-  color:#a7f3d0;               /* main text */
-}
-html.dark #offersOpen strong{ color:#34d399; }     /* headline green */
-html.dark #offersOpen .lc-sub{ color:#86efac; }    /* small subtext */
-html.dark #offersOpen .chip{
-  background:#0b1220;          /* chip background in dark */
-  color:#e5e7eb;               /* <-- makes “+3” readable */
-  border-color:#14532d;
-}
-
-
-/* 1) Remove the default divider on the toggle */
-.totals-toggle{
-  border-top: 0 !important;     /* no line when collapsed */
-}
-
-/* 2) Show the divider ONLY when expanded */
-.totals-panel.is-open .totals-toggle{
-  border-top: 1px solid #e2e8f0;          /* light */
-}
-html.dark .totals-panel.is-open .totals-toggle{
-  border-top: 1px solid #1f2937;          /* dark */
-}
-
-/* 3) (Optional) Hide the inner separator unless expanded */
-.totals-sep{
-  height: 1px;
-  background: #e2e8f0;
-  opacity: 0;                             /* fade by default */
-  transition: opacity .2s var(--ease);
-}
-.totals-panel.is-open .totals-sep{ opacity: 1; }
-html.dark .totals-sep{ background:#1f2937; }
-
-/* 4) Make sure the body collapses without leaving space */
-.totals-body{
-  max-height: 0;
-  padding: 0 16px;                        /* no vertical padding when closed */
-  overflow: hidden;
-  transition: max-height .3s var(--ease), padding .3s var(--ease);
-}
-.totals-panel.is-open .totals-body{
-  max-height: 320px;                      /* big enough for content */
-  padding: 12px 16px 0;
-}
-
-/* When the grid becomes one column, show the price column first */
-@media (max-width:1276px){
-  .grid{ grid-template-columns: 1fr; }
-
-  /* put the right column (totals + discount) on top */
-  .price-col{ grid-row: 1; }
-
-  /* put the rest (left/payment methods) below */
-  .grid > :not(.price-col){ grid-row: 2; }
-
-  /* keep the price stack non-sticky in this mode (you already have this) */
-  .price-card{ position: static; }
-}
-
-/* left rail outer container */
-.pay-col{
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 12px;
-}
-
-/* keep gaps tidy inside */
-.pay-col .section + .section{ margin-top: 10px; }
-
-/* default (wide / 100%): NO outer box */
-.pay-col{
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-
-
-/* hidden on small widths */
-.payments-mast { display: none; }
-
-/* desktop / 100% case */
-@media (min-width: 1360px) {
-  .payments-mast {
+/* Mast should respect the page padding, not touch viewport edges */
+@media (min-width: 1360px){
+  .payments-mast{
     position: sticky;
-    /* adjust if you have a fixed site header; set it to that header’s height */
     top: var(--stickTop, 84px);
-    z-index: 1000;                     /* make sure it’s above cards */
-    padding: 0 24px 12px;
+    z-index: 10;
+    padding: 0 16px 12px;          /* line up with .page padding */
+    margin: 0;
+    background: transparent;
   }
   .payments-mast .mast-inner{
-    display:flex; align-items:center; justify-content:space-between;
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: 12px;
     box-shadow: var(--shadow);
     padding: 12px 16px;
   }
-  .mast-title{ font-weight: 700; }
-  .mast-total{ display:inline-flex; align-items:center; gap:8px; background:transparent; border:0; font-weight:600; cursor:pointer; }
-  .mast-total .amt{ font-weight:800; }
-  .mast-total .caret{
-    width:10px; height:10px;
-    border-right:2px solid currentColor; border-bottom:2px solid currentColor;
-    transform: rotate(45deg); transition: transform .15s ease;
-  }
-  .mast-total[aria-expanded="true"] .caret{ transform: rotate(-135deg); }
+}
+/* keep – boxed look */
+.pay-col{
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
 }
 
-
-/* only on desktop where you want the band */
-@media (min-width: 1360px) {
-  .page, .page > .container { overflow: visible; }   /* adjust selectors to your wrappers */
+/* DELETE this later override (it was removing the box globally)
+.pay-col{
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
 }
+*/
 
- #nav-loading{
-    position: fixed; inset: 0; display: none;
-    align-items: center; justify-content: center;
-    background: rgba(0,0,0,.45);
-    z-index: 99999;
-    -webkit-backdrop-filter: blur(1px);
-    backdrop-filter: blur(1px);
-  }
-  #nav-loading.is-on{ display:flex; }
-  #nav-loading .nav-card{
-    display:flex; flex-direction:column; align-items:center; gap:12px;
-    padding:18px 20px; border-radius:12px;
-    background:#0b0f19; color:#e5e7eb; border:1px solid rgba(255,255,255,.08);
-    box-shadow:0 14px 36px rgba(0,0,0,.55);
-  }
-  #nav-loading .nav-spin{
-    width:48px; height:48px; border-radius:50%;
-    border:4px solid rgba(255,255,255,.35);
-    border-top-color:#fff;
-    animation: nav-spin .7s linear infinite;
-  }
-  #nav-loading .nav-msg{ font-weight:800; letter-spacing:.2px; }
-  @keyframes nav-spin { to { transform: rotate(360deg); } }
+/* If you want “flat” only on very wide screens, scope it: */
+@media (min-width: 1600px){
+  .pay-col{ background:transparent; border:0; box-shadow:none; }
+}
+/* Offers/discount greens work in both themes already (use tokens) */
 
-  /* While busy: block all interaction & scroll */
-  body.is-busy{ pointer-events: none; overflow: hidden; }
-  /* Let the overlay itself stay clickable/focusable */
-  body.is-busy #nav-loading{ pointer-events: all; }
+/* Timeout modal buttons, unchanged */
+#payTimeoutModal .btn-primary:hover{ background:#dc2626; transform:translateY(-1px); }
+
+/* Modal: lock background (your existing rule is fine) */
+html.modal-open, body.modal-open{
+  overflow:hidden !important;
+  height:100%;
+  overscroll-behavior:contain;
+}
 
 </style>
-</head>
+{% endblock %}
 
-<body>
-<form id="payForm" action="/api/pay/success/" method="post"></form>
+{% block content %}
 
-<!-- HEADER -->
-<header>
-  <div class="header-inner">
-    <div class="brand">Novacart</div>
-    <div class="crumb">Payments</div>
-    <div class="spacer"></div>
-    <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
-      <svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-    </button>
-  </div>
-</header>
+<form id="payForm" action="/api/pay/success/" method="post"> 
+  {% csrf_token %}
+</form>
 
-<!-- SINGLE OUTER CONTAINER -->
-<main class="page" id="page">
-  <!-- Inside top bar (back • step • secure • continue) -->
-  <div class="topbar">
-    <div class="top-left">
-      <a class="back-btn" href="/api/checkout/?seed=1" aria-label="Back to Checkout">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </a>
-      <span>Step 3 of 3</span>
-      <span>• Payments</span>
+<div id="order-root" data-session-expired="1" hidden></div>
+
+<section class="pay-page">
+  <div class="page-card">
+
+    <div class="pay-topbar">
+      <div class="top-left">
+        <a class="back-btn" href="/api/checkout/?seed=1" aria-label="Back to Checkout">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <span>Step 3 of 3</span><span>• Payments</span>
+      </div>
+
+      <div class="top-right">
+        <span class="secure-pill">🔒 100% Secure</span>
+      </div>
     </div>
-    <div class="top-right">
-      <span class="secure-pill">🔒 100% Secure</span>
-    </div>
-  </div>
-  <!-- Sticky payments band (desktop only) -->
-<div class="payments-mast" id="paymentsMast" aria-hidden="true">
-  <div class="mast-inner">
-    <div class="mast-title">Step 3 of 3 • Payments</div>
 
-    <!-- mini totals trigger that mirrors your main totals toggle -->
-    <button type="button"
-            class="mast-total"
-            id="mastTotals"
-            aria-controls="totalsBody"
-            aria-expanded="false">
-      <span class="label">Total Amount</span>
-      <span class="amt" id="mastAmt">₹0</span>
-      <span class="caret" aria-hidden="true"></span>
-    </button>
-  </div>
-</div>
+    
+
+    <!-- keep the rest of your payments markup here (accordion, totals, etc.) -->
 
 
-  <!-- Two-column layout -->
+
   <div class="grid">
     <!-- LEFT: PAYMENT METHODS -->
     <section id="paymentsTop" class="pay-col">
@@ -1106,15 +840,9 @@ html.dark .totals-sep{ background:#1f2937; }
         <div class="head"><h3>UPI</h3><span class="chev" aria-hidden="true"></span></div>
         <div class="collapsible">
           <div class="body">
-            <div class="upi-head">
-              <div class="upi-title">Pay by any UPI app</div>
-              <a href="#" class="upi-help" id="upiHelpLink">How to find?</a>
-            </div>
+            <div class="upi-head"><div class="upi-title">Pay by any UPI app</div><a href="#" class="upi-help" id="upiHelpLink">How to find?</a></div>
             <div class="upi-hint">Save upto ₹30 • 4 offers available</div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:12px">
-              <input id="upi-id" class="input" placeholder="ENTER UPI ID" />
-              <button class="btn btn-verify" id="upi-verify" type="button" disabled>Verify</button>
-            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px"><input id="upi-id" class="input" placeholder="ENTER UPI ID"/><button class="btn btn-verify" id="upi-verify" type="button" disabled>Verify</button></div>
             <p class="error-text" id="upi-id-error" role="alert" aria-live="polite"></p>
             <button class="btn btn-pay" id="upi-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post" disabled>Proceed to Pay</button>
             <div class="muted" style="font-size:13px">Use any UPI app. We’ll request a collect to your UPI handle.</div>
@@ -1124,37 +852,16 @@ html.dark .totals-sep{ background:#1f2937; }
 
       <!-- CARD -->
       <div class="section card" id="cardSection" data-accordion data-icon="card">
-        <div class="head">
-          <h3>Credit / Debit / ATM Card</h3>
-          <span class="chev" aria-hidden="true"></span>
-        </div>
+        <div class="head"><h3>Credit / Debit / ATM Card</h3><span class="chev" aria-hidden="true"></span></div>
         <div class="collapsible">
           <div class="body">
             <div class="muted">Add and secure cards as per RBI guidelines</div>
             <div class="pay-hint" style="color:#16a34a;font-weight:700">Get upto 5% cashback* • 2 offers available</div>
-
-            <div class="field">
-            <label for="card-number" class="field-label">Card Number</label>
-            <div class="has-icon">
-                <input id="card-number" class="input" inputmode="numeric" autocomplete="cc-number" placeholder="Card Number" maxlength="19" />
-                <img id="cardBrand" src="/static/images/fakecard.png" alt="card brand">
-            </div>
-            <p class="error-text" id="card-number-error" role="alert" aria-live="polite"></p>
-            </div>
-
+            <div class="field"><label for="card-number" class="field-label">Card Number</label><div class="has-icon"><input id="card-number" class="input" inputmode="numeric" autocomplete="cc-number" placeholder="Card Number" maxlength="19"/><img id="cardBrand" src="/static/images/fakecard.png" alt="card brand"></div><p class="error-text" id="card-number-error" role="alert" aria-live="polite"></p></div>
             <div class="fields-row card-2col">
-            <div class="field">
-                <label for="expiry" class="field-label">Valid Thru</label>
-                <input id="expiry" class="input" inputmode="numeric" placeholder="MM/YY" maxlength="5" />
-                <p class="error-text" id="expiry-error" role="alert" aria-live="polite"></p>
+              <div class="field"><label for="expiry" class="field-label">Valid Thru</label><input id="expiry" class="input" inputmode="numeric" placeholder="MM/YY" maxlength="5"/><p class="error-text" id="expiry-error" role="alert" aria-live="polite"></p></div>
+              <div class="field"><label for="cvv" class="field-label">CVV</label><input id="cvv" class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="CVV"><p class="error-text" id="cvv-error" role="alert" aria-live="polite"></p></div>
             </div>
-            <div class="field">
-                <label for="cvv" class="field-label">CVV</label>
-                <input id="cvv" class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="CVV">
-                <p class="error-text" id="cvv-error" role="alert" aria-live="polite"></p>
-            </div>
-            </div>  
-
             <button class="btn btn-pay" id="card-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post">Proceed to Pay</button>
           </div>
         </div>
@@ -1165,51 +872,19 @@ html.dark .totals-sep{ background:#1f2937; }
         <div class="head"><h3>Net Banking</h3><span class="chev" aria-hidden="true"></span></div>
         <div class="collapsible">
           <div class="body" id="nbBody">
-            <div class="nb-search-wrap" id="nbSearchWrap">
-            <span class="nb-icon" aria-hidden="true"></span>
-            <input id="nbSearch" class="input nb-search" placeholder="Search for bank">
-            </div>
-
+            <div class="nb-search-wrap" id="nbSearchWrap"><span class="nb-icon" aria-hidden="true"></span><input id="nbSearch" class="input nb-search" placeholder="Search for bank"></div>
             <div id="nbPopular">
               <div class="muted" id="nbPopularHeader">Popular banks</div>
               <div id="nbPopularList" class="bank-list">
-                <label class="bank-item">
-                  <input type="radio" name="bank" value="State Bank of India" checked>
-                  <span class="bank-name">State Bank of India</span>
-                  <img class="bank-logo" src="/static/images/sbi.png" alt="SBI" loading="lazy">
-                </label>
-                <label class="bank-item">
-                  <input type="radio" name="bank" value="HDFC Bank">
-                  <span class="bank-name">HDFC Bank</span>
-                  <img class="bank-logo" src="/static/images/hdfc.png" alt="HDFC Bank" loading="lazy">
-                </label>
-                <label class="bank-item">
-                  <input type="radio" name="bank" value="ICICI Bank">
-                  <span class="bank-name">ICICI Bank</span>
-                  <img class="bank-logo" src="/static/images/icici.png" alt="ICICI Bank" loading="lazy">
-                </label>
-                <label class="bank-item">
-                  <input type="radio" name="bank" value="Kotak Mahindra Bank">
-                  <span class="bank-name">Kotak Mahindra Bank</span>
-                  <img class="bank-logo" src="/static/images/kotak.png" alt="Kotak Mahindra Bank" loading="lazy">
-                </label>
-                <label class="bank-item">
-                  <input type="radio" name="bank" value="Axis Bank">
-                  <span class="bank-name">Axis Bank</span>
-                  <img class="bank-logo" src="/static/images/axis.png" alt="Axis Bank" loading="lazy">
-                </label>
-                <label class="bank-item">
-                  <input type="radio" name="bank" value="Federal Bank">
-                  <span class="bank-name">Federal Bank</span>
-                  <img class="bank-logo" src="/static/images/federal.png" alt="Federal Bank" loading="lazy">
-                </label>
+                <label class="bank-item"><input type="radio" name="bank" value="State Bank of India" checked><span class="bank-name">State Bank of India</span><img class="bank-logo" src="/static/images/sbi.png" alt="SBI" loading="lazy"></label>
+                <label class="bank-item"><input type="radio" name="bank" value="HDFC Bank"><span class="bank-name">HDFC Bank</span><img class="bank-logo" src="/static/images/hdfc.png" alt="HDFC Bank" loading="lazy"></label>
+                <label class="bank-item"><input type="radio" name="bank" value="ICICI Bank"><span class="bank-name">ICICI Bank</span><img class="bank-logo" src="/static/images/icici.png" alt="ICICI Bank" loading="lazy"></label>
+                <label class="bank-item"><input type="radio" name="bank" value="Kotak Mahindra Bank"><span class="bank-name">Kotak Mahindra Bank</span><img class="bank-logo" src="/static/images/kotak.png" alt="Kotak Mahindra Bank" loading="lazy"></label>
+                <label class="bank-item"><input type="radio" name="bank" value="Axis Bank"><span class="bank-name">Axis Bank</span><img class="bank-logo" src="/static/images/axis.png" alt="Axis Bank" loading="lazy"></label>
+                <label class="bank-item"><input type="radio" name="bank" value="Federal Bank"><span class="bank-name">Federal Bank</span><img class="bank-logo" src="/static/images/federal.png" alt="Federal Bank" loading="lazy"></label>
               </div>
-              <button id="nbShowAll" type="button"
-                style="background:transparent;border:none;color:var(--brand);font-weight:800;display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer">
-                All other banks <span style="font-size:18px">›</span>
-              </button>
+              <button id="nbShowAll" type="button" style="background:transparent;border:none;color:var(--brand);font-weight:800;display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer">All other banks <span style="font-size:18px">›</span></button>
             </div>
-
             <div id="nbDivider" class="muted" style="display:none;margin-top:10px">All other banks</div>
             <div id="nbAllList" class="bank-list" style="display:none"></div>
           </div>
@@ -1221,9 +896,7 @@ html.dark .totals-sep{ background:#1f2937; }
         <div class="head"><h3>Cash on Delivery</h3><span class="chev" aria-hidden="true"></span></div>
         <div class="collapsible">
           <div class="body" id="codBody">
-            <div class="cod-fee-card" role="note" aria-label="Cash on Delivery handling fee">
-              <p class="cod-fee-title">Due to handling costs, a nominal fee of ₹5 will be charged for orders placed using this option.Avoid this fee by paying online now.</p>
-            </div>
+            <div class="cod-fee-card" role="note" aria-label="Cash on Delivery handling fee"><p class="cod-fee-title">Due to handling costs, a nominal fee of ₹5 will be charged for orders placed using this option.Avoid this fee by paying online now.</p></div>
             <button class="btn btn-pay" id="codPlaceOrder" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post">Place Order</button>
           </div>
         </div>
@@ -1235,16 +908,8 @@ html.dark .totals-sep{ background:#1f2937; }
         <div class="collapsible">
           <div class="body" id="giftBody">
             <div class="muted">Upto 10 giftcards can be added per transaction.</div>
-            <div class="field">
-              <label for="gcNumber" class="field-label">Voucher Number</label>
-              <input id="gcNumber" class="input" inputmode="numeric" autocomplete="off" placeholder="Enter 16-digit number" maxlength="16" />
-              <p class="error-text" id="gcNumberErr" role="alert" aria-live="polite"></p>
-            </div>
-            <div class="field">
-              <label for="gcPin" class="field-label">Voucher PIN</label>
-              <input id="gcPin" class="input" inputmode="numeric" autocomplete="off" placeholder="Enter 6-digit PIN" maxlength="6" />
-              <p class="error-text" id="gcPinErr" role="alert" aria-live="polite"></p>
-            </div>
+            <div class="field"><label for="gcNumber" class="field-label">Voucher Number</label><input id="gcNumber" class="input" inputmode="numeric" autocomplete="off" placeholder="Enter 16-digit number" maxlength="16"/><p class="error-text" id="gcNumberErr" role="alert" aria-live="polite"></p></div>
+            <div class="field"><label for="gcPin" class="field-label">Voucher PIN</label><input id="gcPin" class="input" inputmode="numeric" autocomplete="off" placeholder="Enter 6-digit PIN" maxlength="6"/><p class="error-text" id="gcPinErr" role="alert" aria-live="polite"></p></div>
             <button id="gcAddBtn" class="btn btn-pay" type="button" disabled>Add Gift Card</button>
           </div>
         </div>
@@ -1252,52 +917,19 @@ html.dark .totals-sep{ background:#1f2937; }
 
       <!-- EMI -->
       <div class="section card" id="emiSection" data-accordion data-icon="emi">
-        <div class="head">
-          <h3>EMI</h3>
-          <span class="chev" aria-hidden="true"></span>
-        </div>
+        <div class="head"><h3>EMI</h3><span class="chev" aria-hidden="true"></span></div>
         <div class="collapsible">
           <div class="body">
             <div class="muted">Pay in easy monthly instalments on eligible cards.</div>
             <div class="pay-hint" style="color:#16a34a;font-weight:700">No-cost EMI may apply on select plans</div>
-
-            <div class="field">
-              <label class="field-label">EMI Type</label>
-              <div style="display:flex;gap:12px;flex-wrap:wrap">
-                <label><input type="radio" name="emiType" value="cc" checked> Credit Card EMI</label>
-                <label><input type="radio" name="emiType" value="dc"> Debit Card EMI</label>
-                <label><input type="radio" name="emiType" value="cl"> Cardless EMI</label>
-              </div>
-            </div>
-
+            <div class="field"><label class="field-label">EMI Type</label><div style="display:flex;gap:3px;flex-wrap:wrap"><label><input type="radio" name="emiType" value="cc" checked> Credit Card EMI</label><label><input type="radio" name="emiType" value="dc"> Debit Card EMI</label><label><input type="radio" name="emiType" value="cl"> Cardless EMI</label></div></div>
             <div class="fields-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div class="field">
-                <label for="emiBank" class="field-label">Bank</label>
-                <select id="emiBank" class="select">
-                  <option value="">Select bank…</option>
-                  <option>SBI</option>
-                  <option>HDFC Bank</option>
-                  <option>ICICI Bank</option>
-                  <option>Axis Bank</option>
-                  <option>Kotak</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="emiTenure" class="field-label">Tenure</label>
-                <select id="emiTenure" class="select">
-                  <option value="">Select tenure…</option>
-                  <option value="3">3 months</option>
-                  <option value="6">6 months</option>
-                  <option value="9">9 months</option>
-                  <option value="12">12 months</option>
-                </select>
-              </div>
+              <div class="field"><label for="emiBank" class="field-label">Bank</label><select id="emiBank" class="select"><option value="">Select bank…</option><option>SBI</option><option>HDFC Bank</option><option>ICICI Bank</option><option>Axis Bank</option><option>Kotak</option><option>Kotak Mahindra Bank</option></select></div>
+              <div class="field"><label for="emiTenure" class="field-label">Tenure</label><select id="emiTenure" class="select"><option value="">Select tenure…</option><option value="3">3 months</option><option value="6">6 months</option><option value="9">9 months</option><option value="12">12 months</option></select></div>
             </div>
-
-            <div class="krow"><span>Interest (p.a.)</span><span id="emiRate">—</span></div>
-            <div class="krow"><span>Processing fee</span><span id="emiFee">—</span></div>
-            <div class="krow" style="font-weight:800"><span>Monthly EMI</span><span id="emiMonthly">—</span></div>
-
+            <div class="krow"><span>Interest (p.a.)</span><span id="emiRate"> ... </span></div>
+            <div class="krow"><span>Processing fee</span><span id="emiFee"> ... </span></div>
+            <div class="krow" style="font-weight:800"><span>Monthly EMI</span><span id="emiMonthly"> ... </span></div>
             <button id="emiPay" class="btn btn-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post" disabled>Proceed with EMI</button>
             <p class="error-text" id="emiError" role="alert" aria-live="polite"></p>
           </div>
@@ -1305,139 +937,55 @@ html.dark .totals-sep{ background:#1f2937; }
       </div>
     </section>
 
-
     <!-- RIGHT: PRICE SUMMARY -->
     <div class="price-col">
       <div class="price-stack" id="priceStack">
         <aside class="card price-card">
           <div class="totals-panel" id="totalsPanel">
             <div id="totalsBody" class="totals-body" aria-hidden="true">
-              <div class="totals-row">
-                <span class="muted">Price ({{ item_count }} {{ item_count|pluralize:"item,items" }})</span>
-                <span>₹{{ cart_total|floatformat:0 }}</span>
-              </div>
-              <div class="totals-row">
-                <span class="muted">Delivery charge</span>
-                <span>₹{{ shipping_fee|floatformat:0 }}</span>
-              </div>
-              <div class="totals-row">
-                <span class="muted">Platform fee</span>
-                <span>₹{{ platform_fee|floatformat:0 }}</span>
-              </div>
+              <div class="totals-row"><span class="muted">Price ({{ item_count }} {{ item_count|pluralize:"item,items" }})</span><span>₹{{ cart_total|floatformat:0 }}</span></div>
+              <div class="totals-row"><span class="muted">Delivery charge</span><span>₹{{ shipping_fee|floatformat:0 }}</span></div>
+              <div class="totals-row"><span class="muted">Platform fee</span><span>₹{{ platform_fee|floatformat:0 }}</span></div>
               <div class="totals-sep"></div>
             </div>
-
             <button id="totalsToggle" class="totals-toggle" type="button" aria-expanded="false" aria-controls="totalsBody">
-              <span class="total-left">
-                Total Amount
-                <span class="caret" aria-hidden="true"></span>
-              </span>
-              <span class="total-right">
-                <span class="amount-val" id="amountMain">₹{{ total_payable|floatformat:0 }}</span>
-                <span class="caret" aria-hidden="true"></span>
-              </span>
+              <span class="total-left">Total Amount <span class="caret" aria-hidden="true"></span></span>
+              <span class="total-right"><span class="amount-val" id="amountMain">₹{{ total_payable|floatformat:0 }}</span><span class="caret" aria-hidden="true"></span></span>
             </button>
           </div>
         </aside>
 
         <!-- DISCOUNT -->
         <div class="line-callout" id="offersOpen" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="offersModal">
-          <div class="lc-text">
-          <div class="lc-title"><strong>10% instant discount</strong></div>
-          <div class="lc-sub">Claim now with payment offers</div>
-        </div>
-          <div>
-            <span class="chip">💳</span><span class="chip">🏦</span><span class="chip">+3</span>
-          </div>
+          <div class="lc-text"><div class="lc-title"><strong>10% instant discount</strong></div><div class="lc-sub">Claim now with payment offers</div></div>
+          <div><span class="chip">💳</span><span class="chip">🏦</span><span class="chip">+3</span></div>
         </div>
       </div>
     </div>
   </div>
-</main>
 
+  </div>
+</section>
 
 <!-- BANKS MODAL -->
 <div class="modal-backdrop" id="banksModal" aria-modal="true" role="dialog" aria-labelledby="banksTitle">
   <div class="modal">
     <header><h4 id="banksTitle">Select Your Bank</h4></header>
-    <div class="m-body">
-      <input id="bankSearch" class="input" placeholder="Search for your bank…">
-      <div class="bank-list no-scrollbar" id="banksList"></div>
-    </div>
-    <div class="m-actions">
-      <button class="btn-secondary" id="banksClose">Close</button>
-    </div>
+    <div class="m-body"><input id="bankSearch" class="input" placeholder="Search for your bank…"><div class="bank-list no-scrollbar" id="banksList"></div></div>
+    <div class="m-actions"><button class="btn-secondary" id="banksClose">Close</button></div>
   </div>
 </div>
 
 <!-- UPI HELP MODAL -->
 <div class="modal-backdrop" id="upiHelpModal" aria-modal="true" role="dialog" aria-labelledby="upiHelpTitle">
   <div class="modal">
-    <header style="display:flex;justify-content:space-between;align-items:center;">
-      <h4 id="upiHelpTitle">Steps to find your UPI ID</h4>
-      <button id="upiHelpClose" class="btn-secondary" style="padding:4px 10px">Close</button>
-    </header>
+    <header style="display:flex;justify-content:space-between;align-items:center;"><h4 id="upiHelpTitle">Steps to find your UPI ID</h4><button id="upiHelpClose" class="btn-secondary" style="padding:4px 10px">Close</button></header>
     <div class="m-body">
-      <div class="step">
-        <img class="appicon logo" src="/static/images/phonepe.png" alt="PhonePe">
-        <div>
-          <h5>PhonePe</h5>
-          <ol>
-            <li>Open the <strong>PhonePe</strong> app.</li>
-            <li>Tap your <strong>profile picture</strong> at the <strong>top-left</strong> of the home screen.</li>
-            <li>Open <strong>Bank Accounts / UPI</strong> and tap your account.</li>
-            <li>Your <strong>UPI ID</strong> (e.g. <code>name@bank</code>) is shown there.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div class="step">
-        <img class="appicon logo" src="/static/images/gpay.png" alt="Google Pay">
-        <div>
-          <h5>Google Pay</h5>
-          <ol>
-            <li>Open the <strong>Google Pay</strong> app.</li>
-            <li>Tap your <strong>profile photo</strong> at the <strong>top-right</strong>.</li>
-            <li>Choose <strong>Bank account</strong> / <strong>UPI ID</strong>.</li>
-            <li>Your linked bank shows one or more <strong>UPI IDs</strong>.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div class="step">
-        <img class="appicon logo" src="/static/images/paytm.png" alt="Paytm">
-        <div>
-          <h5>Paytm</h5>
-          <ol>
-            <li>Open the <strong>Paytm</strong> app.</li>
-            <li>Tap your <strong>profile picture</strong> at the <strong>top-left</strong>.</li>
-            <li>Open <strong>UPI &amp; Payment Settings</strong> (or just <strong>UPI</strong>).</li>
-            <li>Your <strong>UPI ID</strong> is visible on that page.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div class="step">
-        <img class="appicon logo" src="/static/images/amazonpay.png" alt="Amazon Pay">
-        <div>
-          <h5>Amazon Pay</h5>
-          <ol>
-            <li>Open the <strong>Amazon Pay</strong> app.</li>
-            <li>Tap your <strong>profile icon</strong> at the <strong>top-left</strong>.</li>
-            <li>Open <strong>Profile</strong> / <strong>My UPI ID</strong>.</li>
-            <li>Your active <strong>UPI ID</strong> is listed there.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div style="margin-top:10px; font-size:13px;">
-        <strong>Tips:</strong>
-        <ul style="margin:8px 0 0 16px; padding:0; list-style:disc">
-          <li>A UPI ID looks like <code>yourname@bank</code> or <code>9876543210@upi</code>.</li>
-          <li>If you have multiple UPI IDs, any one works for collection.</li>
-          <li>Can’t find it? Update your app to the latest version.</li>
-        </ul>
-      </div>
+      <div class="step"><img class="appicon logo" src="/static/images/phonepe.png" alt="PhonePe"><div><h5>PhonePe</h5><ol><li>Open the <strong>PhonePe</strong> app.</li><li>Tap your <strong>profile picture</strong> at the <strong>top-left</strong> of the home screen.</li><li>Open <strong>Bank Accounts / UPI</strong> and tap your account.</li><li>Your <strong>UPI ID</strong> (e.g. <code>name@bank</code>) is shown there.</li></ol></div></div>
+      <div class="step"><img class="appicon logo" src="/static/images/gpay.png" alt="Google Pay"><div><h5>Google Pay</h5><ol><li>Open the <strong>Google Pay</strong> app.</li><li>Tap your <strong>profile photo</strong> at the <strong>top-right</strong>.</li><li>Choose <strong>Bank account</strong> / <strong>UPI ID</strong>.</li><li>Your linked bank shows one or more <strong>UPI IDs</strong>.</li></ol></div></div>
+      <div class="step"><img class="appicon logo" src="/static/images/paytm.png" alt="Paytm"><div><h5>Paytm</h5><ol><li>Open the <strong>Paytm</strong> app.</li><li>Tap your <strong>profile picture</strong> at the <strong>top-left</strong>.</li><li>Open <strong>UPI &amp; Payment Settings</strong> (or just <strong>UPI</strong>).</li><li>Your <strong>UPI ID</strong> is visible on that page.</li></ol></div></div>
+      <div class="step"><img class="appicon logo" src="/static/images/amazonpay.png" alt="Amazon Pay"><div><h5>Amazon Pay</h5><ol><li>Open the <strong>Amazon Pay</strong> app.</li><li>Tap your <strong>profile icon</strong> at the <strong>top-left</strong>.</li><li>Open <strong>Profile</strong> / <strong>My UPI ID</strong>.</li><li>Your active <strong>UPI ID</strong> is listed there.</li></ol></div></div>
+      <div style="margin-top:10px;font-size:13px;"><strong>Tips:</strong><ul style="margin:8px 0 0 16px;padding:0;list-style:disc"><li>A UPI ID looks like <code>yourname@bank</code> or <code>9876543210@upi</code>.</li><li>If you have multiple UPI IDs, any one works for collection.</li><li>Can’t find it? Update your app to the latest version.</li></ul></div>
     </div>
   </div>
 </div>
@@ -1446,29 +994,17 @@ html.dark .totals-sep{ background:#1f2937; }
 <div id="offersModal" class="offers-modal" role="dialog" aria-modal="true" aria-labelledby="offersTitle">
   <div class="offers-dialog">
     <button id="offersCloseX" class="offers-close" aria-label="Close">×</button>
-
-    <header class="offers-header">
-      <h4 id="offersTitle">Offers on online payment</h4>
-    </header>
-
+    <header class="offers-header"><h4 id="offersTitle">Offers on online payment</h4></header>
     <div class="offers-layout">
-      <!-- LEFT: tabs -->
       <aside class="offers-tabs" role="tablist" aria-label="Offer categories">
         <button class="offers-tab is-active" data-group="all" role="tab" aria-selected="true">All Offers</button>
-        <button class="offers-tab" data-group="sbi" role="tab" aria-selected="false">
-          <img class="brand-logo" src="/static/images/sbi.png" alt=""> <span>Novacart SBI Credit Card</span>
-        </button>
-        <button class="offers-tab" data-group="axis" role="tab" aria-selected="false">
-          <img class="brand-logo" src="/static/images/axis.png" alt=""> <span>Novacart Axis Bank Card</span>
-        </button>
+        <button class="offers-tab" data-group="sbi" role="tab" aria-selected="false"><img class="brand-logo" src="/static/images/sbi.png" alt=""><span>Novacart SBI Credit Card</span></button>
+        <button class="offers-tab" data-group="axis" role="tab" aria-selected="false"><img class="brand-logo" src="/static/images/axis.png" alt=""><span>Novacart Axis Bank Card</span></button>
       </aside>
-
-      <!-- RIGHT: offers list -->
       <section id="offersList" class="offers-list" role="tabpanel" aria-live="polite" aria-labelledby="offersTitle"></section>
     </div>
   </div>
 </div>
-
 
 <div id="nav-loading" aria-hidden="true">
   <div class="nav-card" role="status" aria-live="polite">
@@ -1477,8 +1013,87 @@ html.dark .totals-sep{ background:#1f2937; }
   </div>
 </div>
 
+<!-- SESSION ENDED MODAL -->
+<div class="modal-backdrop" id="payTimeoutModal" aria-modal="true" role="dialog" aria-labelledby="payTimeoutTitle">
+  <div class="modal" role="document">
+    <header>
+      <h4 id="payTimeoutTitle" class="t-title">Payment session ended</h4>
+    </header>
+
+    <div class="t-wrap">
+      <div class="t-icon" aria-hidden="true">
+        <!-- warning glyph -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M12 8v5m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div>
+        <p class="t-desc">
+          Your payment wasn’t completed in time. We’ve marked this as <strong>Payment not successful</strong>.
+        </p>
+        <p class="t-note">
+          You can try again from your orders page or continue here. <span id="ptoCountdown" aria-live="polite"></span>
+        </p>
+
+        <!-- soft redirect progress -->
+        <div class="t-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="t-fill" id="ptoFill"></div>
+        </div>
+      </div>
+    </div>
+
+   <div class="m-actions">
+  <!-- help text ABOVE the buttons -->
+  <div class="help">Need help? Contact support from your orders page.</div>
+
+  <!-- buttons (no underline) -->
+  <div class="buttons">
+    <a class="btn-secondary" id="payTimeoutStay" href="#">Continue here</a>
+    <a class="btn-primary" id="payTimeoutOrders" href="/api/vieworders/">Go to My Orders</a>
+  </div>
+</div>
+  </div>
+
+
+  
+{% load static %}
+
+<!-- Backdrop -->
+<div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+
+<!-- Modal -->
+<div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+  <header style="position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;">
+    <h4 id="session-title" style="margin:0;text-align:center;">Your session expired</h4>
+ <button id="session-close-outside" aria-label="Close">×</button>
+  </header>
+
+  <!-- hero image -->
+  <div class="session-hero" aria-hidden="true">
+    <img src="{% static 'images/sessionend.png' %}" alt="" />
+  </div>
+
+  <!-- optional “why” link -->
+  <div class="why" id="why-link-wrap">
+    <a href="#" id="why-link">Why did this happen?</a>
+  </div>
+  <div id="session-why-text" class="msg" style="display:none;">
+    For security, we auto-sign out after inactivity or when your session token expires.
+  </div>
+
+  <!-- actions -->
+  <div class="session-actions">
+    <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+  </div>
+</div>
+
+
+</div>
+
 
 <script>
+
 /* =========================================================
    Vanilla JS for theme, accordions, modals, totals, inputs
    ========================================================= */
@@ -1495,29 +1110,6 @@ const numOnly = s => (s||'').replace(/\D+/g,'');
   document.querySelectorAll('[data-bind="delivery"]').forEach(n=>n.textContent = totals.delivery);
   document.querySelectorAll('[data-bind="platform"]').forEach(n=>n.textContent = totals.platform);
   document.querySelectorAll('[data-bind="total"]').forEach(n=>n.textContent = totals.total);
-})();
-
-/* =========================================================
-   THEME TOGGLE (persists in localStorage)
-   ========================================================= */
-(function(){
-  const btn = document.getElementById('themeToggle');
-  const icon= document.getElementById('themeIcon');
-
-  function setTheme(mode){
-    if(mode==='dark'){
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme','dark');
-      icon.innerHTML='<path d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM4 11a1 1 0 0 1 1 1 6 6 0 1 0 6-6 1 1 0 0 1-1-1 8 8 0 1 1-8 8 1 1 0 0 1 1-1z"/>';
-    }else{
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme','light');
-      icon.innerHTML='<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
-    }
-  }
-
-  setTheme(localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
-  btn?.addEventListener('click', ()=> setTheme(document.documentElement.classList.contains('dark')?'light':'dark'));
 })();
 
 /* =========================================================
@@ -2101,15 +1693,16 @@ document.getElementById('upi-verify')?.addEventListener('click', e=>{ if(validat
 
   function wireRadios(){
   nbBody.querySelectorAll('input[type="radio"][name="bank"]').forEach(r=>{
-    if(r._w) return; r._w=true;
+    if(r._w) return; r._w = true;
     r.addEventListener('change',()=>{
-      // remove any old CTAs
+      // remove old CTAs
       nbBody.querySelectorAll('.bank-cta').forEach(n=>n.remove());
 
-      const row = r.closest('.bank-item');      // this is a <label>
-      if(!row) return;
+      const row = r.closest('.bank-item');
+      // if row is hidden (filtered out), don't show CTA
+      if(!row || row.offsetParent === null) return;
 
-      // ⬇️ insert AFTER the label so the label doesn’t eat the click
+      // insert CTA *after* the label so the label doesn't eat the click
       row.insertAdjacentHTML('afterend', `
         <div class="bank-cta">
           <button class="btn btn-pay"
@@ -2126,18 +1719,31 @@ document.getElementById('upi-verify')?.addEventListener('click', e=>{ if(validat
   });
 }
 
+function removeCTAs(){
+  nbBody.querySelectorAll('.bank-cta').forEach(n=>n.remove());
+}
+
+
+function visibleBankRadios(){
+  return [...nbBody.querySelectorAll('input[type="radio"][name="bank"]')]
+    .filter(r => {
+      const row = r.closest('.bank-item');
+      return row && row.offsetParent !== null; // visible in layout
+    });
+}
+
 
 // Ensure one radio is checked (prefer Popular list)
 function ensureDefaultChecked(){
-  let checked = nbBody.querySelector('input[type="radio"][name="bank"]:checked');
-  if (!checked) {
-    const first =
-      nbPopularList?.querySelector('input[type="radio"][name="bank"]')
-      || nbAllList?.querySelector('input[type="radio"][name="bank"]');
-    if (first) { first.checked = true; checked = first; }
+  const vis = visibleBankRadios();
+  let checked = vis.find(r => r.checked);
+  if (!checked && vis.length){
+    vis[0].checked = true;
+    checked = vis[0];
   }
-  return checked;
+  return checked || null;
 }
+
 
 // Attach CTA under the currently-checked bank
 function attachCtaToChecked(){
@@ -2185,46 +1791,87 @@ function attachCtaToChecked(){
     renderAll(nbSearch ? nbSearch.value : '');
   }
 
-  function applySearch(){
-    const q = nbSearch ? nbSearch.value : '';
-    const searching = q.trim().length > 0;
+  
+function applySearch(){
+  const q = nbSearch ? nbSearch.value : '';
+  const searching = q.trim().length > 0;
 
-    const p = filterPopular(q);
-    const a = allOpen ? renderAll(q) : 0;
-    const none = (p + a) === 0;
+  const p = filterPopular(q);
+  const a = allOpen ? renderAll(q) : 0;
+  const none = (p + a) === 0;
 
-    // no-results art only when searching and truly none
-    nbNoResults.style.display = (searching && none) ? 'block' : 'none';
+  // Show/hide the "no results" artwork
+  nbNoResults.style.display = (searching && none) ? 'block' : 'none';
 
-    // headings/CTA visibility logic
-    if (nbPopularHeader) nbPopularHeader.style.display = (searching || none) ? 'none' : '';
-    if (nbDivider)       nbDivider.style.display       = (!allOpen || searching || none) ? 'none' : '';
-
-    // the link: visible ONLY before user opens; hidden forever this session after click
-    if (nbShowAll) nbShowAll.style.display = allOpen ? 'none' : '';
-
-    // list visibility (when not open, keep it hidden)
-    if (!allOpen){
-      if (nbAllList) nbAllList.style.display = 'none';
+  // If nothing matches: remove CTA and uncheck any radios
+  if (none){
+    removeCTAs();
+    nbBody.querySelectorAll('input[type="radio"][name="bank"]:checked')
+      .forEach(r => r.checked = false);
+  } else {
+    if (searching){
+      // ❗ While typing / filtering: DO NOT auto-select anything and remove CTA
+      removeCTAs();
+      nbBody.querySelectorAll('input[type="radio"][name="bank"]:checked')
+        .forEach(r => r.checked = false);
     } else {
-      if (nbAllList) nbAllList.style.display = (searching && none) ? 'none' : '';
+      // (Non-search mode) keep your older behavior: ensure one visible radio is selected
+      const visibleChecked = nbBody.querySelector(
+        'label.bank-item:not([style*="display: none"]) input[type="radio"][name="bank"]:checked'
+      );
+      if (!visibleChecked){
+        const firstVisible = nbBody.querySelector(
+          'label.bank-item:not([style*="display: none"]) input[type="radio"][name="bank"]'
+        );
+        if (firstVisible){
+          firstVisible.checked = true;
+          firstVisible.dispatchEvent(new Event('change', { bubbles:true })); // attaches CTA
+        } else {
+          removeCTAs(); // safety
+        }
+      } else {
+        // reattach CTA if needed
+        visibleChecked.dispatchEvent(new Event('change', { bubbles:true }));
+      }
     }
   }
+
+  // Headings / divider visibilities
+  if (nbPopularHeader) nbPopularHeader.style.display = (searching || none) ? 'none' : '';
+  if (nbDivider)       nbDivider.style.display       = (!allOpen || searching || none) ? 'none' : '';
+
+  // "Show all banks" link visible only before opening
+  if (nbShowAll) nbShowAll.style.display = allOpen ? 'none' : '';
+
+  // List visibility
+  if (!allOpen){
+    if (nbAllList) nbAllList.style.display = 'none';
+  } else {
+    if (nbAllList) nbAllList.style.display = (searching && none) ? 'none' : '';
+  }
+}
+
+
 
   nbSearch?.addEventListener('input', applySearch);
 
   nbShowAll?.addEventListener('click', ()=>{
-    openAll();       // enter open mode for this session
-    applySearch();   // update visibilities
-    nbNoResults.style.display='none';
-    nbSearch?.focus();
-  });
+  openAll();                 // enter open mode for this session
+  // clear any prior selection & CTA (the default checked one)
+  nbBody.querySelectorAll('input[type="radio"][name="bank"]').forEach(r=> r.checked = false);
+  removeCTAs();
+
+  applySearch();             // update visibilities
+  nbNoResults.style.display = 'none';
+  nbSearch?.focus();
+});
+
 
   // initial render (collapsed)
   filterPopular('');
   applySearch();
   wireRadios();
-  attachCtaToChecked();
+  if (!allOpen) attachCtaToChecked();
 })();
 
 /* =========================================================
@@ -2351,22 +1998,19 @@ function attachCtaToChecked(){
   });
 })();
 
-/* =========================================================
-   Double-click guard on primary pay buttons
-   ========================================================= */
+
+
 (function(){
   const form = document.getElementById('payForm');
   if(!form) return;
 
   function fastSubmit(btn){
-    // copy per-button overrides
     form.action = btn.getAttribute('formaction') || form.action || '/api/pay/success/';
     form.method = btn.getAttribute('formmethod') || form.method || 'post';
-    btn.disabled = true; // prevent double tap, but no timeout
-    requestAnimationFrame(()=> form.submit()); // submit on next frame
+    btn.disabled = true;
+    requestAnimationFrame(()=> form.submit());
   }
 
-  // Capture-phase: runs before any other click listeners
   document.addEventListener('click', (e)=>{
     const btn = e.target.closest('.btn-pay[form="payForm"]');
     if(!btn) return;
@@ -2376,42 +2020,6 @@ function attachCtaToChecked(){
     fastSubmit(btn);
   }, true);
 })();
-
-
-(function(){
-  const miniBtn = document.getElementById('mastTotals');
-  const miniAmt = document.getElementById('mastAmt');
-  const mainAmt = document.getElementById('amountMain');   // from your totals card
-  const mainTgl = document.getElementById('totalsToggle'); // from your totals card
-  if (!miniBtn || !miniAmt || !mainAmt || !mainTgl) return;
-
-  const sync = () => {
-    miniAmt.textContent = mainAmt.textContent;
-    miniBtn.setAttribute('aria-expanded', mainTgl.getAttribute('aria-expanded') || 'false');
-  };
-  sync();
-  new MutationObserver(sync).observe(mainAmt, { childList:true, subtree:true, characterData:true });
-
-  miniBtn.addEventListener('click', () => {
-    mainTgl.click();
-    sync();
-  });
-})();
-
-
-document.querySelectorAll('.btn-pay[form="payForm"]').forEach(btn=>{
-  btn.addEventListener('click', (e)=>{
-    const form = document.getElementById('payForm');
-    if(!form) return;
-
-    // copy per-button settings onto the form
-    form.action = btn.getAttribute('formaction') || form.action;
-    form.method = btn.getAttribute('formmethod') || form.method;
-
-    // submit explicitly
-    form.submit();
-  });
-});
 
 
 /* =========================================================
@@ -2471,4 +2079,268 @@ Spinner
   });
 })();
 
+
+/* =========================================================
+Global Dark ro White mode 
+========================================================= */
+(function () {
+  const root = document.documentElement;
+
+  function apply(mode) {
+    const theme = (mode === 'dark') ? 'dark' : 'light';
+    root.dataset.theme = theme;           // <-- all CSS reads this
+    root.style.colorScheme = theme;       // form controls, UA styles
+    try { localStorage.setItem('theme', theme); } catch {}
+  }
+
+  // initial
+  const saved = localStorage.getItem('theme');
+  apply(saved === 'dark' ? 'dark' : 'light');
+
+  // header toggle (adapt id if different)
+  document.getElementById('theme-toggle-header')?.addEventListener('click', () => {
+    apply((root.dataset.theme === 'dark') ? 'light' : 'dark');
+  });
+
+  // cross-tab sync
+  addEventListener('storage', (e) => {
+    if (e.key === 'theme') apply(e.newValue === 'dark' ? 'dark' : 'light');
+  });
+})();
+
+
+/* ================== DJANGO CSRF HELPERS ================== */
+function getCookie(name) {
+  const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+  return m ? decodeURIComponent(m.pop()) : '';
+}
+
+/* ================== PAYMENT INACTIVITY TIMER ==================
+   - Default is 60_000ms; override with data-timeout-ms on #paymentsTop (e.g. 10000 for testing).
+   - Sends POST to /api/pay/timeout/ exactly once per page load.
+================================================================= */
+(function paymentTimeout(){
+  const area    = document.getElementById('paymentsTop') || document.body;
+  const payForm = document.getElementById('payForm');
+  const modal   = document.getElementById('payTimeoutModal');
+  const stayBtn = document.getElementById('payTimeoutStay');
+  const ordersBtn = document.getElementById('payTimeoutOrders');
+
+    // after: const stayBtn = ...; const ordersBtn = ...;
+  const countdownEl = document.getElementById('ptoCountdown');
+  const fillEl = document.getElementById('ptoFill');
+  const REDIRECT_SEC = 20; // change to taste
+  let cdTimer = null, cdLeft = REDIRECT_SEC;
+
+  function startCountdown(){
+    // reset
+    cdLeft = REDIRECT_SEC;
+    update();
+    clearInterval(cdTimer);
+    cdTimer = setInterval(() => {
+      cdLeft--;
+      update();
+      if (cdLeft <= 0){
+        clearInterval(cdTimer);
+        // ensure server knows; then redirect
+        postTimeoutOnce().finally(() => { window.location.href = '/api/vieworders/'; });
+      }
+    }, 1000);
+  }
+  function stopCountdown(){ clearInterval(cdTimer); }
+  function update(){
+    if (countdownEl) countdownEl.textContent = `Auto-redirecting in ${cdLeft}s…`;
+    if (fillEl){
+      const pct = Math.max(0, Math.min(100, 100 * (REDIRECT_SEC - cdLeft) / REDIRECT_SEC));
+      fillEl.style.width = pct + '%';
+      const bar = fillEl.parentElement;
+      if (bar) bar.setAttribute('aria-valuenow', String(Math.round(pct)));
+    }
+  }
+
+  // hook into show/hide
+  const _showModal = showModal;
+  showModal = function(){ _showModal(); startCountdown(); };
+  const _hideModal = hideModal;
+  hideModal = function(){ stopCountdown(); _hideModal(); };
+
+  // cancel countdown if user continues here
+  stayBtn?.addEventListener('click', (e) => { stopCountdown(); });
+
+
+  if (!modal) return; // no modal, nothing to do
+
+  const DEFAULT_MS = 40_000;
+  const ms = Number(area?.dataset?.timeoutMs || DEFAULT_MS);
+
+  let timerId = null;
+  let submitted = false;
+  let posted = false; // ensure we POST only once
+
+  function startTimer(){
+    clearTimeout(timerId);
+    timerId = setTimeout(onTimeout, ms);
+  }
+  function stopTimer(){
+    clearTimeout(timerId);
+    timerId = null;
+  }
+  function showModal(){
+  modal.classList.add('show');
+  modal.removeAttribute('hidden');
+  // ⬇lock background
+  document.documentElement.classList.add('modal-open'); // <html>
+  document.body.classList.add('modal-open');            // <body>
+  // hard fallback against !important rules
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+}
+
+function hideModal(){
+  modal.classList.remove('show');
+  // ⬇ unlock background
+  document.documentElement.classList.remove('modal-open');
+  document.body.classList.remove('modal-open');
+  // remove hard fallback
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+}
+
+  async function postTimeoutOnce(){
+    if (posted) return;
+    posted = true;
+    try{
+      const res = await fetch('/api/pay/timeout/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ reason: 'inactivity' }),
+        credentials: 'same-origin'
+      });
+      // (optional) log to console for quick debugging
+      if (!res.ok){
+        const txt = await res.text().catch(()=> '');
+        console.warn('pay timeout POST failed:', res.status, txt);
+      }
+    }catch(err){
+      console.warn('pay timeout POST error:', err);
+    }
+  }
+
+  async function onTimeout(){
+    if (submitted) return;     // user already started paying
+    await postTimeoutOnce();   // tell backend to log "Payment Failed"
+    showModal();               // show dialog
+  }
+
+  // 1) Start timer on load
+  startTimer();
+
+  // 2) Any interaction in the payment area resets the timer
+  ['click','keydown','pointerdown','touchstart','wheel'].forEach(ev => {
+    area.addEventListener(ev, () => { if (!submitted) startTimer(); }, { passive: true });
+  });
+
+  // 3) If the user actually submits the payment form, cancel the timeout
+  payForm?.addEventListener('submit', () => { submitted = true; stopTimer(); });
+
+  // 4) Visibility changes: if they leave the tab, keep the timer running; if they come back, keep counting.
+  //    (No special handling needed, but you can pause/resume if preferred.)
+
+  // 5) Modal buttons
+  stayBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideModal();
+    if (!submitted) startTimer(); // give them another window
+  });
+
+  ordersBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    // ensure we told backend (in case user clicks quickly)
+    postTimeoutOnce().finally(() => {
+      window.location.href = '/api/vieworders/';
+    });
+  });
+
+  // 6) Close modal on backdrop click (optional)
+  modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+})();
+
+
+
+(function(){
+  const modal = document.getElementById('session-modal');
+  const back  = document.getElementById('session-backdrop');
+  const closeOutside = document.getElementById('session-close-outside');
+  const whyLink  = document.getElementById('why-link');
+  const whyBlock = document.getElementById('session-why-text');
+
+  if (!modal || !back) return;
+
+  let opened = false;
+
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+  function open(){
+    if (opened) return;
+    opened = true;
+    modal.style.display = 'block';
+    back.style.display  = 'block';
+    lockScroll();
+  }
+  function shut(){
+    modal.style.display = 'none';
+    back.style.display  = 'none';
+    unlockScroll();
+  }
+
+  // UI wiring
+  closeOutside?.addEventListener('click', shut);
+  back?.addEventListener('click', shut);
+  whyLink?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const on = whyBlock.style.display !== 'block';
+    whyBlock.style.display = on ? 'block' : 'none';
+    whyLink.classList.toggle('clicked', on);
+    whyLink.textContent = on ? 'Hide details' : 'Why did this happen?';
+  });
+
+  // Always check the session; open on 401/403
+  fetch('/api/userview/', { credentials:'same-origin' })
+    .then(r => {
+      if (r.status === 401 || r.status === 403) open();
+    })
+    .catch(open);
+
+  // Optional: catch any later API calls that 401/403
+  const _fetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const res = await _fetch(...args);
+    if ((res.status === 401 || res.status === 403) && !opened) open();
+    return res;
+  };
+})();
+
+
 </script>
+
+{% endblock %}

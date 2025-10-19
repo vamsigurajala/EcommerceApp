@@ -17,7 +17,7 @@ from rest_framework import views, status, generics
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 import json
 import jwt
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta, timezone
 from register.settings import user_url, product_url, cart_url, order_url, review_url, payment_url
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt 
 from django.views.decorators.http import require_POST, require_GET, require_http_methods 
@@ -32,72 +32,111 @@ from typing import List, Dict
 from django.urls import reverse
 import uuid as py_uuid
 import uuid
+from django.core.paginator import Paginator
+from django.shortcuts import render
+import requests
+import random
+import hashlib
+from .utils.auth import get_user_from_request
+import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
+from .utils.payment_utils import normalize_payment_attempt, headline_from_attempts
+from .utils.words import amount_in_words_rupees
+from django.contrib import messages as dj_messages
+
+
 
 
 def landing_page(request):
    return redirect("homepage")
 
+
+
+def userview(request):
+    token = request.COOKIES.get('jwt')
+    if not token:
+        return JsonResponse({'code':'TOKEN_MISSING'}, status=401)
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
+        return JsonResponse({'ok': True, 'user_id': payload['user_id']})
+    except ExpiredSignatureError:
+        return JsonResponse({'code':'TOKEN_EXPIRED'}, status=401)
+    except InvalidTokenError:
+        return JsonResponse({'code':'TOKEN_INVALID'}, status=401)
+
+
+# views.py (very top)
+from hashids import Hashids
+
+# Alphanumeric public code (good default)
+_USER_HASH = Hashids(
+    salt="CHANGE_ME_USERS_v1",   # put a secret from settings/env in prod
+    min_length=12,               # length you like (12–16 looks good)
+    alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+)
+
+def _encode_user_pk(pk: int) -> str:
+    return _USER_HASH.encode(pk)
+
+# (Optional) if you ever need to decode back:
+# def _decode_user_code(code: str) -> int | None:
+#     try:
+#         res = _USER_HASH.decode(code)
+#         return res[0] if res else None
+#     except Exception:
+#         return None
+
 #LOGIN AND SIGNUP PAGE CODE
+
 
 class UserLoginAPIView(APIView):
     def get(self, request):
-        # Allow showing errors via context too (optional)
         return render(request, "userlogin.html")
 
     def post(self, request):
         email = (request.POST.get('email') or '').strip()
         password = request.POST.get('password') or ''
-
         user = authenticate(request, email=email, password=password)
         if user is None:
-            # Bad credentials → show inline error and preserve email
-            return render(
-                request,
-                "userlogin.html",
-                {
-                    "message_type": "error",
-                    "message": "Invalid email or password.",
-                    "email": email,
-                },
-                status=401,
-            )
+            return render(request, "userlogin.html",
+                          {"message_type":"error","message":"Invalid email or password.","email": email},
+                          status=401)
 
-        # (Optional) block inactive users
         if not user.is_active:
-            return render(
-                request,
-                "userlogin.html",
-                {
-                    "message_type": "error",
-                    "message": "Your account is inactive. Please contact support.",
-                    "email": email,
-                },
-                status=403,
-            )
+            return render(request, "userlogin.html",
+                          {"message_type":"error","message":"Your account is inactive.","email": email},
+                          status=403)
 
-        # Success: issue JWT and continue
         payload = {
             'user_id': user.user_id,
-            'exp': datetime.utcnow() + timedelta(minutes=60),
+            'exp': datetime.utcnow() + timedelta(minutes=settings.JWT_TTL_MINS),
             'iat': datetime.utcnow(),
         }
-        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        token = jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALG)
+        default_next = "/api/paginate/?page=1"
+        next_url = (request.POST.get("next")
+                    or request.GET.get("next")
+                    or request.META.get("HTTP_REFERER")
+                    or default_next)
 
-        response = redirect('paginatedproducts')
-        response.set_cookie(key='jwt', value=token, httponly=True)
-        return response
+        resp = redirect(next_url)
+        resp.set_cookie("jwt", token, httponly=True, samesite="Lax")
+        return resp
 
 
 class UserDetailsView(APIView):
-    permission_classes = []  
-
-    JWT_SECRET = 'secret'
-    JWT_ALGORITHM = 'HS256'
+    permission_classes = []
 
     def get_user(self, token):
         if not token:
             raise AuthenticationFailed('Unauthenticated')
-        payload = jwt.decode(token, self.JWT_SECRET, algorithms=[self.JWT_ALGORITHM])
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
+        except ExpiredSignatureError:
+            raise AuthenticationFailed('Token expired')
+        except InvalidTokenError:
+            raise AuthenticationFailed('Invalid token')
+        from application.models import User
         return User.objects.get(pk=payload['user_id'])
 
     def get(self, request):
@@ -108,7 +147,8 @@ class UserDetailsView(APIView):
             'user_id': data['user_id'],
             'username': data['username'],
             'email': data['email'],
-            'phone': data.get('phone')
+            'phone': data.get('phone'),
+            'user_code': getattr(user, 'user_code', '')
         })
 
 def forgot_password(request):
@@ -163,7 +203,6 @@ def usersignup(request):
     elif request.method == "POST":
         role = request.POST.get('user_role')
         phone = request.POST.get('phone')  
-
         # create user
         user = User(
             username=request.POST['name'],
@@ -180,14 +219,17 @@ def usersignup(request):
         user.phone = phone
         user.save()
 
+        if not user.user_code:
+            user.user_code = _encode_user_pk(user.pk)
+            user.save(update_fields=['user_code'])
+
         # *** IMPORTANT: auto-login by issuing the JWT like your login view ***
         payload = {
             'user_id': user.user_id,
             'exp': datetime.utcnow() + timedelta(minutes=60),
             'iat': datetime.utcnow(),
         }
-        token = jwt.encode(payload, 'secret', algorithm='HS256')
-
+        token = jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALG)
         resp = redirect('addingaddress')   # or whatever name maps to address.html
         resp.set_cookie(key='jwt', value=token, httponly=True)
         return resp
@@ -196,89 +238,77 @@ def usersignup(request):
 
 class LogoutView(APIView):
     def post(self, request):
-        response = redirect('home.html')
-        response.delete_cookie('jwt')
-        response.data={
-            'message':'Successlly logged out'
-        }
-        return Response(response.data, status=status.HTTP_200_OK)
+        # where should we go *after* the user logs in again?
+        desired_next = (request.GET.get("next")
+                        or request.POST.get("next")
+                        or request.META.get("HTTP_REFERER")
+                        or "/api/paginate/?page=1")
 
+        login_url = f"{reverse('loginuser')}?next={desired_next}"
+        resp = redirect(login_url)
+        resp.delete_cookie('jwt')
+        return resp
 
 class AddressView(APIView):
-    JWT_SECRET = 'secret'
-    JWT_ALGORITHM = 'HS256'
+    permission_classes = []  # we auth via JWT cookie
 
-    def get_user_id(self, token):
+    def _user_id_from_jwt(self, request):
+        token = request.COOKIES.get('jwt')
         if not token:
-            raise AuthenticationFailed('User not authenticated!')
+            raise AuthenticationFailed('Unauthenticated')
         try:
-            payload = jwt.decode(token, self.JWT_SECRET, algorithms=[self.JWT_ALGORITHM])
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Token has expired!')
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
+        except ExpiredSignatureError:
+            raise AuthenticationFailed('Token expired')
+        except InvalidTokenError:
+            raise AuthenticationFailed('Invalid token')
         return payload['user_id']
 
     def get(self, request):
-        token = request.COOKIES.get('jwt')
-        user_id = self.get_user_id(token)
+        user_id = self._user_id_from_jwt(request)
         addresses = Address.objects.filter(user_id=user_id).order_by('-updated_at', '-created_at')
-        serializer = AddressSerializer(addresses, many=True)
-        return Response({'addresses': serializer.data}, status=status.HTTP_200_OK)
+        data = AddressSerializer(addresses, many=True).data
+        return Response({'addresses': data}, status=200)
 
     def post(self, request):
-        token = request.COOKIES.get('jwt')
-        user_id = self.get_user_id(token)
-        #serializer = AddressSerializer(data=request.data)
-        serializer = AddressSerializer(data={**request.data, 'user': self.get_user_id(request.COOKIES.get('jwt'))})
-        if serializer.is_valid():
-            # set FK via *_id is fine
-            serializer.save(user_id=user_id)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        user_id = self._user_id_from_jwt(request)
+        ser = AddressSerializer(data=request.data)
+        if ser.is_valid():
+            ser.save(user_id=user_id)
+            return Response(ser.data, status=201)
+        return Response(ser.errors, status=400)
 
     def put(self, request):
-        """
-        Update an address that belongs to the logged-in user.
-        Pass ?address_id=<id> in the query string.
-        """
-        token = request.COOKIES.get('jwt')
-        user_id = self.get_user_id(token)
+        user_id = self._user_id_from_jwt(request)
         addr_id = request.query_params.get('address_id')
-
         if not addr_id:
-            return Response({'detail': 'address_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'detail':'address_id is required'}, status=400)
         try:
             addr = Address.objects.get(pk=addr_id)
         except Address.DoesNotExist:
-            return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
-
+            return Response({'detail':'Address not found'}, status=404)
         if addr.user_id != user_id:
             raise PermissionDenied('Not your address')
 
-        serializer = AddressSerializer(addr, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()  # user_id stays same
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        ser = AddressSerializer(addr, data=request.data, partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data, status=200)
+        return Response(ser.errors, status=400)
 
     def delete(self, request):
-        token = request.COOKIES.get('jwt')
-        user_id = self.get_user_id(token)
+        user_id = self._user_id_from_jwt(request)
         addr_id = request.query_params.get('address_id')
-
         if not addr_id:
-            return Response({'detail': 'address_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'detail':'address_id is required'}, status=400)
         try:
             addr = Address.objects.get(pk=addr_id)
         except Address.DoesNotExist:
-            return Response({'detail': 'Address not found'}, status=status.HTTP_404_NOT_FOUND)
-
+            return Response({'detail':'Address not found'}, status=404)
         if addr.user_id != user_id:
             raise PermissionDenied('Not your address')
-
         addr.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=204)
 
 
 
@@ -288,7 +318,7 @@ def _jwt_user_id(request):
     if not token:
         return None
     try:
-        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
         return payload.get('user_id')
     except jwt.ExpiredSignatureError:
         return None
@@ -442,7 +472,6 @@ def paginate(request, page=None, search=None):
 
 
 
-
 class GetUserIdAPIView(views.APIView): #Get the UserId
     def get(self, request, *args, **kwargs):
         user_id = kwargs['user_id']
@@ -450,7 +479,142 @@ class GetUserIdAPIView(views.APIView): #Get the UserId
         return Response( UserSerializer(user).data)
 
 
-# CART SERVICE CODE
+
+# CART & WISHLIST SERVICE CODE
+
+SNAPSHOT_CART_KEY      = "__cart_snapshot__"
+SNAPSHOT_WISHLIST_KEY  = "__wishlist_snapshot__"
+SNAPSHOT_TOTAL_KEY     = "__cart_total_snapshot__"
+
+def _no_store(response):
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
+
+def _simulate_cart_eta(seed=None):
+    now = int(datetime.now(tz=timezone.utc).timestamp())
+    if seed is None:
+        seed = now
+    r = random.Random(hash(seed) & 0xffffffff)
+    add_days  = r.randint(2, 6)
+    add_hours = r.randint(0, 12)
+    return now + add_days*86400 + add_hours*3600
+
+
+@never_cache
+def cart(request):
+    cartitems, wishlistitems, cart_total = [], [], 0.0
+    session_expired = False
+
+    # 1) quick cookie check
+    if 'jwt' not in request.COOKIES:
+        session_expired = True
+
+    # 2) try to fetch live data if session seems valid
+    if not session_expired:
+        try:
+            u = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
+            user_id = u.get('user_id') or u.get('id')
+            if not user_id:
+                session_expired = True
+        except Exception:
+            session_expired = True
+
+    if not session_expired:
+        # ----- LIVE FETCH (and snapshot it) -----
+        try:
+            cart_rows = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES, timeout=8).json()
+            if not isinstance(cart_rows, list):
+                cart_rows = []
+        except Exception:
+            cart_rows = []
+
+        total = 0.0
+        out = []
+        for idx, row in enumerate(cart_rows):
+            pid = row.get('product_id')
+            qty = int(row.get('quantity', 1) or 1)
+
+            try:
+                p = requests.get(
+                    f'{product_url}/api/productview/{pid}/',
+                    cookies=request.COOKIES, timeout=8
+                ).json()
+            except Exception:
+                p = {}
+
+            if 'image' in p:
+                p['image'] = p['image'].replace('http://152.14.0.14', 'http://127.0.0.1')
+
+            price = float(p.get('price', 0) or 0)
+            row['product'] = p
+            row['total_price'] = round(qty * price, 2)
+
+            # --- NEW: ETA per item (seeded so it’s stable per product) ---
+            seed = f"{pid}:{qty}:{idx}"
+            eta_ts = _simulate_cart_eta(seed)
+            eta_date = datetime.fromtimestamp(eta_ts, tz=timezone.utc).strftime("%b %d")
+            row['eta_display'] = f"Delivery by {eta_date}"
+            row['eta_ts'] = eta_ts  # if you ever want to sort/group
+
+            out.append(row)
+            total += qty * price
+
+        cartitems  = out
+        cart_total = round(total, 2)
+
+
+        # wishlist
+        try:
+            wraw = requests.get(f'{cart_url}/api/wishlistitems/', cookies=request.COOKIES, timeout=8).json()
+            wishlistitems = wraw if isinstance(wraw, list) else []
+            # normalize wishlist rows (add product blobs for template parity)
+            for w in wishlistitems:
+                pid = w.get('product_id')
+                try:
+                    p = requests.get(f'{product_url}/api/productview/{pid}/', cookies=request.COOKIES, timeout=8).json()
+                except Exception:
+                    p = {}
+                if 'image' in p:
+                    p['image'] = p['image'].replace('http://152.14.0.14', 'http://127.0.0.1')
+                w['product'] = p
+                w['quantity'] = int(w.get('quantity', 1) or 1)
+        except Exception:
+            wishlistitems = []
+
+        # snapshot for later read-only rendering
+        request.session[SNAPSHOT_CART_KEY]     = cartitems
+        request.session[SNAPSHOT_WISHLIST_KEY] = wishlistitems
+        request.session[SNAPSHOT_TOTAL_KEY]    = float(cart_total)
+        request.session.modified = True
+
+    else:
+        cartitems     = request.session.get(SNAPSHOT_CART_KEY, []) or []
+        wishlistitems = request.session.get(SNAPSHOT_WISHLIST_KEY, []) or []
+        cart_total    = request.session.get(SNAPSHOT_TOTAL_KEY, 0.0) or 0.0
+
+    # Ensure ETA exists for each item in snapshot too
+    for idx, row in enumerate(cartitems):
+        if not row.get('eta_display'):
+            pid = row.get('product_id')
+            seed = f"snap:{pid}:{idx}"
+            eta_ts = _simulate_cart_eta(seed)
+            eta_date = datetime.fromtimestamp(eta_ts, tz=timezone.utc).strftime("%b %d")
+            row['eta_display'] = f"Delivery by {eta_date}"
+            row['eta_ts'] = eta_ts
+
+    resp = render(request, "cart.html", {
+        "cartitems": cartitems,
+        "wishlistitems": wishlistitems,
+        "cart_total": cart_total,
+        "session_expired": 1 if session_expired else 0,
+        "read_only": 1 if session_expired else 0,  
+    })
+    return _no_store(resp)
+    
+
+
 @require_POST
 def add_to_cart_ajax(request):
     if 'jwt' not in request.COOKIES:
@@ -480,41 +644,7 @@ def add_to_cart_ajax(request):
     return JsonResponse({'ok': True, 'cart_count': cart_count})
 
 
-def cart(request):
-    # Initialize cartitems to None
-    cartitems=None
 
-    # Check if user is authenticated
-    if requests and request.COOKIES and  'jwt' in request.COOKIES:
-        response  = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()
-        user_id=response['user_id']
-    else:
-        return redirect(f'{user_url}/api/login/')
-    
-    # Retrieve the cart items from the cart service
-    cart_response = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES)
-    
-    #Check if cart is empty
-    if 'message' in cart_response.json():
-        message= cart_response.json()['message']
-        return render(request, "cart.html", {'user_id':user_id, 'cartitems':cartitems, 'message': message})
-    
-    # If cart is not empty, process the cart items
-    cartitems=cart_response.json()
-    cart_total=0
-    #cart_count = 0 
-    for item in cartitems:
-        # Retrieve product details from the product service
-        product_id = item["product_id"]
-        product=requests.get(f'{product_url}/api/productview/{product_id}/', data= item).json()
-        product['image']=product['image'].replace('http://152.14.0.14','http://127.0.0.1')
-        item['product'] = product
-        # Calculate total price for each item
-        item['total_price'] = item['quantity'] * float(product['price'])
-        cart_total+=item['total_price']
-        #cart_count += int(item['quantity']) 
-    return render(request, 'cart.html',{'user_id':user_id, 'cartitems':cartitems, 'cart_total':cart_total, 'message':None})    
-        
 
 def add_quantity(request):
 
@@ -555,241 +685,127 @@ def delete_product(request):
     reposne = requests.post(f'{cart_url}/api/deleteproduct/',data=request.GET, cookies=request.COOKIES).json()
     return redirect('/api/cart/')
 
+@require_POST
 def clear_cart(request):
-
-    if 'jwt' in request.COOKIES.keys():
-        resposne = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-    else:
+    # require login like you already do
+    if 'jwt' not in request.COOKIES: 
         return redirect(f'{user_url}/api/login/')
-    
-    product_id =  request.GET['product_id']
-    reposne = requests.post(f'{cart_url}/api/clearcart/',data=request.GET, cookies=request.COOKIES).json()
+    try:
+        # IMPORTANT: no product_id, and POST (not GET)
+        r = requests.post(f'{cart_url}/api/clearcart/', cookies=request.COOKIES, timeout=6)
+        data = r.json() if r.ok else {'message': 'Could not clear cart'}
+    except requests.RequestException:
+        data = {'message': 'Could not clear cart'}
+    # optional UX message
+    messages.success(request, data.get('message', 'Cart cleared'))
     return redirect('/api/cart/')
 
 
 def get_user_address(request):
     user_id=requests.get(f'{user_url}/api/userview/',cookies=request.COOKIES).json()['user_id']
-
     # Get the user's address from the Address model
     address=Address.objects.filter(user_id=user_id).first()
     context={'address':address}
     return render(request, 'address.html', context)
 
+@require_POST
+def move_cart_to_wishlist(request):
+    if 'jwt' not in request.COOKIES: return redirect(f'{user_url}/api/login/')
+    product_id = request.POST.get('product_id')
+    requests.post(f'{cart_url}/api/move-cart-to-wishlist/', data={'product_id': product_id}, cookies=request.COOKIES, timeout=8)
+    return redirect('/api/cart/?open=wishlist')
 
-"""
-def checkout(request):
-    if request.method=='GET':
-        if 'jwt' in request.COOKIES.keys():
 
-            user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-        else:
-            return redirect(f'{user_url}/api/login/')
-        address_response = requests.get(f'{user_url}/api/getaddress/', cookies= request.COOKIES).json()
-        address = address_response['addresses'][0] 
 
-        # full_address_response = requests.get(f'http://127.0.0.1:8000/api/getaddress/{address["address_id"]}/', cookies=request.COOKIES).json
-        # full_address = full_address_response['address']
-        # print(full_address_response)
-        
-        cart_items_response = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
-        cart_total=0
-        for item in cart_items_response:
-            product_id = item["product_id"]
-            product=requests.get(f'{product_url}/api/productview/{product_id}/', data= item).json()
-            product['image']=product['image'].replace('http://152.14.0.14','http://127.0.0.1')
-            item['product'] = product
-            item['total_price'] = item['quantity'] * float(product['price'])
-            cart_total+=item['total_price'] 
-        cart_items = [
-        {**cart_item, **requests.get(f'{product_url}/api/singleproduct/{cart_item["product_id"]}/', cookies=request.COOKIES).json()}
-        for cart_item in cart_items_response
-        ]
-        return render(request, "checkout.html" , {'orders_data': cart_items, 'addresses': address_response['addresses'], 'cart_total':cart_total})#, 'full_address' : full_address_response['addresses']})
-    elif request.method=="POST":
-        return start_payment_from_checkout(request)
+@require_POST
+def add_to_wishlist_ajax(request):
+    if 'jwt' not in request.COOKIES:
+        return JsonResponse({'ok': False, 'auth': False}, status=401)
 
-    ''' if 'jwt' in request.COOKIES.keys():
+    pid = request.POST.get('product_id')
+    if not pid:
+        return JsonResponse({'ok': False, 'error': 'missing product_id'}, status=400)
 
-            user_id = requests.get(f'{user_url}/api/userview/', cookies = request.COOKIES).json()['user_id']
-        else:
+    try:
+        # correct cart service endpoint
+        r = requests.post(
+            f'{cart_url}/api/addtowishlist/',
+            data={'product_id': pid},
+            cookies=request.COOKIES,
+            timeout=8
+        )
+        if r.status_code >= 400:
+            return JsonResponse(
+                {'ok': False, 'error': 'wishlist endpoint error', 'status': r.status_code, 'body': r.text},
+                status=502
+            )
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'wishlist endpoint unreachable'}, status=502)
 
-            return redirect(f'{user_url}/api/login/')
-        
-        address_response = requests.get(f'{user_url}/api/getaddress/', cookies= request.COOKIES).json()
-        address = address_response['addresses'][0]  
-
-        # full_address_response = requests.get(f'http://127.0.0.1:8000/api/getaddress/{address["address_id"]}/', cookies=request.COOKIES).json
-        # full_address = full_address_response['address']
-        # print(full_address_response)
-
-        # Get user's cart items and calculate the total price
-        cart_items_response = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
-        cart_total=0
-        for item in cart_items_response:
-            product_id = item["product_id"]
-            product=requests.get(f'{product_url}/api/productview/{product_id}/', data= item).json()
-            item['product'] = product
-            item['total_price'] = item['quantity'] * float(product['price'])
-            cart_total+=item['total_price']
-
-        # Get detailed product information for each item in the cart
-        cart_items = [
-            {**cart_item, **requests.get(f'{product_url}/api/singleproduct/{cart_item["product_id"]}/', cookies=request.COOKIES).json()}
-            for cart_item in cart_items_response
-        ]
-        #print(cart_items)
-        orders_data = {
-            'user_id': user_id,
-            'address': address,
-            'items': cart_items,
-        }
-        print(orders_data)
-        # Place the order using the orders_data dictionary and save the response
-        order_response = requests.post(f'{order_url}/api/placeorder/', data={"order":json.dumps( orders_data)}, cookies=request.COOKIES)
-        reposne = requests.post(f'{cart_url}/api/clearcart/',data=request.GET, cookies=request.COOKIES).json()
-
-        orders_data = json.dumps(orders_data)
-        messages.success(request, "Order placed successfully!")
-        return redirect('/api/vieworders/?placed=1')'''
-    
-from django.contrib.messages import get_messages
-
-def _clear_messages(request):
-    # iterate once to consume anything pending
-    for _ in get_messages(request):
+    # optional: return fresh wishlist count
+    wl_count = 0
+    try:
+        w = requests.get(f'{cart_url}/api/wishlistitems/', cookies=request.COOKIES, timeout=8).json()
+        if isinstance(w, list):
+            wl_count = sum(int(item.get('quantity', 1) or 1) for item in w)
+    except Exception:
         pass
 
-import uuid as py_uuid
+    return JsonResponse({'ok': True, 'wishlist_count': wl_count})
 
-def start_payment_from_checkout(request):
+
+
+def remove_wishlist_item(request):
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+    product_id = request.GET.get('product_id')
+    requests.post(f'{cart_url}/api/removewishlist/', data={'product_id': product_id}, cookies=request.COOKIES)
+    return redirect('/api/cart/?open=wishlist')
+
+@require_POST
+def move_wishlist_to_cart(request):
     if 'jwt' not in request.COOKIES:
         return redirect(f'{user_url}/api/login/')
 
-    # address
-    address_response = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES).json()
-    addresses = address_response.get('addresses') or []
-    if not addresses:
-        messages.error(request, "No address on file. Please add an address.")
-        return redirect('/api/getaddress/')
-    address = addresses[0]
+    product_id = request.POST.get('product_id')
+    if not product_id:
+        messages.error(request, "Missing product id")
+        return redirect('/api/cart/?open=wishlist')
 
-    # cart
-    cart_items_response = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
-    cart_total = 0.0
-    for item in cart_items_response:
-        product_id = item["product_id"]
-        product = requests.get(f'{product_url}/api/productview/{product_id}/', data=item).json()
-        item['product'] = product
-        item['total_price'] = item['quantity'] * float(product['price'])
-        cart_total += item['total_price']
+    r = requests.post(
+        f'{cart_url}/api/move-wishlist-to-cart/',
+        data={'product_id': product_id},
+        cookies=request.COOKIES,
+        timeout=8
+    )
+    if r.status_code >= 400:
+        messages.error(request, f"Move failed ({r.status_code})")
+    else:
+        messages.success(request, "Moved to cart")
 
-    cart_items = [
-        {**cart_item, **requests.get(f'{product_url}/api/singleproduct/{cart_item["product_id"]}/', cookies=request.COOKIES).json()}
-        for cart_item in cart_items_response
-    ]
+    return redirect('/api/cart/?open=wishlist')
 
-    user_id = _get_current_user_id(request)
-    orders_data = {
-        'user_id': user_id,
-        'address': address,
-        'items': cart_items,
-    }
+@require_GET
+def wishlist_addquantity(request):
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+    pid = request.GET.get('product_id')
+    if pid:
+        requests.post(f'{cart_url}/api/wishlist/addquantity/', data={'product_id': pid}, cookies=request.COOKIES, timeout=8)
+    return redirect('/api/cart/?open=wishlist')
 
-    total_amount = round(cart_total, 2)
-    idemp = str(py_uuid.uuid4())
-
-    # 🔹 DEBUG STARTS HERE
-    intent_url = f"{payment_url.rstrip('/')}/payments/intents/"
-    payload = {
-        "order_id": 0,
-        "user_id": user_id,
-        "amount": total_amount,
-        "currency": "INR",
-        "provider": "razorpay",
-        "idempotency_key": idemp,
-        "metadata": {
-            "source": "cart_checkout",
-            "orders_data": orders_data
-        }
-    }
-    print("DEBUG >> POSTing to:", intent_url)
-    print("DEBUG >> Payload:", payload)
-    # 🔹 DEBUG ENDS HERE
-
-    try:
-        r = requests.post(intent_url, json=payload, timeout=10)
-
-        # 🔹 EXTRA DEBUG
-        print("DEBUG >> Response status:", r.status_code)
-        print("DEBUG >> Response body:", r.text)
-
-        if not r.ok:
-            messages.error(request, "Could not start payment. Please try again.")
-            return redirect('/api/paginate/')
-        payment_payload = r.json()
-    except Exception as e:
-        print("DEBUG >> Exception during payment POST:", str(e))
-        messages.error(request, "Payment service unreachable.")
-        return redirect('/api/paginate/')
-
-    request.session['__pending_order__'] = orders_data
-    request.session['__pending_payment__'] = payment_payload
-
-    return render(request, "payment.html", {
-        "amount": total_amount,
-        "currency": "INR",
-        "payment": payment_payload,
-        "order": orders_data,
-    })
-
-@csrf_exempt
-def payment_success(request):
-    #Called from payment.html after a successful (or mock) payment.
-    orders_data = request.session.get('__pending_order__')
-    payment = request.session.get('__pending_payment__')
-    if not orders_data or not payment:
-        _clear_messages(request)
-        messages.error(request, "No pending payment found.")
-        return redirect('/api/paginate/')
-
-    try:
-        order_resp = requests.post(
-            f'{order_url}/api/placeorder/',
-            data={"order": json.dumps(orders_data)},
-            cookies=request.COOKIES, timeout=12
-        )
-        if not order_resp.ok:
-            _clear_messages(request)
-            messages.error(request, "Order creation failed after payment. Contact support.")
-            return redirect('/api/paginate/')
-
-        # clear the cart best-effort
-        try:
-            requests.post(f'{cart_url}/api/clearcart/', data={}, cookies=request.COOKIES, timeout=8)
-        except Exception:
-            pass
-
-        # cleanup
-        request.session.pop('__pending_order__', None)
-        request.session.pop('__pending_payment__', None)
-
-        _clear_messages(request)
-        messages.success(request, "Payment successful! Order placed.")
-        return redirect('/api/vieworders/?placed=1')
-    except Exception:
-        _clear_messages(request)
-        messages.error(request, "Unexpected error while finalizing order.")
-        return redirect('/api/paginate/')
+@require_GET
+def wishlist_reducequantity(request):
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+    pid = request.GET.get('product_id')
+    if pid:
+        requests.post(f'{cart_url}/api/wishlist/reducequantity/', data={'product_id': pid}, cookies=request.COOKIES, timeout=8)
+    return redirect('/api/cart/?open=wishlist')
 
 
-def payment_failure(request):
-    # make sure only ONE toast shows after this redirect
-    _clear_messages(request)
-    messages.error(request, "Payment cancelled. No money was taken.")
-    # choose where you want to land users after cancel:
-    return redirect('/api/paginate/') 
-"""
 
+# CHECKOUT SERVICE CODE 
 # ---------- checkout sandbox helpers ----------
 
 USE_CHECKOUT_SANDBOX = True           # keep cart untouched while on checkout
@@ -1069,6 +1085,9 @@ def delete_product_checkout(request):
 
 
 
+
+#PAYMENT PAGE CODE
+
 def _get_current_user_id(request):
     try:
         data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
@@ -1083,24 +1102,47 @@ def _clear_messages(request):
         pass
 
 
+
+@ensure_csrf_cookie
 @require_POST
 def start_payment_from_checkout(request):
     """
-    Start payment using the *exact* snapshot saved by checkout().
-    Snapshot is stored in request.session['checkout_snapshot'].
+    Opens the payment page using the exact values frozen by checkout().
+    Also stashes a minimal order snapshot in the session as __pending_order__
+    so we can create a 'Payment Failed' order if the user bails or times out.
     """
+    # must be logged in
     if 'jwt' not in request.COOKIES:
         return redirect(f'{user_url}/api/login/')
 
-    # 1) Selected address
-    sel_addr_id = request.POST.get('address_id')
+    # 1) Which address?
+        # 1) Which address? — be tolerant to different field names and JSON bodies
+    # Try POST form first, then JSON body if present
+    raw_sel = (
+        request.POST.get('address_id') or
+        request.POST.get('selected_address_id') or
+        request.POST.get('selectedAddressId') or
+        request.POST.get('address')  # sometimes radios are named "address"
+    )
+    if not raw_sel and request.META.get("CONTENT_TYPE", "").startswith("application/json"):
+        try:
+            body = json.loads(request.body.decode("utf-8") or "{}")
+            raw_sel = (
+                body.get("address_id") or body.get("selected_address_id") or
+                body.get("selectedAddressId") or body.get("address")
+            )
+        except Exception:
+            raw_sel = None
+
     try:
-        address_response = requests.get(
-            f'{user_url}/api/getaddress/',
-            cookies=request.COOKIES,
-            timeout=8
-        ).json()
-        addresses = address_response.get('addresses', []) or []
+        sel_addr_id = int(raw_sel) if raw_sel is not None else None
+    except Exception:
+        sel_addr_id = None
+
+    # Load user address book
+    try:
+        addr_resp = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES, timeout=8).json()
+        addresses = addr_resp.get('addresses', []) or []
     except Exception:
         addresses = []
 
@@ -1108,21 +1150,33 @@ def start_payment_from_checkout(request):
         messages.error(request, "No address on file. Please add an address.")
         return redirect('/api/getaddress/')
 
-    if sel_addr_id:
-        address = next(
-            (a for a in addresses if str(a.get('address_id')) == str(sel_addr_id)),
-            addresses[0]
-        )
+    # Pick the selected one, or default to the first — but only if nothing valid was sent
+    def _aid(a: dict) -> str:
+        for k in ('address_id', 'id', 'addressId', 'aid'):
+            v = a.get(k)
+            if v is not None:
+                return str(v)
+        return ''
+
+    if sel_addr_id is not None:
+        address = next((a for a in addresses if _aid(a) == str(sel_addr_id)), None)
+        if not address:
+            # if the id didn’t match any, fall back to the first but log it
+            print("[checkout] WARN: selected id", sel_addr_id, "not found, using first")
+            address = addresses[0]
     else:
         address = addresses[0]
 
-    # 2) Pull the frozen snapshot created by checkout()
+    print("[checkout] using address_id =", _aid(address))
+
+
+    # 2) Pull the frozen checkout snapshot (set in your checkout view)
     snap = request.session.get('checkout_snapshot')
     if not snap:
         messages.error(request, "Session expired. Please open checkout again.")
         return redirect('/api/checkout/')
 
-    # snapshot → plain floats only (no Decimal!)
+    # 3) Normalize numbers (JSON-safe floats/ints only)
     items         = snap.get("items", [])
     item_count    = int(snap.get("item_count", 0))
     cart_total    = float(snap.get("cart_total", 0.0))
@@ -1132,61 +1186,78 @@ def start_payment_from_checkout(request):
 
     user_id = _get_current_user_id(request)
 
-    # 3) Build the order payload to keep across the flow
+    # 4) Build the order snapshot we’ll keep during payment
+    def _fmt_address(a: dict) -> str:
+        parts = [a.get('doorno'), a.get('street'), a.get('landmark'),
+             a.get('city'), a.get('state'), a.get('pincode')]
+        return ', '.join(str(p) for p in parts if p)
+
+    recipient_name  = (address.get('customer_name')
+                    or f"{address.get('firstname','')} {address.get('lastname','')}".strip())
+    recipient_phone = address.get('customer_phone') or address.get('phone') or ''
+    address_label   = address.get('address_type') or 'Home'
+    shipping_addr   = _fmt_address(address)
+
+    # 4) Build the order snapshot we’ll keep during payment
     orders_data = {
         "user_id": user_id,
-        "address": address,
+        "address_id": address.get("address_id"),
+        "address": address,        # handy for the payment page UI
+
+        # --- NEW: freeze address fields into the order snapshot ---
+        "recipient_name":  recipient_name,
+        "recipient_phone": recipient_phone,
+        "address_label":   address_label,
+        "shipping_address": shipping_addr,
+
         "items": items,
         "summary": {
             "item_count": item_count,
             "cart_total": cart_total,
             "shipping_fee": shipping_fee,
             "platform_fee": platform_fee,
+            "final_total": total_payable,
             "total_payable": total_payable,
         }
     }
-
-    # Amount to charge = what the user saw
-    total_amount = round(total_payable, 2)
-    idemp = str(uuid.uuid4())
-
-    # 4) Create a payment intent with your gateway service
-    intent_url = f"{payment_url.rstrip('/')}/payments/intents/"
-    payload = {
-        "order_id": 0,
-        "user_id": user_id,
-        "amount": total_amount,         # float → JSON-safe
-        "currency": "INR",
-        "provider": "razorpay",
-        "idempotency_key": idemp,
-        "metadata": {
-            "source": "cart_checkout",
-            "orders_data": orders_data   # dict with only JSON-safe types
-        }
-    }
-    try:
-        r = requests.post(intent_url, json=payload, timeout=10)
-        if not r.ok:
-            messages.error(request, "Could not start payment. Please try again.")
-            return redirect('/api/paginate/')
-        payment_payload = r.json()
-    except Exception:
-        messages.error(request, "Payment service unreachable.")
-        return redirect('/api/paginate/')
-
-    # 5) Persist for success/failure handlers
-    request.session['__pending_order__'] = orders_data
-    request.session['__pending_payment__'] = payment_payload
+    
+    # >>> KEY LINES: keep a copy for timeout/failure <<<
+    request.session['__pending_order__']   = orders_data
     request.session.modified = True
+    # <<< KEY LINES
 
-    # 6) Render the payment page with the exact snapshot amounts
+    # 5) (Optional) create a payment intent with your gateway
+    # If you don’t have a gateway service, you can skip this whole try/except
+    payment_payload = {}
+    try:
+        intent_url = f"{payment_url.rstrip('/')}/payments/intents/"
+        idemp      = str(uuid.uuid4())
+        payload = {
+            "order_id": 0,
+            "user_id": user_id,
+            "amount": round(total_payable, 2),
+            "currency": "INR",
+            "provider": "razorpay",
+            "idempotency_key": idemp,
+            "metadata": {"source": "cart_checkout"}
+        }
+        r = requests.post(intent_url, json=payload, timeout=10)
+        if r.ok:
+            payment_payload = r.json()
+            request.session['__pending_payment__'] = payment_payload
+            request.session.modified = True
+        # if it fails, we still show payment page; your JS can switch to UPI/COD UI
+    except Exception:
+        pass
+
+    # 6) Render the payment page (your modal/JS can post to /api/pay/timeout/)
     return render(request, "payment.html", {
-        "amount": total_amount,
+        "amount": round(total_payable, 2),
         "currency": "INR",
         "payment": payment_payload,
         "order": orders_data,
 
-        # right price card + buttons
+        # right-side price card values used by your template
         "item_count": item_count,
         "cart_total": cart_total,
         "shipping_fee": shipping_fee,
@@ -1195,72 +1266,198 @@ def start_payment_from_checkout(request):
     })
 
 
-@csrf_exempt
+# --- one-time toast helper -----------------------------------------------
+def set_toast(request, text: str, kind: str = "success") -> None:
+    """
+    Save a single-use toast payload in session.
+    kind: "success" | "error"
+    """
+    request.session["__toast"] = {"text": text, "kind": kind}
+    request.session.modified = True
+
+
+@ensure_csrf_cookie
+@require_POST
 def payment_success(request):
     """
-    Called by your payment return/handler when the payment is successful.
-    Uses the pending order saved in session.
+    Called by the payment handler when a payment is successful.
+    Consumes the '__pending_order__' snapshot, creates the order,
+    clears the cart, cleans session, then redirects to /api/vieworders/
+    with a session 'flash' toast (no query params, no messages framework).
     """
     orders_data = request.session.get('__pending_order__')
-    # --- ensure final total (cart + shipping + platform) is carried into the order ---
-    summary = (orders_data or {}).get("summary", {}) if orders_data else {}
-    final_total = float(summary.get("total_payable") or (
-        float(summary.get("cart_total") or 0) +
-        float(summary.get("shipping_fee") or 0) +
-        float(summary.get("platform_fee") or 0)
-    ))
 
-    # put it in both a summary field (for safety) and a top-level legacy key
-    if orders_data is not None:
-        summary["final_total"] = final_total
-        orders_data["summary"] = summary
-        orders_data["total_amount"] = final_total
-
+    # If we lost the snapshot, show an error toast on vieworders
     if not orders_data:
-        _clear_messages(request)
-        messages.error(request, "No pending payment found.")
-        return redirect('/api/paginate/')
+        set_toast(request, "No pending payment found.", "error")
+        return redirect(reverse("vieworders"))
 
+    # --- compute / ensure final totals ---
+    summary = orders_data.get("summary") or {}
+
+    def f(x):
+        try:
+            return float(x or 0)
+        except Exception:
+            return 0.0
+
+    final_total = summary.get("total_payable") or summary.get("final_total")
+    final_total = f(final_total) if final_total is not None else (
+        f(summary.get("cart_total")) + f(summary.get("shipping_fee")) + f(summary.get("platform_fee"))
+    )
+
+    summary.update({
+        "final_total": final_total,
+        "total_payable": final_total if summary.get("total_payable") is None else f(summary.get("total_payable")),
+    })
+    orders_data["summary"] = summary
+    orders_data["total_amount"] = final_total
+
+    # --- mark statuses for the Orders service ---
+    orders_data["status"] = "PAID"                # internal status
+    orders_data["order_status"] = "Placed"        # display-friendly
+    orders_data["payment_status"] = "SUCCESS"
+    orders_data["payment"] = request.session.get("__pending_payment__", {})
+
+    # --- create order in Orders service ---
     try:
-        # Place order in your Orders service
-        order_resp = requests.post(
-            f'{order_url}/api/placeorder/',
+        resp = requests.post(
+            f"{order_url.rstrip('/')}/api/placeorder/",
             data={"order": json.dumps(orders_data)},
             cookies=request.COOKIES,
             timeout=12
         )
-        if not order_resp.ok:
-            _clear_messages(request)
-            messages.error(request, "Order creation failed after payment. Contact support.")
-            return redirect('/api/paginate/')
-
-        # Best effort clear cart
-        try:
-            requests.post(f'{cart_url}/api/clearcart/', data={}, cookies=request.COOKIES, timeout=8)
-        except Exception:
-            pass
-
-        # Clean session state
-        request.session.pop('__pending_order__', None)
-        request.session.pop('__pending_payment__', None)
-        request.session.pop('checkout_snapshot', None)
-        request.session.modified = True
-
-        _clear_messages(request)
-        messages.success(request, "Payment successful! Order placed.")
-        return redirect('/api/vieworders/?placed=1')
+        if not resp.ok:
+            set_toast(request, "Order creation failed after payment. Contact support.", "error")
+            return redirect(reverse("vieworders"))
     except Exception:
-        _clear_messages(request)
-        messages.error(request, "Unexpected error while finalizing order.")
-        return redirect('/api/paginate/')
+        set_toast(request, "Unexpected error while finalizing order.", "error")
+        return redirect(reverse("vieworders"))
 
+    # --- best-effort clear cart ---
+    try:
+        requests.post(f"{cart_url.rstrip('/')}/api/clearcart/", data={}, cookies=request.COOKIES, timeout=8)
+    except Exception:
+        pass
+
+    # --- clean session state ---
+    for k in ("__pending_order__", "__pending_payment__", "checkout_snapshot"):
+        request.session.pop(k, None)
+    request.session.modified = True
+
+    # --- success toast on /api/vieworders/ ---
+    set_toast(request, "Payment successful! Order placed.", "success")
+    return redirect(reverse("vieworders"))
+
+
+
+def get_payment_breakdown(order_id: int, request) -> dict:
+    """
+    Returns:
+      {
+        "headline": "Card – VISA ****1234",
+        "attempts": [ ...normalized rows... ],
+        "paid_amount": 1799.0
+      }
+    """
+    attempts = []
+
+    # A) Try your Payments service by order_id
+    try:
+        r = requests.get(f"{payment_url}/api/payments/by-order/", params={"order_id": order_id},
+                         cookies=request.COOKIES, timeout=8)
+        if r.ok:
+            for row in (r.json() or []):
+                attempts.append(normalize_payment_attempt(row))
+    except Exception:
+        pass
+
+    # B) Fallback: sometimes Orders snapshot carries a payment dict/list
+    try:
+        r2 = requests.get(f"{order_url}/api/orders/payment-info/", params={"order_id": order_id},
+                          cookies=request.COOKIES, timeout=6)
+        if r2.ok:
+            js = r2.json() or {}
+            raw_list = js.get("attempts") or js.get("payments") or ([js] if js else [])
+            for row in raw_list:
+                attempts.append(normalize_payment_attempt(row))
+    except Exception:
+        pass
+    # Dedup by txn_id + amount
+    seen = set()
+    uniq = []
+    for a in attempts:
+        key = (a.get("txn_id"), round(a.get("amount", 0), 2), a.get("mode"))
+        if key not in seen:
+            seen.add(key); uniq.append(a)
+    attempts = uniq
+
+    headline = headline_from_attempts(attempts)
+    paid_amount = sum(a.get("amount",0) for a in attempts if a["status"]=="success")
+    return {"headline": headline, "attempts": attempts, "paid_amount": float(paid_amount)}
+
+
+@csrf_exempt
+def payment_timeout(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'method_not_allowed'}, status=405)
+
+    orders_data = request.session.get('__pending_order__')
+    if not orders_data:
+        # still give the user feedback next time they hit vieworders
+        set_toast(request, "Payment not successful. Please contact your bank for any money deducted.", "error")
+        return JsonResponse({'ok': False, 'error': 'no_pending_order'}, status=400)
+
+    # compute final total if not stored
+    summary = orders_data.get('summary', {}) or {}
+    final_total = float(summary.get("final_total") or (
+        float(summary.get("cart_total") or 0) +
+        float(summary.get("shipping_fee") or 0) +
+        float(summary.get("platform_fee") or 0)
+    ))
+    summary["final_total"] = final_total
+    orders_data["summary"] = summary
+    orders_data["total_amount"] = final_total
+    orders_data["status"] = "PAYMENT_FAILED"
+
+    try:
+        r = requests.post(
+            f"{order_url}/api/log_failed_order/",
+            data={"order": json.dumps(orders_data)},
+            cookies=request.COOKIES,
+            timeout=10
+        )
+        if not r.ok:
+            # even if logging failed, show the toast on next vieworders
+            set_toast(request, "Payment not successful. Please contact your bank for any money deducted.", "error")
+            return JsonResponse({'ok': False, 'error': 'orders_service_reject'}, status=502)
+    except Exception as e:
+        set_toast(request, "Payment not successful. Please contact your bank for any money deducted.", "error")
+        return JsonResponse({'ok': False, 'error': 'orders_service_unreachable'}, status=502)
+
+    # set the toast so the next navigation shows it
+    set_toast(request, "Payment not successful. Please contact your bank for any money deducted.", "error")
+    return JsonResponse({'ok': True})
 
 
 def payment_failure(request):
-    _clear_messages(request)
-    messages.error(request, "Payment cancelled. No money was taken.")
-    return redirect('/api/paginate/')
+    # User explicitly cancelled / provider returned failure
+    set_toast(request, "Payment cancelled. No money was taken.", "error")
+    return redirect(reverse("vieworders"))
 
+@require_GET
+def pay_flash_success(request):
+    messages.success(request, "Payment successful! Order placed.")
+    return redirect(reverse("vieworders"))
+
+@require_GET
+def pay_flash_fail(request):
+    messages.error(request, "Payment not successful. Please contact your bank for any money deducted.")
+    return redirect(reverse("vieworders"))
+
+
+
+# ORDER SERVICE CODE
 
 def _get_current_user_id(request):
     try:
@@ -1285,10 +1482,65 @@ def _get_my_review_id(product_id, request):
         pass
     return None
 
+
+
+def _to_epoch(value):
+    """Return POSIX seconds for datetime/ISO string; 0 if unknown."""
+    if value is None:
+        return 0
+    if hasattr(value, "tzinfo"):
+        try:
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return int(value.timestamp())
+        except Exception:
+            return 0
+    if isinstance(value, str):
+        s = value.strip()
+        try:
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            return int(datetime.fromisoformat(s).timestamp())
+        except Exception:
+            return 0
+    return 0
+
+# utils in views.py
+def _simulate_eta(placed_ts: int, seed=None) -> int:
+    """
+    Deterministic ETA:
+      base = placed_ts (or now)
+      + 2..6 days and 0..12 hours chosen from a seeded RNG
+    """
+    now = int(datetime.now(tz=timezone.utc).timestamp())
+    base = placed_ts or now
+
+    # stable seed from order identity
+    if seed is None:
+        seed = base
+    r = random.Random(hash(seed) & 0xffffffff)
+
+    add_days  = r.randint(2, 6)
+    add_hours = r.randint(0, 12)
+    return base + add_days*86400 + add_hours*3600
+
+
 def vieworders(request):
-    r = requests.get(f'{order_url}/api/placeorder/', cookies=request.COOKIES, timeout=10)
+    if request.GET.get("placed") == "1":
+        messages.success(request, "Payment successful! Order placed.")
+    if request.GET.get("not_placed") == "1" or request.GET.get("failed") == "1" or request.GET.get("timeout") == "1":
+        messages.error(request, "Payment not successful. Please contact your bank for any money deducted.")
+
+    # ---------------- fetch ----------------
+    r = requests.get(f'{order_url}/api/placeorder/', cookies=request.COOKIES, timeout=6)
+    if r.status_code == 401:
+        return render(
+            request,
+            "vieworder.html",
+            {"order_data": [], "page_obj": None, "session_expired": True}
+        )
     if not r.ok:
-        return render(request, "vieworder.html", {"order_data": []})
+        return render(request, "vieworder.html", {"order_data": [], "page_obj": None})
 
     order_data = r.json()
     if isinstance(order_data, str):
@@ -1297,17 +1549,65 @@ def vieworders(request):
         except json.JSONDecodeError:
             order_data = {}
 
-    for order in order_data.get('orderlist', []):
-        items = order.get('order_items', []) or []
+    raw_orders = order_data.get('orderlist', []) or []
 
-        # 1) cart_total from items (prefer item's own total_price; else qty * price)
+    # ---------------- normalize/enrich ----------------
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+
+    # NEW: per-request caches (avoid calling the same endpoints repeatedly)
+    product_cache: dict[str, dict] = {}
+    review_cache: dict[str, typing.Optional[int]] = {}
+
+    for idx, order in enumerate(raw_orders):
+        items = order.get('order_items', []) or []
+                # preview for the list card (first item thumb/name and “+N more”)
+        if items:
+            _first = items[0]
+            order['preview_image'] = _first.get('image', '')
+            order['preview_name']  = _first.get('product_name') or 'Item'
+            order['preview_more']  = max(0, len(items) - 1)
+        else:
+            order['preview_image'] = ''
+            order['preview_name']  = 'Items'
+            order['preview_more']  = 0
+
+
+        placed_ts = _to_epoch(order.get('placed_time'))
+        order['placed_ts'] = placed_ts
+
+        status = (order.get('order_status') or '').strip() or 'Placed'
+
+        # keep numeric id for URL reversing
+        raw_id = order.get('order_id')
+        try:
+            order_pk = int(raw_id)
+        except (TypeError, ValueError):
+            order_pk = None
+        order['order_pk'] = order_pk
+
+        # use real code from Order service for display
+        order['display_code'] = (order.get('order_code') or '').strip()
+
+        # ETA/status (unchanged)
+        seed = order.get('order_code') or order.get('order_id') or placed_ts or idx
+        eta_ts = _simulate_eta(placed_ts, seed)        
+        special = {'payment failed', 'cancelled', 'returned', 'order not placed'}
+        if status.lower() in special:
+            # keep the special status; no ETA
+            order['order_status'] = status
+            order['delivery_eta_ts'] = 0
+        else:
+            # normal shipping logic
+            order['order_status'] = 'Delivered' if eta_ts <= now_ts else 'On the way'
+            order['delivery_eta_ts'] = int(eta_ts)
+
+        # ---- totals (your existing logic, kept) ----
         cart_total = 0.0
         for it in items:
             try:
                 line_total = it.get('total_price')
                 if line_total is None:
                     qty = float(it.get('quantity') or 1)
-                    # try multiple spots for unit price
                     unit = it.get('price')
                     if unit is None:
                         unit = (it.get('product') or {}).get('price')
@@ -1317,27 +1617,16 @@ def vieworders(request):
             except (TypeError, ValueError):
                 pass
 
-        # 2) fees (same rules you used in checkout)
         shipping_fee = 0.0 if cart_total == 0 else (0.0 if cart_total >= 1500 else 100.0)
-        platform_fee = 0.0 if cart_total == 0 else float(PLATFORM_FEE_RS)  # import/read same const
+        platform_fee = 0.0 if cart_total == 0 else float(PLATFORM_FEE_RS)
 
-        # 3) prefer server-provided summary, else compute our own final total
         summary = order.get('summary', {}) or {}
-        # if backend didn’t store final_total, compute it
-        final_total = summary.get('final_total')
-        if final_total is None:
-            final_total = summary.get('total_payable')
-
-        if final_total is None:
-            # Backend lost the fees — reconstruct deterministically
-            final_total = cart_total + shipping_fee + platform_fee
-
+        final_total = summary.get('final_total') or summary.get('total_payable')
         try:
             final_total = float(final_total)
         except (TypeError, ValueError):
             final_total = cart_total + shipping_fee + platform_fee
 
-        # 4) keep a consistent shape for the template
         summary.update({
             "item_count": len(items),
             "cart_total": float(cart_total),
@@ -1347,27 +1636,770 @@ def vieworders(request):
             "final_total": float(final_total),
         })
         order['summary'] = summary
-        order['total_amount'] = float(final_total)  # canonical total for the UI
+        order['total_amount'] = float(final_total)
 
-        # 5) (your existing enrichment)
+        # per-item enrichment (now with request-level caching)
         for item in items:
-            pid = item.get("product_id")
-            if pid is None:
+            pid_raw = item.get("product_id")
+            if pid_raw is None:
                 continue
-            try:
-                product_data = requests.get(
-                    f'{product_url}/api/productview/{pid}/',
-                    cookies=request.COOKIES, timeout=8
-                ).json()
-                item['product_name'] = product_data.get('product_name')
-                img = product_data.get('image') or ''
-                item['image'] = img.replace('http://152.14.0.14','http://127.0.0.1')
-            except Exception:
-                item.setdefault('product_name', 'Unknown product')
-                item.setdefault('image', '')
-            item['my_review_id'] = _get_my_review_id(pid, request)
+            pid = str(pid_raw)
 
-    return render(request, "vieworder.html", {"order_data": order_data.get('orderlist', [])})
+            # --- product cache: only fetch each product once per request ---
+            if pid not in product_cache:
+                try:
+                    resp = requests.get(
+                        f'{product_url}/api/productview/{pid}/',
+                        cookies=request.COOKIES,
+                        timeout=4
+                    )
+                    product_cache[pid] = resp.json() if resp.ok else {}
+                except Exception:
+                    product_cache[pid] = {}
+
+            pd = product_cache.get(pid, {}) or {}
+            item['product_name'] = pd.get('product_name') or item.get('product_name') or 'Unknown product'
+            img = pd.get('image') or ''
+            item['image'] = img.replace('http://152.14.0.14', 'http://127.0.0.1')
+
+            # --- review cache: only check "mine" once per product per request ---
+            if pid not in review_cache:
+                review_cache[pid] = _get_my_review_id(pid, request)
+            item['my_review_id'] = review_cache[pid]
+
+    # ---------------- paginate (fast UI) ----------------
+    paginator = Paginator(raw_orders, 50)  # 50 orders/page
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+
+    # --- NEW: session toast + collected Django messages ---
+    flash_toast = request.session.pop("__toast", None)
+
+    # --- Django messages (set by /api/pay/flash/* or anywhere else)
+    from django.contrib import messages as dj
+    dj_messages = [{"text": m.message, "tags": m.tags} for m in dj.get_messages(request)]
+
+    return render(request, "vieworder.html", {
+        "order_data": list(page_obj.object_list),
+        "page_obj": page_obj,
+        "session_expired": False,
+        "flash_toast": flash_toast,      
+        "dj_messages": dj_messages,
+    })
+
+
+
+def vieworderdetails(request, order_pk: int):
+    """
+    Render the details page for a single order.
+    - order_pk is the DB order_id (integer) saved by your Orders service.
+    - Enriches with order items, product info, and the shipping address.
+    - Adds recipient_name/phone/address_label/shipping_address for the template.
+    """
+    # top of vieworderdetails, after the docstring
+    if request.GET.get("simulate_expired") == "1":
+        return render(request, "vieworderdetails.html", {
+            "order": {"order_id": order_pk, "order_items": []},
+            "item": {},
+            "status_ok_for_invoice": False,
+            "session_expired": True,
+        })
+
+    session_expired = False  # <— new
+    user, session_expired = get_user_from_request(request)
+
+    # --- 1) Base order ---
+    r = None
+    try:
+        r  = requests.get(f'{order_url}/api/orders/orderdata/',  params={'order_id': order_pk}, cookies=request.COOKIES, timeout=10)
+    except Exception:
+        pass
+    print(
+            "orderdata status:", getattr(r, "status_code", None),
+            "cookies_present:", bool(request.COOKIES),
+        )
+
+    # If cookie/session expired, show the page with login modal flag (hard 401/403 from Orders)
+    if r is not None and r.status_code in (401, 403):
+        return render(
+            request,
+            "vieworderdetails.html",
+            {
+                "order": {"order_id": order_pk, "order_items": []},
+                "item": {},
+                "status_ok_for_invoice": False,
+                "session_expired": True,   
+            },
+        )
+
+    if not r or not r.ok:
+        raise Http404("Order not found")
+
+    order = r.json() or {}
+    if not order or int(order.get('order_id', 0)) != int(order_pk):
+        raise Http404("Order not found")
+    jwt_tok = request.COOKIES.get('jwt') or ''
+    print(
+        "jwt_present:", bool(jwt_tok),
+        "orders_status:", getattr(r, "status_code", None),
+    )
+
+
+    pii_missing = not any([
+        (order.get('shipping_address') or '').strip(),
+        (order.get('recipient_name')  or '').strip(),
+        (order.get('recipient_phone') or '').strip(),
+    ])
+    if pii_missing:
+        session_expired = True
+
+    # Soft heuristic: if we don’t have typical auth cookies, consider the session expired
+    if not (request.COOKIES.get("sessionid") or request.COOKIES.get("jwt") or request.COOKIES.get("access")):
+        session_expired = True
+
+    order['display_code'] = (order.get('order_code') or '').strip()
+
+    # --- 2) Order items ---
+    items = []
+    try:
+        ri = requests.get(f'{order_url}/api/orders/orderitems/', params={'order_id': order_pk},
+                        cookies=request.COOKIES, timeout=10)
+        if ri.ok:
+            items = ri.json() or []
+    except Exception:
+        pass
+
+    # NEW: per-request caches so we don't call the same endpoints repeatedly
+    product_cache: dict[str, dict] = {}
+    review_cache: dict[str, typing.Optional[int]] = {}
+
+    # Enrich items with product data **and** "my review" status
+    for it in items:
+        pid = it.get('product_id')
+        if not pid:
+            continue
+        pid_str = str(pid)
+
+        # --- product (cached) ---
+        if pid_str not in product_cache:
+            try:
+                pr = requests.get(f'{product_url}/api/productview/{pid_str}/',
+                                cookies=request.COOKIES, timeout=8)
+                product_cache[pid_str] = pr.json() if pr.ok else {}
+            except Exception:
+                product_cache[pid_str] = {}
+
+        pd = product_cache.get(pid_str, {}) or {}
+        it['product_name'] = pd.get('product_name') or it.get('product_name') or 'Unknown product'
+        img = pd.get('image') or ''
+        it['image'] = img.replace('http://152.14.0.14', 'http://127.0.0.1:8001')
+
+        # --- NEW: find the logged-in user's review id for this product (cached) ---
+        if pid_str not in review_cache:
+            review_cache[pid_str] = _get_my_review_id(pid_str, request)
+        it['my_review_id'] = review_cache[pid_str]
+
+    order['order_items'] = items
+
+    # --- Price summary so the template has per-row numbers ---
+    cart_total = 0.0
+    for it in items:
+        # prefer a ready line total; else compute qty * unit
+        line_total = it.get('total_price')
+        if line_total is None:
+            try:
+                qty  = float(it.get('quantity') or it.get('qty') or 1)
+                unit = it.get('final_price') or it.get('price') \
+                    or (it.get('product') or {}).get('price') \
+                    or it.get('amount') or 0
+                line_total = float(unit) * qty
+            except Exception:
+                line_total = 0.0
+        cart_total += float(line_total or 0)
+
+    shipping_fee = 0.0 if cart_total == 0 else (0.0 if cart_total >= 1500 else 100.0)
+    platform_fee = 0.0 if cart_total == 0 else float(PLATFORM_FEE_RS)
+
+    s = (order.get('summary') or {}).copy()
+    s.update({
+        "item_count": len(items),
+        "cart_total": float(cart_total),
+        "shipping_fee": float(shipping_fee),
+        "platform_fee": float(platform_fee),
+        "total_payable": float(cart_total + shipping_fee + platform_fee),
+    })
+    order['summary'] = s
+    # keep total_amount in sync for older templates
+    order['total_amount'] = float(s.get('final_total', s['total_payable']))
+
+    pb = get_payment_breakdown(order_pk, request)
+    order["payment_mode_label"] = pb["headline"]          
+    order["payment_attempts"]   = pb["attempts"]          
+    order["paid_amount"]        = pb["paid_amount"] or order.get("total_amount")
+
+    # >>> ADD THESE 5 LINES <<<
+    item = items[0] if items else {
+        "product_name": "Item",
+        "image": "",
+        "price": order.get("total_amount", 0),
+    }
+
+   # --- 3) Shipping address (prefer values from address_id the user chose) ---
+    def _fmt_address(a: dict) -> str:
+        if not a:
+            return ""
+        parts = [
+            a.get('doorno') or a.get('door_no') or a.get('house_no') or a.get('house') or a.get('door'),
+            a.get('street') or a.get('street1') or a.get('address1'),
+            a.get('landmark') or a.get('address2') or a.get('street2'),
+            a.get('city') or a.get('district'),
+            a.get('state') or a.get('province'),
+            a.get('pincode') or a.get('postal_code') or a.get('zip'),
+        ]
+        return ', '.join(str(p) for p in parts if p)
+
+    # Snapshot from the order (may be stale)
+    recipient_name  = (order.get('recipient_name') or order.get('ship_to_name') or "").strip()
+    recipient_phone = (order.get('recipient_phone') or order.get('ship_to_phone') or "").strip()
+    address_label   = (order.get('address_label') or 'Home').strip()
+    shipping_addr   = (order.get('shipping_address') or "").strip()
+
+    # If an address_id is present, resolve it and OVERRIDE all four fields
+    def _addr_id_of(d: dict) -> str:
+        for k in ('address_id', 'id', 'addressId', 'aid'):
+            v = d.get(k)
+            if v is not None:
+                return str(v)
+        return ''
+
+    addr_id = order.get('address_id') or (order.get('address') or {}).get('address_id')
+    addr_obj = None
+    addresses = []
+    if addr_id:
+        try:
+            ar = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES, timeout=10)
+            if ar.ok:
+                addresses = (ar.json() or {}).get('addresses', []) or []
+                addr_obj = next((x for x in addresses if _addr_id_of(x) == str(addr_id)), None)
+        except Exception:
+            addr_obj = None
+
+    # Optional: debug what we matched
+    try:
+        print("order.address_id =", addr_id)
+        print("address_book_ids =", [_addr_id_of(a) for a in addresses])
+        print("matched_addr =", bool(addr_obj))
+    except Exception:
+        pass
+
+    if addr_obj:
+        # overwrite (do not “only if missing”)
+        recipient_name  = (
+            addr_obj.get('customer_name') or addr_obj.get('username') or addr_obj.get('name')
+            or f"{addr_obj.get('firstname','')} {addr_obj.get('lastname','')}".strip()
+            or recipient_name
+        )
+        recipient_phone = (
+            addr_obj.get('customer_phone') or addr_obj.get('phone') or addr_obj.get('mobile')
+            or recipient_phone
+        )
+        address_label   = (addr_obj.get('address_type') or addr_obj.get('type') or address_label or 'Home')
+        shipping_addr   = _fmt_address(addr_obj) or shipping_addr
+
+
+    # Fall back once more to the embedded address dict if nothing resolved
+    if not shipping_addr and isinstance(order.get('address'), dict):
+        shipping_addr = _fmt_address(order['address'])
+
+    # Write back for the template
+    order['recipient_name']   = recipient_name
+    order['customer_name']    = recipient_name
+    order['recipient_phone']  = recipient_phone
+    order['shipping_address'] = shipping_addr
+    order['address_label']    = address_label
+
+    # --- Who can access (strip + modal) -----------------------------------------
+    def _digits(s: str) -> str:
+        return "".join(ch for ch in (s or "") if ch.isdigit())
+
+    def _norm(s: str) -> str:
+        return (s or "").strip().lower()
+
+    # 1) Try to get the logged-in user's info
+    buyer_phone = (order.get("buyer_phone") or request.COOKIES.get("phone") or "").strip()
+    buyer_name  = ""
+
+    if not buyer_phone or not buyer_name:
+        try:
+            u = requests.get(f"{user_url}/api/userview/", cookies=request.COOKIES, timeout=6)
+            # If this user endpoint says 401/403, mark as expired (for the modal), but keep page usable
+            if u.status_code in (401, 403):
+                session_expired = True
+            elif u.ok:
+                uj = u.json() or {}
+                buyer_phone = (
+                    (buyer_phone or uj.get("phone") or uj.get("mobile") or
+                     uj.get("customer_phone") or uj.get("contact") or uj.get("tel") or "")
+                    .strip()
+                )
+                buyer_name = (uj.get("username") or uj.get("name") or uj.get("customer_name") or "")
+        except Exception:
+            # network error: don’t crash; keep whatever we have
+            pass
+
+    # last-ditch fallbacks (if your Orders service carries who placed the order)
+    buyer_phone = (buyer_phone or order.get("login_phone") or order.get("placed_by_phone") or "").strip()
+    buyer_name  = (buyer_name  or order.get("login_name")  or order.get("placed_by_name")  or "").strip()
+
+    recipient_phone = (order.get("recipient_phone") or "").strip()
+    recipient_name  = (order.get("recipient_name")  or "").strip()
+
+    # 2) placed-for-other?
+    phones_differ = bool(_digits(buyer_phone) and _digits(recipient_phone) and
+                        _digits(buyer_phone) != _digits(recipient_phone))
+    names_differ  = bool(_norm(buyer_name) and _norm(recipient_name) and
+                        _norm(buyer_name) != _norm(recipient_name))
+
+    placed_for_other = phones_differ or (not _digits(buyer_phone) and names_differ)
+
+    # 3) shared list (only other people; don’t add buyer)
+    existing = list(order.get("shared_numbers") or [])
+    shared = list(existing)
+    if placed_for_other and recipient_phone and recipient_phone not in shared:
+        shared.append(recipient_phone)
+
+    order["shared_numbers"]    = shared
+    order["buyer_phone"]       = buyer_phone  # expose for template labelling if needed
+    order["access_phone"]      = recipient_phone if placed_for_other else (shared[0] if shared else "")
+    order["show_access_strip"] = bool(order["access_phone"])
+    order["access_remove_api"] = f"/api/orders/{order_pk}/access/remove/"
+
+    print("buyer_phone=", buyer_phone,
+        "recipient_phone=", recipient_phone,
+        "buyer_name=", buyer_name,
+        "recipient_name=", recipient_name,
+        "placed_for_other=", placed_for_other,
+        "access_phone=", order["access_phone"],
+        "show_access_strip=", order["show_access_strip"],
+        "shared_numbers=", order["shared_numbers"])
+
+    # --- 4) Timeline / timestamps (safe defaults) ---
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+
+    def _to_epoch(v):
+        try:
+            if v is None or v == "":
+                return 0
+            if isinstance(v, (int, float)):
+                n = int(v)
+                return n // 1000 if n > 1_000_000_000_000 else n  # ms -> s
+            if isinstance(v, str):
+                s = v.strip()
+                if not s:
+                    return 0
+                if s.endswith("Z"):
+                    s = s[:-1] + "+00:00"
+                return int(datetime.fromisoformat(s).timestamp())
+            if hasattr(v, "timestamp"):
+                return int(v.timestamp())
+        except Exception:
+            pass
+        return 0
+
+    def _pick(d, *keys):
+        for k in keys:
+            if k in d and d[k] not in (None, "", 0):
+                return d[k]
+        return 0
+
+    # normalize status early (you were missing status_lc)
+    status    = (order.get("order_status") or "").strip()
+    status_lc = status.lower()
+
+    # placed/created/confirmed
+    placed_ts = _to_epoch(_pick(order, "placed_ts", "placed_time", "order_time", "created_at"))
+    order["placed_ts"]    = placed_ts or now_ts
+    order["created_ts"]   = _to_epoch(_pick(
+        order, "created_ts","created_time","created_at","created_on",
+        "order_date","order_created","order_time","placed_time"
+    )) or order["placed_ts"]
+    order["confirmed_at"] = order["placed_ts"]  # treat placed as confirmed
+
+    # deterministic seed so ETA doesn't change on refresh
+    seed = order.get('order_code') or order_pk or order.get('placed_ts') or now_ts
+
+    # try to pull delivered time from many places (order and first item)
+    first_item = (order.get("order_items") or ([item] if item else []))[:1]
+    first      = first_item[0] if first_item else {}
+
+    delivered_ts = _to_epoch(_pick(
+        order, "delivered_at","delivered_on","delivery_date","actual_delivery","deliveredTime"
+    )) or _to_epoch(_pick(
+        first, "delivered_at","delivered_on","delivery_date","actual_delivery","deliveredTime"
+    ))
+
+    # if marked delivered but timestamp missing, fabricate a sane one
+    if status_lc == "delivered" and not delivered_ts:
+        delivered_ts = order["confirmed_at"] + 2*86400
+
+    order["delivered_at"] = int(delivered_ts or 0)
+
+    special = {"payment failed", "order not placed", "not yet placed", "cancelled", "returned"}
+
+    # Prefer ETA from API (order or first item); else simulate deterministically
+    eta_from_api = _to_epoch(_pick(
+        order, "delivery_eta","expected_delivery","delivery_by","eta","promise_date"
+    )) or _to_epoch(_pick(
+        first, "delivery_eta","expected_delivery","delivery_by","eta","promise_date"
+    ))
+
+    # IMPORTANT: your _simulate_eta must accept a seed and use random.Random(seed)
+    order["delivery_eta_ts"] = 0 if status_lc in special else int(
+        eta_from_api or _simulate_eta(order["confirmed_at"], seed)
+    )
+
+    # Final delivered flag from real timestamp
+    order["is_delivered"] = bool(order["delivered_at"] and order["delivered_at"] <= now_ts)
+
+    # If not delivered but ETA has passed, promote to delivered so the detail page
+    # matches the list page (and dates stay stable)
+    if not order["is_delivered"] and status_lc not in special:
+        if order["delivery_eta_ts"] and order["delivery_eta_ts"] <= now_ts:
+            order["is_delivered"] = True
+
+    bad = {'payment failed', 'order not placed', 'not yet placed'}
+    status_ok_for_invoice = (str(order.get('order_status', '')).strip().lower() not in bad)
+
+    # --- Who can access (strip + modal) ---
+    # --- Manage "who can access" (strip + modal) -------------------------------
+    def _norm(s):
+        return (s or "").strip().lower()
+
+    buyer_phone     = (order.get("buyer_phone") or request.COOKIES.get("phone") or "").strip()
+    recipient_phone = (order.get("recipient_phone") or "").strip()
+
+    # Gate by order status: hide strip for failed / not-placed
+    order_status  = (order.get("order_status") or "").strip().lower()
+    bad_statuses  = {"payment failed", "order not placed", "not yet placed"}
+    order_active  = order_status not in bad_statuses
+
+    # Build shared numbers (dedup)
+    def _uniq(seq):
+        out = []
+        for s in seq:
+            s = (s or "").strip()
+            if s and s not in out:
+                out.append(s)
+        return out
+
+    existing = list(order.get("shared_numbers") or [])
+
+    # Seed recipient only when buyer != recipient
+    seed = []
+    if buyer_phone and recipient_phone and _norm(buyer_phone) != _norm(recipient_phone):
+        seed.append(recipient_phone)
+
+    shared = _uniq([*seed, *existing])
+    order["shared_numbers"] = shared
+
+    # Phone to show in the strip
+    access_phone = shared[0] if shared else (
+        recipient_phone if (buyer_phone and _norm(buyer_phone) != _norm(recipient_phone)) else ""
+    )
+    order["access_phone"] = access_phone
+    # SHOW only if order is active AND we actually have a phone to show
+    order["show_access_strip"] = bool(order_active and access_phone)
+    # API for removal
+    order["access_remove_api"] = f"/api/orders/{order_pk}/access/remove/"
+    # (Optional) expose buyer so the modal can tag "You"
+    order["buyer_phone"] = buyer_phone
+
+    ctx = { "order": order, "item": item, "status_ok_for_invoice": status_ok_for_invoice,
+            "session_expired": session_expired }
+    resp = render(request, "vieworderdetails.html", ctx)
+    resp["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    
+    return resp
+   
+
+
+@require_POST
+def remove_access_number(request, order_id):
+    try:
+        payload = json.loads(request.body or "{}")
+        phone = (payload.get("phone") or "").strip()
+        if not phone:
+            return HttpResponseBadRequest("phone missing")
+
+        remaining = 0  # set to len(order.shared_numbers) when using a real model
+        return JsonResponse({"ok": True, "remaining": remaining})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
+    
+
+# --- add these imports near the top of views.py ---
+import os
+import shutil
+import requests
+import pdfkit
+from tempfile import NamedTemporaryFile
+
+from django.http import HttpResponse, Http404
+from django.template.loader import render_to_string
+from django.templatetags.static import static
+from django.contrib.staticfiles import finders
+from django.utils import timezone
+from datetime import datetime
+# user_url, product_url, order_url, PLATFORM_FEE_RS must already be defined in your settings/imports
+
+
+def invoice_pdf(request, order_pk: int):
+    """Build and download invoice as <order_code>.pdf, with structured addresses (wkhtmltopdf-safe)."""
+
+    # ---------- 1) Fetch core order ----------
+    try:
+        r = requests.get(
+            f"{order_url}/api/orderdata/",
+            params={"order_id": order_pk},
+            cookies=request.COOKIES,
+            timeout=10,
+        )
+    except Exception:
+        r = None
+    if not r or not r.ok:
+        raise Http404("Order not found")
+    order = r.json() or {}
+    if int(order.get("order_id", 0)) != int(order_pk):
+        raise Http404("Order not found")
+
+    order_code = (order.get("order_code") or f"ORDER_{order_pk}").strip()
+
+    # ---------- 2) Fetch items ----------
+    items = []
+    try:
+        ri = requests.get(
+            f"{order_url}/api/orderitems/",
+            params={"order_id": order_pk},
+            cookies=request.COOKIES,
+            timeout=10,
+        )
+        if ri.ok:
+            items = ri.json() or []
+    except Exception:
+        pass
+
+    # Normalize items a bit for the template
+    norm_items = []
+    for it in items:
+        pid = it.get("product_id")
+        name = it.get("product_name") or "Item"
+        # enrich with product data if present
+        if pid:
+            try:
+                pr = requests.get(f"{product_url}/api/productview/{pid}/",
+                                  cookies=request.COOKIES, timeout=6)
+                if pr.ok:
+                    pd = pr.json() or {}
+                    name = pd.get("product_name") or name
+                    it.setdefault("price", pd.get("price") or 0)
+            except Exception:
+                pass
+
+        qty = int(it.get("quantity") or it.get("qty") or 1)
+        unit = float(it.get("final_price") or it.get("price") or it.get("amount") or 0)
+        line_total = float(it.get("total_price") or (unit * qty))
+        norm_items.append({
+            "product_name": name,
+            "qty": qty,
+            "unit_price": unit,
+            "line_total": line_total,
+        })
+
+    # ---------- 3) Dates ----------
+    order_date_str = ""
+    placed_raw = order.get("placed_time") or order.get("created_at") or order.get("order_time")
+    if placed_raw:
+        try:
+            order_date_str = datetime.fromisoformat(placed_raw.replace("Z", "+00:00")).strftime("%d-%m-%Y")
+        except Exception:
+            order_date_str = ""
+    invoice_date_str = timezone.now().strftime("%d-%m-%Y")
+
+    # ---------- 4) Address helpers ----------
+    def _split_address(addr: dict) -> dict:
+        line1 = (
+            addr.get("doorno") or addr.get("door_no") or addr.get("house_no")
+            or addr.get("house") or addr.get("door") or ""
+        )
+        line2 = ", ".join(x for x in [
+            addr.get("street") or addr.get("street1") or addr.get("address1"),
+            addr.get("landmark") or addr.get("address2") or addr.get("street2"),
+        ] if x)
+        city = addr.get("city") or addr.get("district") or ""
+        state = addr.get("state") or addr.get("province") or ""
+        pincode = addr.get("pincode") or addr.get("postal_code") or addr.get("zip") or ""
+        return {"line1": line1, "line2": line2, "city": city, "state": state, "pincode": pincode}
+
+    recipient_name  = (order.get("recipient_name") or order.get("ship_to_name") or "").strip()
+    recipient_phone = (order.get("recipient_phone") or order.get("ship_to_phone") or "").strip()
+
+    # If address_id present -> pull from user service and override fields
+    addr_id = order.get("address_id") or (order.get("address") or {}).get("address_id")
+    addr_obj = None
+    if addr_id:
+        try:
+            ar = requests.get(f"{user_url}/api/getaddress/", cookies=request.COOKIES, timeout=10)
+            if ar.ok:
+                addresses = (ar.json() or {}).get("addresses", []) or []
+                addr_obj = next((x for x in addresses if str(x.get("address_id")) == str(addr_id)), None)
+        except Exception:
+            addr_obj = None
+
+    bill = _split_address(addr_obj or (order.get("address") or {}))
+    ship = bill  # same shipping; change if you later store separately
+
+    # Prefer name/phone from address if available
+    name_from_addr = (
+        (addr_obj or {}).get("customer_name") or (addr_obj or {}).get("username")
+        or (addr_obj or {}).get("name")
+        or f"{(addr_obj or {}).get('firstname','')} {(addr_obj or {}).get('lastname','')}".strip()
+    ).strip()
+    phone_from_addr = (
+        (addr_obj or {}).get("customer_phone") or (addr_obj or {}).get("phone")
+        or (addr_obj or {}).get("mobile")
+    )
+    if name_from_addr:
+        recipient_name = name_from_addr
+    if phone_from_addr:
+        recipient_phone = str(phone_from_addr)
+
+    # ---------- 5) Summary totals (recompute like detail page) ----------
+    cart_total = sum(i["line_total"] for i in norm_items)
+    shipping_fee = 0.0 if cart_total == 0 else (0.0 if cart_total >= 1500 else 100.0)
+    platform_fee = 0.0 if cart_total == 0 else float(PLATFORM_FEE_RS)
+
+    # If API already had a final_total, you can prefer it; otherwise use our computed one.
+    api_summary = order.get("summary") or {}
+    grand_total = float(
+        api_summary.get("final_total")
+        or api_summary.get("total_payable")
+        or (cart_total + shipping_fee + platform_fee)
+    )
+    amount_words = amount_in_words_rupees(grand_total, use_and=True)
+
+     # --- Payment mode (very tolerant; works for old orders too) ---
+    def _payment_headline(o: dict) -> str:
+        pm  = (o.get("payment_mode") or o.get("paid_via") or o.get("payment_method") or "").lower()
+        prov= (o.get("payment_provider") or o.get("gateway") or "").lower()
+        cod = str(o.get("cod") or o.get("is_cod") or o.get("cash_on_delivery") or "").lower() in ("1","true","yes")
+        if cod: return "Cash on Delivery"
+        if "upi" in pm or "upi" in prov: return "UPI"
+        if any(k in pm for k in ("card","debit","credit")): return "Card"
+        if "net" in pm or "bank" in pm: return "Netbanking"
+        if "wallet" in pm: return "Wallet"
+        if "emi" in pm: return "EMI"
+        if "gift" in pm: return "Gift Card"
+        return "Online Payment"
+
+    payment_mode_label = _payment_headline(order)
+
+
+    # ---------- 6) Static file -> file:// URL (wkhtmltopdf safe) ----------
+    def _file_url(static_rel_path: str) -> str:
+        """Return a file:/// URL for a static asset (works in dev via staticfiles finders)."""
+        abs_path = finders.find(static_rel_path)
+        if not abs_path:
+            return ""
+        return "file:///" + os.path.abspath(abs_path).replace("\\", "/")
+
+    # ---------- 7) Template context ----------
+    ctx = {
+        # branding / assets
+        "logo_url": _file_url("images/novacart.png"),
+        "font_regular": _file_url("fonts/Inter-Regular.ttf"),
+        "font_medium":  _file_url("fonts/Inter-Medium.ttf"),
+        "font_bold":    _file_url("fonts/Inter-Bold.ttf"),
+
+        # seller block + invoice number
+        "seller_name": "Novacart Pvt. Ltd.",
+        "seller_pan": "AABCN0000X",
+        "seller_gstin": "29AACFN0000Z1D",
+        "invoice_no": order_code,
+
+        # order meta
+        "order_code": order_code,
+        "order_date_str": order_date_str,
+        "invoice_date_str": invoice_date_str,
+
+        # addresses
+        "billing_name": recipient_name,
+        "billing_line1": bill["line1"],
+        "billing_line2": bill["line2"],
+        "billing_city": bill["city"],
+        "billing_state": bill["state"],
+        "billing_pincode": bill["pincode"],
+        "billing_phone": recipient_phone,
+
+        "shipping_name": recipient_name,
+        "shipping_line1": ship["line1"],
+        "shipping_line2": ship["line2"],
+        "shipping_city": ship["city"],
+        "shipping_state": ship["state"],
+        "shipping_pincode": ship["pincode"],
+        "shipping_phone": recipient_phone,
+
+        # items and totals
+        "items": norm_items,
+        "summary": {
+            "cart_total": cart_total,
+            "shipping_fee": shipping_fee,
+            "platform_fee": platform_fee,
+            "total_payable": cart_total + shipping_fee + platform_fee,
+            "final_total": grand_total,
+        },
+        "amount_in_words": f"{amount_words} Rupees only",
+        "payment_mode_label": payment_mode_label, 
+    }
+
+    # ---------- 8) Render HTMLs ----------
+    html = render_to_string("invoice.html", ctx)
+
+    footer_html = render_to_string("invoice_footer.html", ctx)
+    with NamedTemporaryFile(mode="w", suffix=".html", delete=False, encoding="utf-8") as f:
+        f.write(footer_html)
+        footer_path = f.name  # absolute path for --footer-html
+
+    # ---------- 9) Build PDF ----------
+    wkhtml_path = (
+        shutil.which("wkhtmltopdf")
+        or r"C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe"
+        or r"C:/ProgramData/chocolatey/bin/wkhtmltopdf.exe"
+    )
+    config = pdfkit.configuration(wkhtmltopdf=wkhtml_path)
+
+    pdf = pdfkit.from_string(
+        html,
+        False,
+        configuration=config,
+        options={
+            "page-size": "A4",
+            "encoding": "UTF-8",
+            "enable-local-file-access": None,   # allow file:/// assets
+            "margin-top": "14mm",
+            "margin-bottom": "22mm",            # room for footer
+            "margin-left": "14mm",
+            "margin-right": "14mm",
+            "footer-html": footer_path,         # stable, no overlap
+            "footer-spacing": "-30",
+        },
+    )
+
+    filename = f"{order_code}.pdf"
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp
+
+
+
 
 
 #REVIEW SERVICE CODE 
@@ -1486,6 +2518,33 @@ def _build_page_links(cur_page, total_pages, make_url):
     return items
 
 
+def _get_current_user_id(request):
+    try:
+        data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
+        return data.get('user_id')
+    except Exception:
+        return None
+    
+
+def _has_purchased(request, product_id) -> bool:
+    user_id = _get_current_user_id(request)
+    if not user_id:
+        return False
+    try:
+        r = requests.get(
+            f'{order_url}/api/internal/has-purchased/',
+            params={'user_id': str(user_id), 'product_id': str(product_id)},
+            cookies=request.COOKIES,      # ← add this
+            timeout=6
+        )
+        if r.ok:
+            data = r.json()
+            return bool(data.get('has_purchased'))
+        return False
+    except Exception:
+        return False
+
+
 def reviews_page(request, product_id):
     # product info
     product = requests.get(f'{product_url}/api/singleproduct/{product_id}/').json()
@@ -1576,7 +2635,10 @@ def reviews_page(request, product_id):
     if pinned_review:
         pr_id = int(pinned_review.get('review_id'))
         reviews = [rv for rv in reviews if int(rv.get('review_id')) != pr_id]
-
+    
+    can_review = bool(
+        current_user_id and (_has_purchased(request, product_id) or pinned_review)
+    )
     # pager URLs – preserve sort & stars
     base = reverse('reviews_page', args=[product_id])
     common = {}
@@ -1596,6 +2658,7 @@ def reviews_page(request, product_id):
     return render(request, 'reviews.html', {
         'product': product,
         'reviews': reviews,
+        'can_review': can_review,
         'pinned_review': pinned_review,
         'current_user_id': current_user_id,
         'cur_page': cur_page,
@@ -1604,7 +2667,6 @@ def reviews_page(request, product_id):
         'next_url': next_url,
         'stats': stats,
         'total_count': total_count,
-        'can_review': can_review,
         'sort': sort,
         'stars': stars,
         'rating_count': rating_count,
@@ -1754,34 +2816,6 @@ def review_vote(request, review_id):
         print("[review_vote] 502 review service unreachable")
         return JsonResponse({'ok': False, 'error': 'review service unreachable'}, status=502)
 
-
-def _get_current_user_id(request):
-    try:
-        data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
-        return data.get('user_id')
-    except Exception:
-        return None
-
-def _has_purchased(request, product_id) -> bool:
-    """
-    Calls Order Service internal endpoint to check if the logged-in user bought the product.
-    """
-    user_id = _get_current_user_id(request)
-    if not user_id:
-        return False
-    try:
-        r = requests.get(
-            f'{order_url}/api/internal/has-purchased/',
-            params={'user_id': str(user_id), 'product_id': str(product_id)},
-            timeout=6
-        )
-        if r.ok:
-            data = r.json()
-            return bool(data.get('has_purchased'))
-        return False
-    except Exception:
-        return False
-    
 
 @require_POST
 def delete_review(request, review_id):

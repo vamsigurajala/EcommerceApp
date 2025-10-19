@@ -15,4 +15,4 @@ class PaginatedProductSerializer(serializers.Serializer):
 class CartProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ('product_name','price','image')
+        fields = ('product_name','price','image','product_code')

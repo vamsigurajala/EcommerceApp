@@ -8,6 +8,7 @@ class Payment(models.Model):
     Keep only provider tokens/ids—never store raw card data here.
     """
     payment_id = models.AutoField(primary_key=True)
+    transaction_id = models.CharField(max_length=22, null=True, blank=True, db_index=True)
 
     # references to other services (keep as primitives; no cross-DB foreign keys)
     order_id = models.BigIntegerField(db_index=True)

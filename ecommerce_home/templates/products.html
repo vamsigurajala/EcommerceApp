@@ -59,15 +59,16 @@
             <li>
                 <p><img src="{{i.image}}"></p>
                 <h3><b>Product Name:</b> {{i.product_name}}</h3>
+                <!-- <small class="muted"> Code: {{ i.product_code|default:"—" }}</small> -->
                 <p><b>Description:</b> {{ i.product_description }}</p>
                 <p><b>Price : </b>{{ i.price }}</p>
                 <p><b>Category : </b>{{i.category}}</p>
             </li>
             <button type="button" class="add-to-cart" data-product-id="{{ i.product_id }}">Add To Cart</button>
-            <a href="{% url 'reviews_page' i.product_id %}">
-                <button type="button">See Reviews</button></a>
-        </div>
-        {% empty %}
+            <a href="{% url 'reviews_page' i.product_id %}"><button type="button">See Reviews</button></a>
+            <button type="button" class="btn-wishlist" data-product-id="{{ i.product_id }}">♡ Wishlist</button>
+          </div>     
+          {% empty %}
         <p>No Products Available</p>
         {% endfor %}
     </div>
@@ -136,6 +137,46 @@ document.querySelectorAll('.add-to-cart').forEach(btn=>{
     }
   });
 });
-</script>
 
+
+const csrftoken_w = (function getCookie(n){const v=`; ${document.cookie}`.split(`; ${n}=`);return v.length===2?v.pop().split(';').shift():''})('csrftoken');
+/* --- Add to Wishlist (fixed selector + redirect) --- */
+document.querySelectorAll('.btn-wishlist').forEach(btn=>{
+  btn.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const id = btn.dataset.productId;
+    if(!id) return;
+
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    try{
+      const resp = await fetch('/api/addtowishlist-ajax/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: new URLSearchParams({ product_id: id }),
+        credentials: 'same-origin'
+      });
+
+      const data = await resp.json().catch(()=>({}));
+      if (!resp.ok || !data.ok){
+        btn.textContent = 'Try again';
+        setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 800);
+        return;
+      }
+
+      btn.textContent = 'Saved ✓';
+      setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 600);
+    } catch (err){
+      btn.textContent = 'Try again';
+      setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 800);
+    }
+  });
+});
+
+
+</script>
 {% endblock %}

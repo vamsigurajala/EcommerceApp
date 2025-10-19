@@ -1,1292 +1,705 @@
-{% load static %}
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Novacart • Checkout</title>
+{% extends 'changemode.html' %}
 
-  <style>
-    :root{
-      --brand:#2874f0;
-      --header-h:64px;
-      --gutter:24px;
-      --sidebar-w:360px;
-      --card-radius:12px;
+{% block title %}Novacart Checkout Page{% endblock %}
 
-      --text:#1f2937;
-      --muted:#6b7280;
-      --surface:#ffffff;
-      --surface-2:#f1f5f9;
-      --border:#e5e7eb;
-      --cta:#ff6a00;
-      --shadow:0 6px 16px rgba(2,6,23,.08);
-
-      color-scheme: light dark;
-    }
-    @media (prefers-color-scheme: dark){
-      :root{
-        --text:#e5e7eb; --muted:#9ca3af;
-        --surface:#0b1220; --surface-2:#0a0f1a;
-        --border:#1f2937; --shadow:0 6px 16px rgba(0,0,0,.45);
-      }
-    }
-    html[data-theme="light"]{
-      --text:#1f2937; --muted:#6b7280;
-      --surface:#ffffff; --surface-2:#f1f5f9;
-      --border:#e5e7eb; --shadow:0 6px 16px rgba(2,6,23,.08);
-    }
-    html[data-theme="dark"]{
-      --text:#e5e7eb; --muted:#9ca3af;
-      --surface:#0b1220; --surface-2:#0a0f1a;
-      --border:#1f2937; --shadow:0 6px 16px rgba(0,0,0,.45);
-    }
-
-    *,*::before,*::after{ box-sizing:border-box; }
-    html{ scroll-behavior:smooth; }
-    body{
-      margin:0;
-      background:var(--surface-2);
-      color:var(--text);
-      font:500 15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-    }
-    a{ color:var(--brand); text-decoration:none; }
-    a:hover{ text-decoration:underline; }
-
-    /* Logout link should never underline (match Flipkart) */
-#link-logout,
-#link-logout:hover,
-#link-logout:active{
-  text-decoration: none;
-}
-
+{% block extra_style %}
+<style>
+    /* ===== Root tokens (brand, layout, colors, shadow, color-scheme) ===== */
+:root{--brand:#2874f0;--header-h:64px;--gutter:24px;--sidebar-w:360px;--card-radius:12px;--text:#1f2937;--muted:#6b7280;--surface:#ffffff;--surface-2:#f1f5f9;--border:#e5e7eb;--cta:#ff6a00;--shadow:0 6px 16px rgba(2,6,23,.08);color-scheme:light dark;}
+/* Make the topbar fixed (always visible) */
+.topbar{ position: fixed;top: 0; left: 0; right: 0; z-index: 1000;height: var(--header-h); z-index: 1000;}
+/* Undo center/100vh layout from the base for this page */
+html, body { margin: 0; padding: 0; height: auto;min-height: 100%; overflow-x: hidden; overflow-y: auto;}
+/* --- Tight gap under blue topbar (Flipkart-like) --- */
+:root{ --header-h: 64px; --header-gap: 16px;} 
+/* kill the vertical-centering from changemode layout just on this page */
+body { display: block; } 
+/* force main grid padding so it sits just below the topbar */
+body > main.checkout{ padding: calc(64px + 16px) !important; }
+/* the price column must stick starting at the same offset */
+.price-wrap, .price-card{ top: calc(var(--header-h) + var(--header-gap)) !important;}
+/* remove any extra top margin from the first content block */
+main.checkout > *:first-child, main.checkout > section:first-of-type, main.checkout > div:first-of-type{ margin-top: 6 !important;}
+/* nuke any earlier padding-top that kept the big gap */
+.checkout{ padding-top: 6 !important;}
+/*===== Forced light theme ===== */
+html[data-theme="light"]{--text:#1f2937;--muted:#6b7280;--surface:#ffffff;--surface-2:#f1f5f9;--border:#e5e7eb;--shadow:0 6px 16px rgba(2,6,23,.08);}
+/* ===== Forced dark theme ===== */
+html[data-theme="dark"]{--text:#e5e7eb;--muted:#9ca3af;--surface:#0b1220;--surface-2:#0a0f1a;--border:#1f2937;--shadow:0 6px 16px rgba(0,0,0,.45);}
+/* ===== Base reset / typography / links ===== */
+*,*::before,*::after{box-sizing:border-box;}html{scroll-behavior:smooth;}body{margin:0;background:var(--surface-2);color:var(--text);font:500 15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;}a{color:var(--brand);text-decoration:none;}a:hover{text-decoration:underline;}
+/* Logout link should never underline (match Flipkart) */
+#link-logout,#link-logout:hover,#link-logout:active{text-decoration:none;}
 /* (Optional but good a11y) show a clean focus ring instead of underline */
-#link-logout:focus-visible{
-  outline: 2px solid rgba(40,116,240,.55);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-    /* Top bar */
-    .topbar{
-      position:sticky; top:0; z-index:10;
-      height:var(--header-h);
-      display:flex; align-items:center;
-      padding:0 16px;
-      background:var(--brand);
-      color:#fff; box-shadow:0 1px 0 rgba(0,0,0,.1);
-    }
-    .brand{ font-weight:900; font-size:22px; letter-spacing:.2px; }
-    .plus{ font-weight:700; margin-left:8px; opacity:.95 }
-    .spacer{ flex:1; }
-    .theme-toggle{
-      width:36px; height:36px; border-radius:999px;
-      display:grid; place-items:center; border:1px solid rgba(255,255,255,.35);
-      background:transparent; cursor:pointer; color:#fff;
-    }
-
-    /* Layout */
-    .checkout{
-      display:grid; grid-template-columns:minmax(0,1fr) var(--sidebar-w);
-      gap:var(--gutter); max-width:1200px; margin:0 auto; padding:16px 16px 64px;
-    }
-    /* When there are no items: make it a single centered column like Flipkart */
-    .checkout.is-empty{ grid-template-columns: 1fr; justify-content: center; justify-items: center;  }
-    .checkout.is-empty > div{width: 100%; max-width: 880px; justify-self: center;margin-inline: auto;place-self: start center;}
-    .checkout.is-empty .trust-strip{ grid-column: 1; justify-self: center; max-width: 880px;width: 100%;}
-
-
-    /* Step shells & spacing */
-    .step-card{ border-radius:var(--card-radius); scroll-margin-top:calc(var(--header-h) + 12px); }
-    .step-card + .step-card{ margin-top:16px; }
-    .step-card + .mini-row{ margin-top:12px; }
-    .mini-row + .addnew-panel{ margin-top:12px; }
-    .addnew-panel + .step-card{ margin-top:16px; }
-
-    /* Header grid (title + change button + collapsed summary under title) */
-    .step-header{
-      cursor: default;
-      display:grid;
-      grid-template-columns:auto minmax(0,1fr) auto;
-      grid-template-rows:56px; 
-      align-items:center; gap:10px 12px;
-      min-height:56px; padding:8px 18px;
-      background:var(--surface); color:var(--text);
-      border:1px solid var(--border);
-      border-radius:var(--card-radius);
-      box-shadow:var(--shadow);
-      transition: background .15s ease, color .15s ease;
-    }
-    .step-card.is-open .step-header{
-      grid-template-rows:56px;
-      background:var(--brand); color:#fff;
-      border-bottom:none;
-      border-top-left-radius:var(--card-radius);
-      border-top-right-radius:var(--card-radius);
-      border-bottom-left-radius:0;
-      border-bottom-right-radius:0;
-    }
-    .step-index{
-      grid-row:1; grid-column:1;
-      display:inline-grid; place-items:center; width:26px; height:26px;
-      border-radius:6px; background:#e5e7eb; color:#1e293b; font-weight:700;
-    }
-    .step-header h2,.step-index,.step-header .step-secondary{align-self:center;}
-    .step-card.is-open .step-index{ background:#fff; color:#1e40af; }
-    .step-header h2{
-      grid-row:1; grid-column:2; margin:0; font-size:16px; letter-spacing:.2px;
-      display:flex; align-items:center; gap:8px;
-    }
-
-    /* Collapsed summary lines – under title, never under CHANGE (avoid overlap) */
-    .step-collapsed{
-      display:none; grid-row:2; grid-column:2;   /* <== stay in middle column only */
-      font-size:14px; padding-right:16px;
-    }
-    .step-collapsed b{ font-weight:900; }
-    .step-card:not(.is-open) .step-collapsed{ display:block; }
-
-    /* Done tick beside title, only when collapsed (never on open) */
-    .step-done{
-      font-weight:900; color:#22c55e; display:none;
-    }
-    .step-card.is-done:not(.is-open) .step-done{ display:inline; }
-
-    /* CHANGE buttons – visible only when collapsed, perfectly centered vertically */
-    .step-header .step-secondary{
-      cursor: pointer;
-      grid-row:1; grid-column:3;
-      cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
-      height:32px; padding:0 14px; border-radius:8px;
-      font-weight:800; border:1px solid var(--border);
-      background:var(--surface-2); color:var(--text);
-      margin-left:auto; align-self:center;
-    }
-    .step-card.is-open .step-header .step-secondary{ display:none; }
-
-    /* Bodies */
-    .step-body{
-      max-height:0; overflow:hidden; padding:0; pointer-events:none;
-      background:var(--surface);
-      border-left:1px solid var(--border); border-right:1px solid var(--border);
-      border-bottom-left-radius:var(--card-radius); border-bottom-right-radius:var(--card-radius);
-      transition:max-height .22s ease, padding .18s ease;
-      will-change:max-height;
-    }
-    .addr-list.has-inline{ overflow:visible; }
-    /* Login content */
-    .step-card.is-open .step-body{ max-height:none;overflow:visible; padding:16px; pointer-events:auto; border-bottom:1px solid var(--border);}
-    .step-card__box{ box-shadow:var(--shadow); border-radius:var(--card-radius); overflow:hidden; }
-    .step-card__content{ padding:18px; background:var(--surface); border:1px solid var(--border); border-top:none; border-bottom-left-radius:var(--card-radius); border-bottom-right-radius:var(--card-radius); }
-    #step-login:not(.is-open) .step-card__content{ display:none; }
-    .label{color:var(--muted); font-weight:600; margin-bottom:4px}
-    .value{font-weight:700; color:var(--text)}
-
-    /* Flipkart-like two columns: left (name/phone/logout/button) + right (advantages) */
-    .login-grid{
-      display:grid; grid-template-columns:minmax(0,1fr) 1fr; gap:24px; align-items:start;
-    }
-    @media (max-width: 900px){ .login-grid{grid-template-columns:1fr} }
-    .login-left .row{display:grid; grid-template-columns:96px 1fr; gap:18px; align-items:center;}
-    .login-left .row + .row{margin-top:10px}
-    .login-actions{ display:flex; gap:18px; align-items:center; margin-top:14px; flex-wrap:wrap; }
-    .benefits{display:grid; gap:10px; margin-top:0}
-    .benefit{display:flex; align-items:center; gap:10px; color:var(--text)}
-    .icon{font-size:18px}
-    .note{margin-top:14px;color:var(--muted);font-size:13px;white-space: nowrap;text-overflow: ellipsis;display: block;}
-
-    /* Buttons / fields */
-    .btn{ border-radius:6px; border:1px solid transparent; padding:12px 18px; font-weight:800; cursor:pointer; }
-    .btn-lg{padding:14px 22px; font-size:16px}
-    .btn-primary{background:var(--cta); color:#111}
-    .btn-primary:hover{filter:brightness(0.98)}
-    .btn-secondary{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
-
-    .field{ display:flex; flex-direction:column; gap:6px; }
-    .field label{ color:var(--muted); font-weight:700; }
-    .field input{ height:44px; padding:0 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); }
-    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    @media (max-width:900px){ .grid-2{ grid-template-columns:1fr; } }
-    .form-actions{ display:flex; gap:12px; margin-top:12px; }
-
-    /* Address list */
-    .addr-list{ display:grid; gap:0; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--surface); }
-    .addr-item{
-      display:grid; grid-template-columns:36px 1fr auto; gap:10px; align-items:start;
-      padding:14px 16px; border-bottom:1px solid var(--border);
-      cursor:pointer; user-select:none;
-    }
-    .addr-item:last-child{ border-bottom:none; }
-    .addr-radio{ margin-top:4px; cursor:pointer; }
-    .addr-name{ font-weight:800; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .addr-phone{ font-weight:700; }
-    .addr-chip{
-      font-size:12px; font-weight:800; padding:2px 6px;
-      border:1px solid var(--border); border-radius:999px; color:var(--muted);
-    }
-    .addr-edit{ color:var(--brand); background:none; border:0; font-weight:800; cursor:pointer; visibility:hidden; }
-    .addr-item.is-selected .addr-edit{ visibility:visible; }
-    .addr-address{ margin:6px 0 0 0; color:var(--text); opacity:.95; }
-    .addr-actions{ margin:8px 0 0 0; display:none; }
-    .addr-item.is-selected .addr-actions{ display:block; }
-    .deliver-btn{ margin-top:6px; height:44px; padding:0 18px; border:0; border-radius:6px; font-weight:800; background:var(--cta); color:#111; cursor:pointer; }
-    .addr-item *{ cursor:inherit; }
-    .addr-edit, .addr-actions *{ cursor:pointer !important; }
-
-    /* + Add new address row */
-    .mini-row{
-      height:48px; display:flex; align-items:center; gap:10px; padding:0 16px;
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--card-radius); box-shadow:var(--shadow);
-      font-weight:500; color:var(--brand); cursor:pointer; user-select:none;
-    }
-    .mini-row .plus{ width:auto; height:auto; border:none; background:none; padding:0; font-weight:700; line-height:1; }
-
-    /* Add new / Edit panels */
-    .addnew-panel, .edit-panel{
-      display:none; background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--card-radius); box-shadow:var(--shadow); padding:16px; width:100%;
-      margin-top:12px;
-    }
-    /* Inline editor replacing a single row */
-.addr-form.inline-edit{padding:14px;border:1px solid var(--border);border-radius:8px;background:#fff;}
-html[data-theme="dark"] .addr-form.inline-edit{background:#0f172a;border-color:#1f2937;}
-.addr-form.inline-edit .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
-.addr-form.inline-edit .actions{display:flex;gap:10px;margin-top:12px;}
+#link-logout:focus-visible{outline:2px solid rgba(40,116,240,.55);outline-offset:2px;border-radius:6px;}
+/* ===== Layout grid (content + sidebar) ===== */
+.checkout{display:grid;grid-template-columns:minmax(0,1fr) var(--sidebar-w);gap:var(--gutter);max-width:1200px;margin:0 auto;padding:16px 16px 64px;}
+/* When there are no items: make it a single centered column like Flipkart */
+.checkout.is-empty{grid-template-columns:1fr;justify-content:center;justify-items:center;}
+.checkout.is-empty>div{width:100%;max-width:880px;justify-self:center;margin-inline:auto;place-self:start center;}
+.checkout.is-empty .trust-strip{grid-column:1;justify-self:center;max-width:880px;width:100%;}
+/* ===== Step shells & spacing ===== */
+.step-card{border-radius:var(--card-radius);scroll-margin-top:calc(var(--header-h) + 12px);} .step-card+.step-card{margin-top:16px;} .step-card+.mini-row{margin-top:12px;} .mini-row+.addnew-panel{margin-top:12px;} .addnew-panel+.step-card{margin-top:16px;}
+/* ===== Step header (title/index/change/collapsed summary) ===== */
+.step-header{cursor:default;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:56px;align-items:center;gap:10px 12px;min-height:56px;padding:8px 18px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow);transition:background .15s ease,color .15s ease;}
+.step-card.is-open .step-header{grid-template-rows:56px;background:var(--brand);color:#fff;border-bottom:none;border-top-left-radius:var(--card-radius);border-top-right-radius:var(--card-radius);border-bottom-left-radius:0;border-bottom-right-radius:0;}
+.step-index{grid-row:1;grid-column:1;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;background:#e5e7eb;color:#1e293b;font-weight:700;}
+.step-header h2,.step-index,.step-header .step-secondary{align-self:center;}
+.step-card.is-open .step-index{background:#fff;color:#1e40af;}
+.step-header h2{grid-row:1;grid-column:2;margin:0;font-size:16px;letter-spacing:.2px;display:flex;align-items:center;gap:8px;}
+/* ===== Collapsed summary / done tick / CHANGE button ===== */
+.step-collapsed{display:none;grid-row:2;grid-column:2;font-size:14px;padding-right:16px;} .step-collapsed b{font-weight:900;} .step-card:not(.is-open) .step-collapsed{display:block;}
+.step-done{font-weight:900;color:#22c55e;display:none;} .step-card.is-done:not(.is-open) .step-done{display:inline;}
+.step-header .step-secondary{cursor:pointer;grid-row:1;grid-column:3;display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 14px;border-radius:8px;font-weight:800;border:1px solid var(--border);background:var(--surface-2);color:var(--text);margin-left:auto;align-self:center;} .step-card.is-open .step-header .step-secondary{display:none;}
+/* ===== Step bodies (expand/collapse) ===== */
+.step-body{max-height:0;overflow:hidden;padding:0;pointer-events:none;background:var(--surface);border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom-left-radius:var(--card-radius);border-bottom-right-radius:var(--card-radius);transition:max-height .22s ease,padding .18s ease;will-change:max-height;}
+.addr-list.has-inline{overflow:visible;}
+/* Login content */
+.step-card.is-open .step-body{max-height:none;overflow:visible;padding:16px;pointer-events:auto;border-bottom:1px solid var(--border);} .step-card__box{box-shadow:var(--shadow);border-radius:var(--card-radius);overflow:hidden;} .step-card__content{padding:18px;background:var(--surface);border:1px solid var(--border);border-top:none;border-bottom-left-radius:var(--card-radius);border-bottom-right-radius:var(--card-radius);} #step-login:not(.is-open) .step-card__content{display:none;} .label{color:var(--muted);font-weight:600;margin-bottom:4px} .value{font-weight:700;color:var(--text)}
+/* ===== Login grid (left details + right benefits) ===== */
+.login-grid{display:grid;grid-template-columns:minmax(0,1fr) 1fr;gap:24px;align-items:start;} @media (max-width:900px){.login-grid{grid-template-columns:1fr}}
+.login-left .row{display:grid;grid-template-columns:96px 1fr;gap:18px;align-items:center;} .login-left .row+.row{margin-top:10px} .login-actions{display:flex;gap:18px;align-items:center;margin-top:14px;flex-wrap:wrap;} .benefits{display:grid;gap:10px;margin-top:0} .benefit{display:flex;align-items:center;gap:10px;color:var(--text)} .icon{font-size:18px} .note{margin-top:14px;color:var(--muted);font-size:13px;white-space:nowrap;text-overflow:ellipsis;display:block;}
+/* ===== Buttons & fields ===== */
+.btn{border-radius:6px;border:1px solid transparent;padding:12px 18px;font-weight:800;cursor:pointer;} .btn-lg{padding:14px 22px;font-size:16px} .btn-primary{background:var(--cta);color:#fff} .btn-primary:hover{filter:brightness(0.98)} .btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border);}
+.field{display:flex;flex-direction:column;gap:6px;} .field label{color:var(--muted);font-weight:700;} .field input{height:44px;padding:0 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);} .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;} @media (max-width:900px){.grid-2{grid-template-columns:1fr;}} .form-actions{display:flex;gap:12px;margin-top:12px;}
+/* ===== Address list / item / actions ===== */
+.addr-list{display:grid;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);} .addr-item{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;} .addr-item:last-child{border-bottom:none;} .addr-radio{margin-top:4px;cursor:pointer;} .addr-name{font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap;} .addr-phone{font-weight:700;} .addr-chip{font-size:12px;font-weight:800;padding:2px 6px;border:1px solid var(--border);border-radius:999px;color:var(--muted);} .addr-edit{color:var(--brand);background:none;border:0;font-weight:800;cursor:pointer;visibility:hidden;} .addr-item.is-selected .addr-edit{visibility:visible;} .addr-address{margin:6px 0 0 0;color:var(--text);opacity:.95;} .addr-actions{margin:8px 0 0 0;display:none;} .addr-item.is-selected .addr-actions{display:block;} .deliver-btn{margin-top:6px;height:44px;padding:0 18px;border:0;border-radius:6px;font-weight:800;background:var(--cta);color:#fff;cursor:pointer;} .addr-item *{cursor:inherit;} .addr-edit,.addr-actions *{cursor:pointer!important;}
+/* ===== “+ Add new address” row ===== */
+.mini-row{height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow);font-weight:500;color:var(--brand);cursor:pointer;user-select:none;} .mini-row .plus{width:auto;height:auto;border:none;background:none;padding:0;font-weight:700;line-height:1;}
+/* ===== Add/Edit panels (+ inline edit card) ===== */
+.addnew-panel,.edit-panel{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow);padding:16px;width:100%;margin-top:12px;}
+/* Inline editor replacing a single row */
+.addr-form.inline-edit{padding:14px;border:1px solid var(--border);border-radius:8px;background:#fff;} html[data-theme="dark"] .addr-form.inline-edit{background:#0f172a;border-color:#1f2937;} .addr-form.inline-edit .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;} .addr-form.inline-edit .actions{display:flex;gap:10px;margin-top:12px;}
 /* inline edit panel (inside a row) */
-.inline-edit{margin:12px 0 6px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);}
-.inline-edit .field input{width:100%;}
-.inline-edit .form-actions{margin-top:12px;}
-
-
-    /* Price card */
-    .price-card{
-      position:sticky; top:calc(var(--header-h) + 16px); align-self:start;
-      width:var(--sidebar-w); background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--card-radius); box-shadow:var(--shadow);
-      max-height:calc(100vh - var(--header-h) - 32px); overflow:auto;
-    }
-    .price-card .card-body{ padding:16px 20px 10px; }
-    .price-card .card-body,.price-card .row{position:relative;overflow:visible;}
-    .price-card h3{ margin:0 0 12px; font-size:16px; letter-spacing:.3px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-    .row{display:flex; justify-content:space-between; gap:12px; padding:10px 0; }
-    .muted{ color:var(--muted); }
-    .total{ border-top:1px solid var(--border); margin-top: 6px; padding: 14px 0;font-weight: 900; }
-    .save{  color:#1a8f3d; font-weight:900; margin-top:12px; padding-top:12px;border-top:1px solid var(--border);}
-    .price-card .card-foot{ padding:14px 20px 16px; border-top:1px solid var(--border); }
-    .trust{ font-size:12px; color:var(--muted); margin:0; }
-    .checkout .trust-strip{ grid-column: 2; margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
-    .checkout .trust-strip::before{ content: '🛡️';font-size: 14px; line-height: 1; opacity: .9;}
-
-    /* Summary items */
-    .summary-item{display:grid; grid-template-columns:112px 1fr; grid-auto-rows:auto; column-gap:14px; row-gap:8px; padding:18px 0; border-bottom:1px solid var(--border);}
-    /* image – NO box/background */
-    .summary-item img{
-      width:112px; height:112px; object-fit:contain; border:none; background:transparent; border-radius:0;
-      grid-row:1 / span 3;
-    }
-    .summary-item .name{ font-weight:600; }
-    .summary-item .meta{ color:var(--muted); font-size:13px; margin-top:2px; }
-    /* price sits under name, with breathing space (not above +/-) */
-    .summary-item .price{ font-weight:900; margin:8px 0 6px; }
-
-    /* keep dividers only between items, not after the last one */
-    #step-summary .summary-item:last-child{border-bottom: none; padding-bottom: 0;margin-bottom: 0;     }
-
-    /* Qty bar under details */
-    .qty-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
-    .qty-btn{
-      width:28px; height:28px; border-radius:8px;
-      background:#fff; border:1px solid #cbd5e1; color:#111; cursor:pointer;
-      display:inline-grid; place-items:center; font-weight:900; line-height:1; box-shadow: var(--shadow);
-    }
-    html[data-theme="dark"] .qty-btn{ background:#0b1220; color:#e5e7eb; border-color:#374151; }
-    .qty-num{ min-width:28px; text-align:center; font-weight:800; }
-    .qty-btn[disabled]{ opacity:.45; cursor:not-allowed; }
-
-    /* confirmation panel (collapses with summary) */
-    .confirm-panel{
-      margin-top:14px; background:var(--surface); border:1px solid var(--border);
-      border-radius:10px; box-shadow:var(--shadow); padding:14px 16px;
-    }
-    .confirm-panel .note{ margin:0 0 10px; color:var(--muted); }
-    .confirm-actions{ display:flex; gap:12px; }
-    .empty-hint{ background:#fff8d6; border:1px solid #f3e29e; color:#7a5a00; padding:12px 14px; border-radius:8px; }
-
-    /* Small stroke around each section box */
-.step-card{
-  position: relative;               /* needed for the pseudo element */
-  border-radius: var(--card-radius);
-}
-.step-card::after{
-  content:"";
-  position:absolute; inset:0;
-  border-radius: inherit;
-  pointer-events:none;
-  /* light mode stroke */
-  box-shadow: 0 0 0 1px rgba(0,0,0,.06);
-}
-
-/* darker, crisper stroke in dark mode */
-@media (prefers-color-scheme: dark){
-  .step-card::after{
-    box-shadow: 0 0 0 1px rgba(255,255,255,.08);
-  }
-}
+.inline-edit{margin:12px 0 6px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);} .inline-edit .field input{width:100%;} .inline-edit .form-actions{margin-top:12px;}
+/* ===== Price card (sticky sidebar) ===== */
+.price-card{position:sticky;top:calc(var(--header-h) + 16px);align-self:start;width:var(--sidebar-w);background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow);max-height:calc(100vh - var(--header-h) - 32px);overflow:auto;}
+.price-card .card-body{padding:16px 20px 10px;} .price-card .card-body,.price-card .row{position:relative;overflow:visible;} .price-card h3{margin:0 0 12px;font-size:16px;letter-spacing:.3px;padding-bottom:12px;border-bottom:1px solid var(--border);} .row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;} .total{border-top:1px solid var(--border);margin-top:6px;padding:14px 0;font-weight:900;} .save{color:#0eb03e;font-weight:900;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);} .price-card .card-foot{padding:14px 20px 16px;border-top:1px solid var(--border);} .trust{font-size:12px;color:var(--muted);margin:0;} .checkout .trust-strip{grid-column:2;margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);} .checkout .trust-strip::before{content:'🛡️';font-size:14px;line-height:1;opacity:.9;}
+/* ===== Summary items (list + image + details) ===== */
+.summary-item{display:grid;grid-template-columns:112px 1fr;grid-auto-rows:auto;column-gap:14px;row-gap:8px;padding:18px 0;border-bottom:1px solid var(--border);} .summary-item img{width:112px;height:112px;object-fit:contain;border:none;background:transparent;border-radius:0;grid-row:1/span 3;} .summary-item .name{font-weight:600;} .summary-item .meta{color:var(--muted);font-size:13px;margin-top:2px;} .summary-item .price{font-weight:900;margin:8px 0 6px;}
+/* keep dividers only between items, not after the last one */
+#step-summary .summary-item:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0;}
+/* Qty bar under details */
+.qty-row{display:flex;align-items:center;gap:8px;margin-top:6px;} .qty-btn{width:28px;height:28px;border-radius:8px;background:#fff;border:1px solid #cbd5e1;color:#111;cursor:pointer;display:inline-grid;place-items:center;font-weight:900;line-height:1;box-shadow:var(--shadow);} html[data-theme="dark"] .qty-btn{background:#0b1220;color:#e5e7eb;border-color:#374151;} .qty-num{min-width:28px;text-align:center;font-weight:800;} .qty-btn[disabled]{opacity:.45;cursor:not-allowed;}
+/* ===== Confirmation panel (under summary) ===== */
+.confirm-panel{margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px;} .confirm-panel .note{margin:0 0 10px;color:var(--muted);} .confirm-actions{display:flex;gap:12px;} .empty-hint{background:#fff8d6;border:1px solid #f3e29e;color:#7a5a00;padding:12px 14px;border-radius:8px;}
+/* ===== Section stroke (pseudo-outline) ===== */
+.step-card{position:relative;border-radius:var(--card-radius);} .step-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.06);}
 /* if you force dark via data-theme */
-html[data-theme="dark"] .step-card::after{
-  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
-}
-
-/* make sure children are above the stroke */
-.step-card > *{ position: relative; }
+html[data-theme="dark"] .step-card::after{box-shadow:0 0 0 1px rgba(255,255,255,.08);}
+ /* make sure children are above the stroke */
+.step-card>*{position:relative;}
 /* ---------- Global custom radios (white, larger, brand dot) ---------- */
-:root{ --radio-size: 20px; }
-
-input[type="radio"]{
-  /* remove native look and draw our own */
-  -webkit-appearance: none;
-  appearance: none;
-
-  width: var(--radio-size);
-  height: var(--radio-size);
-  border-radius: 50%;
-  border: 2px solid #cbd5e1;       /* light gray ring */
-  background: #fff;                 /* << keep button white */
-  display: inline-grid;
-  place-items: center;
-  cursor: pointer;
-  vertical-align: middle;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
+:root{--radio-size:20px;}
+input[type="radio"]{-webkit-appearance:none;appearance:none;width:var(--radio-size);height:var(--radio-size);border-radius:50%;border:2px solid #cbd5e1;background:#fff;display:inline-grid;place-items:center;cursor:pointer;vertical-align:middle;transition:border-color .15s ease,box-shadow .15s ease;}
 /* the inner dot */
-input[type="radio"]::after{
-  content: "";
-  width: calc(var(--radio-size) * 0.5);
-  height: calc(var(--radio-size) * 0.5);
-  border-radius: 50%;
-  background: var(--brand);         /* brand color when checked */
-  transform: scale(0);
-  transition: transform .12s ease;
-}
-
-input[type="radio"]:checked{
-  border-color: rgba(40,116,240,.8);
-}
-input[type="radio"]:checked::after{
-  transform: scale(1);
-}
-
-/* focus ring for a11y */
-input[type="radio"]:focus-visible{
-  outline: 2px solid rgba(40,116,240,.55);
-  outline-offset: 2px;
-}
-
+input[type="radio"]::after{content:"";width:calc(var(--radio-size)*0.5);height:calc(var(--radio-size)*0.5);border-radius:50%;background:var(--brand);transform:scale(0);transition:transform .12s ease;}
+input[type="radio"]:checked{border-color:rgba(40,116,240,.8);} input[type="radio"]:checked::after{transform:scale(1);}
+ /* focus ring for a11y */
+input[type="radio"]:focus-visible{outline:2px solid rgba(40,116,240,.55);outline-offset:2px;}
 /* Dark mode: keep the pill white but soften the border */
-html[data-theme="dark"] input[type="radio"]{
-  background:#fff;                  /* stays white as you asked */
-  border-color:#475569;
-}
-
-
-
+html[data-theme="dark"] input[type="radio"]{background:#fff;border-color:#475569;}
 /* ---------- Per-area sizing ---------- */
 /* Address list radios (slightly larger than default if you want) */
-.addr-list{ --radio-size: 20px; }
+.addr-list{--radio-size:20px;}
 /* Edit/Add forms radios: a bit bigger as requested */
-.edit-panel, .addnew-panel{ --radio-size: 22px; }
-.inline-edit, .inline-add{ --radio-size: 20px; }
+.edit-panel,.addnew-panel{--radio-size:22px;}
+.inline-edit,.inline-add{--radio-size:20px;}
 /* If you want the inline radios inside address rows also bigger */
-.addr-radio{ --radio-size: 20px; }
+.addr-radio{--radio-size:20px;}
 /* Hand cursor on radio options in edit/add forms */
-.edit-panel label,
-.addnew-panel label,
-.edit-panel input[type="radio"],
-.addnew-panel input[type="radio"]{
-  cursor: pointer;
-  user-select: none;   /* optional: avoids accidental text selection */
-}
-
+.edit-panel label,.addnew-panel label,.edit-panel input[type="radio"],.addnew-panel input[type="radio"]{cursor:pointer;user-select:none;}
 /* === Signup-like focus styles for checkout inputs === */
-.field input{transition: background .2s, color .2s, border .2s;}
-.field input:focus{outline: none;border: 1.5px solid #0077cc;background: #eaf4fd;}
-html[data-theme="dark"] 
-.field input{background-color: #444;color: #fff;border: 1px solid #383b41}
-html[data-theme="dark"]
-.field input:focus{background: #23282f;border: 1.5px solid #00aaff;}
-
+.field input{transition:background .2s,color .2s,border .2s;} .field input:focus{outline:none;border:1.5px solid #0077cc;background:#eaf4fd;} html[data-theme="dark"] .field input{background-color:#444;color:#fff;border:1px solid #383b41} html[data-theme="dark"] .field input:focus{background:#23282f;border:1.5px solid #00aaff;}
 /* Inline error bar (same tone as signup) */
-.form-error{color: red;text-align: center;margin: 8px 0 12px;font-size: 15px;width: 100%;}
-
-form.edit-panel, form.addnew-panel { display:none; }
-
-#toast-root{position:fixed;right:16px;top:16px;z-index:9999;display:grid;gap:8px;pointer-events:none}
-.toast{pointer-events:auto;min-width:260px;max-width:360px;padding:12px 14px;border-radius:10px;box-shadow:0 6px 16px rgba(2,6,23,.18);background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;font-weight:600;animation:toast-in .2s ease-out}
-.toast--error{background:#fef2f2;color:#7f1d1d;border-color:#fecaca}
-.toast__msg{margin:0}
-.toast__close{border:0;background:transparent;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 4px;border-radius:6px}
-.toast__close:focus-visible{outline:2px solid rgba(40,116,240,.55)}
-@keyframes toast-in {from { transform: translateY(-12px); opacity: 0; } to   { transform: translateY(0);     opacity: 1; }}
-@keyframes toast-out {to { transform: translateY(-8px); opacity: 0; }}
-.toast{border-left: 4px solid #10b981;}
-.toast--error{border-left-color: #ef4444;}
-html[data-theme="dark"] .toast{background:#082d27;color:#86efac;border-color:#134e4a;box-shadow:0 6px 16px rgba(0,0,0,.45)}
-html[data-theme="dark"] .toast--error{background:#3f0a0a;color:#fecaca;border-color:#7f1d1d}
-
-/* ===== Top-center, wider, sharp edges, smooth top->down ===== */
-#snack-root{position:fixed;top:0;left:0;right:0;z-index:10000;pointer-events:none;padding-top:16px}
-.snack-wrap{position:relative;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center}
-.snack{pointer-events:auto;display:inline-flex;align-items:center;gap:14px;min-width:680px;max-width:min(900px,94vw); min-width: unset; width: fit-content; max-width: calc(100vw - 32px); white-space: nowrap; padding:16px 22px;border-radius:0;background:#0b0f19;color:#e5e7eb;box-shadow:0 14px 36px rgba(0,0,0,.45);will-change:transform,opacity;animation:snack-in .26s cubic-bezier(.16,1,.3,1);font-weight:700;letter-spacing:.1px;font-size:16px}
-.snack__badge{width:22px;height:22px;border-radius:999px;background:#22c55e;color:#0b0f19;display:grid;place-items:center;font-size:14px;font-weight:900;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
-.snack__msg{margin:0}
-.snack__close{margin-left:12px;border:0;background:transparent;color:inherit;font-size:18px;line-height:1;cursor:pointer}
-@keyframes snack-in{from{transform:translate3d(0,-18px,0);opacity:0}to{transform:translate3d(0,0,0);opacity:1}}
-@keyframes snack-out{to{transform:translate3d(0,-10px,0);opacity:0}}
-.price-card .ship-note{margin-top:-6px;font-size:13px;color:#16a34a;font-weight:700}
-html[data-theme="dark"] .price-card .ship-note{color:#22c55e}
-
-.remove-btn{background:transparent;border:0;padding:0;margin-left:12px;color:#010101;font-weight:800;text-transform:none;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1;}
-.remove-btn:hover{color:#ef4444;}
-.remove-btn:focus-visible{outline:2px solid rgba(239,68,68,.45);outline-offset:2px;border-radius:6px;}
-html[data-theme="dark"] .remove-btn{color:#d7cccc;}
-html[data-theme="dark"] .remove-btn:hover{color:#f87171;}
+.form-error{color:red;text-align:center;margin:8px 0 12px;font-size:15px;width:100%;}
+form.edit-panel,form.addnew-panel{display:none;}
+/* ===== Toasts (right-top) ===== */
+#toast-root{position:fixed;right:16px;top:16px;z-index:9999;display:grid;gap:8px;pointer-events:none} .toast{pointer-events:auto;min-width:260px;max-width:360px;padding:12px 14px;border-radius:10px;box-shadow:0 6px 16px rgba(2,6,23,.18);background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;font-weight:600;animation:toast-in .2s ease-out} .toast--error{background:#fef2f2;color:#7f1d1d;border-color:#fecaca} .toast__msg{margin:0} .toast__close{border:0;background:transparent;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 4px;border-radius:6px} .toast__close:focus-visible{outline:2px solid rgba(40,116,240,.55)} @keyframes toast-in{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}} @keyframes toast-out{to{transform:translateY(-8px);opacity:0}} .toast{border-left:4px solid #10b981;} .toast--error{border-left-color:#ef4444;} html[data-theme="dark"] .toast{background:#082d27;color:#86efac;border-color:#134e4a;box-shadow:0 6px 16px rgba(0,0,0,.45)} html[data-theme="dark"] .toast--error{background:#3f0a0a;color:#fecaca;border-color:#7f1d1d}
+/* ===== Snackbar (top-center) ===== */
+#snack-root{position:fixed;top:0;left:0;right:0;z-index:10000;pointer-events:none;padding-top:16px} .snack-wrap{position:relative;left:50%;transform:translateX(-50%);width:100%;display:flex;justify-content:center} .snack{pointer-events:auto;display:inline-flex;align-items:center;gap:14px;min-width:680px;max-width:min(900px,94vw);min-width:unset;width:fit-content;max-width:calc(100vw - 32px);white-space:nowrap;padding:16px 22px;border-radius:0;background:#0b0f19;color:#e5e7eb;box-shadow:0 14px 36px rgba(0,0,0,.45);will-change:transform,opacity;animation:snack-in .26s cubic-bezier(.16,1,.3,1);font-weight:700;letter-spacing:.1px;font-size:16px} .snack__badge{width:22px;height:22px;border-radius:999px;background:#22c55e;color:#0b0f19;display:grid;place-items:center;font-size:14px;font-weight:900;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)} .snack__msg{margin:0} .snack__close{margin-left:12px;border:0;background:transparent;color:inherit;font-size:18px;line-height:1;cursor:pointer} @keyframes snack-in{from{transform:translate3d(0,-18px,0);opacity:0}to{transform:translate3d(0,0,0);opacity:1}} @keyframes snack-out{to{transform:translate3d(0,-10px,0);opacity:0}} .price-card .ship-note{margin-top:-6px;font-size:13px;color:#16a34a;font-weight:700} html[data-theme="dark"] .price-card .ship-note{color:#22c55e}
+/* ===== Remove button + qty spacing ===== */
+.remove-btn{background:transparent;border:0;padding:0;margin-left:12px;color:#010101;font-weight:800;text-transform:none;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1;} .remove-btn:hover{color:#ef4444;} .remove-btn:focus-visible{outline:2px solid rgba(239,68,68,.45);outline-offset:2px;border-radius:6px;} html[data-theme="dark"] .remove-btn{color:#d7cccc;} html[data-theme="dark"] .remove-btn:hover{color:#f87171;}
 /* optional spacing bump for the row */
-.qty-row{display:flex;align-items:center;gap:10px;margin-top:6px;}
-html[data-theme="dark"] .remove-btn{color:#cbd5e1;}
-
-
-.summary-item{display:grid;grid-template-columns:112px 1fr;grid-template-rows:auto auto;column-gap:16px;row-gap:8px;padding:18px 0;border-bottom:1px solid var(--border);}
-.summary-item img{grid-column:1;grid-row:1;width:112px;height:112px;object-fit:contain;border:0;background:transparent;border-radius:0;}
-.summary-item .details{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;gap:6px;}
-.summary-item .price-row{display:flex;align-items:center;gap:18px;margin:4px 0 8px;}
-.summary-item .price{display:block;margin:2px 0 2px;font-weight:900;}
-.summary-item .qty-row{grid-column:1;grid-row:2;justify-self:center;display:flex;align-items:center;gap:8px;margin-top:4px;}
-.remove-form{grid-column:2;grid-row:2;align-self:center;margin-top:0;}
-.remove-btn{background:transparent;border:0;padding:0;margin:0;color:var(--text);font-weight:800;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;line-height:1;}
-.remove-btn:hover{text-decoration:none;color:#ef4444;}
-.remove-btn:focus-visible{outline:2px solid rgba(239,68,68,.45);outline-offset:2px;border-radius:6px;}
-
-
+.qty-row{display:flex;align-items:center;gap:10px;margin-top:6px;} html[data-theme="dark"] .remove-btn{color:#cbd5e1;}
+/* ===== Summary item (alt layout with rows) ===== */
+.summary-item{display:grid;grid-template-columns:112px 1fr;grid-template-rows:auto auto;column-gap:16px;row-gap:8px;padding:18px 0;border-bottom:1px solid var(--border);} .summary-item img{grid-column:1;grid-row:1;width:112px;height:112px;object-fit:contain;border:0;background:transparent;border-radius:0;} .summary-item .details{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;gap:6px;} .summary-item .price-row{display:flex;align-items:center;gap:18px;margin:4px 0 8px;} .summary-item .price{display:block;margin:2px 0 2px;font-weight:900;} .summary-item .qty-row{grid-column:1;grid-row:2;justify-self:center;display:flex;align-items:center;gap:8px;margin-top:4px;} .remove-form{grid-column:2;grid-row:2;align-self:center;margin-top:0;} .remove-btn{background:transparent;border:0;padding:0;margin:0;color:var(--text);font-weight:800;letter-spacing:.2px;cursor:pointer;display:inline-flex;align-items:center;line-height:1;} .remove-btn:hover{text-decoration:none;color:#ef4444;} .remove-btn:focus-visible{outline:2px solid rgba(239,68,68,.45);outline-offset:2px;border-radius:6px;}
 /* place the chip at the top-right of the label text */
-.price-card .row .muted{position:relative;padding-right:22px;}
-.price-card .row .muted .iwrap{position:absolute;top:-2px;right:0;margin-left:0;}
-
-
-.addr-item.is-hidden{display:none;}
-.inline-edit{display:grid;grid-template-columns:36px 1fr;align-items:start;gap:10px;padding:14px 16px;margin:0;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
-.inline-edit .inline-radio{display:flex;align-items:flex-start;padding-top:2px;}
-.inline-edit .inline-box{display:block;}
-.inline-edit .inline-title{font-weight:800;color:var(--muted);margin:0 0 8px 0;}
-/* dark tweaks so it doesn’t blend with the card */
-html[data-theme="dark"] .inline-edit{background:#0b1220;border-color:#1f2937;}
-
-
+.price-card .row .muted{position:relative;padding-right:22px;} .price-card .row .muted .iwrap{position:absolute;top:-2px;right:0;margin-left:0;}
+/* ===== Inline editor inside addr-list ===== */
+.addr-item.is-hidden{display:none;} .inline-edit{display:grid;grid-template-columns:36px 1fr;align-items:start;gap:10px;padding:14px 16px;margin:0;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);} .inline-edit .inline-radio{display:flex;align-items:flex-start;padding-top:2px;} .inline-edit .inline-box{display:block;} .inline-edit .inline-title{font-weight:800;color:var(--muted);margin:0 0 8px 0;} html[data-theme="dark"] .inline-edit{background:#0b1220;border-color:#1f2937;}
 /* when the wrapper is followed by the next step, keep the bigger gap */
-
 /* let the address list grow when an inline editor is open */
-.addr-list.has-inline { overflow: visible; }
-
+.addr-list.has-inline{overflow:visible;}
 /* give the inline form a bit more breathing room */
 /* Inline edit should sit flush like any addr row */
-.addr-list > .inline-edit{
-  margin: 0;                          /* no gap above/below */
-  padding: 14px 16px;                 /* same padding as rows */
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;                   /* no bubbles inside the list */
-}
-
+.addr-list>.inline-edit{margin:0;padding:14px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;}
 /* keep borders seamless at the ends of the list */
-.addr-list > .inline-edit:first-child{ border-top: none; }
-.addr-list > .inline-edit:last-child { border-bottom: none; }
-
+.addr-list>.inline-edit:first-child{border-top:none;} .addr-list>.inline-edit:last-child{border-bottom:none;}
 /* (optional) while editing, let the list clip neatly */
-.addr-list{ overflow: hidden; }
-
+.addr-list{overflow:hidden;}
 /* (optional) if you still feel cramped, raise the open body cap a bit */
-.step-card.is-open .step-body { max-height: 1600px; } /* was 1200px */
-
+.step-card.is-open .step-body{max-height:1600px;} /* was 1200px */
 /* one consistent vertical rhythm */
-:root { --stack: 12px; }          /* set 12px (use 16px if you prefer larger) */
-
+:root{--stack:12px;} /* set 12px (use 16px if you prefer larger) */
 /* step-to-step gap */
-.step-card + .step-card { margin-top: var(--stack); }
-
-/* spacer between Address and Summary */
-#addrow-wrap { 
-  margin: var(--stack) 0;                 /* when +Add area is open/visible */
-}
-#addrow-wrap:not(.is-open){
-  height: var(--stack);                   /* when closed, act as a spacer */
-  margin: 0;                              /* avoid double spacing */
-}
-
+.step-card+.step-card{margin-top:var(--stack);}
+ /* spacer between Address and Summary */
+#addrow-wrap{margin:var(--stack) 0;}
+#addrow-wrap:not(.is-open){height:var(--stack);margin:0;}
 /* belt-and-suspenders: ensure a gap even if the wrapper is empty */
-#step-address + #addrow-wrap + #step-summary{
-  margin-top: var(--stack);
-}
-
-/* When DELIVERY is open, leave a larger, guaranteed gap before ORDER SUMMARY */
-#step-address.is-open + #addrow-wrap{
-  margin-top: var(--stack);
-  margin-bottom: var(--stack);
-}
-
-:root { --stack: 12px; }
-.step-card + .step-card { margin-top: var(--stack); }
-
-
-/* when DELIVERY is open, keep the buffer generous */
-#step-address.is-open + #addrow-wrap{
-  margin-top: var(--stack);
-  margin-bottom: var(--stack);
-}
-
-/* safety: even if the wrapper is empty/hidden, keep a gap before SUMMARY */
-#step-address.is-open + #addrow-wrap[style*="display:none"] + #step-summary,
-#step-address.is-open + #addrow-wrap:empty + #step-summary{
-  margin-top: calc(var(--stack) + 12px);
-}
-
-
-/* absolute safety: even if the wrapper is empty/hidden, keep the gap */
-#step-address.is-open + #addrow-wrap[style*="display:none"] + #step-summary,
-#step-address.is-open + #addrow-wrap:empty + #step-summary{
-  margin-top: calc(var(--stack) + 12px);
-}
-
-/* When the DELIVERY section (#step-address) is open, show it */
-#step-address.is-open + #addrow-wrap{ display:block; }
-
-.step-card.hide-collapsed .step-collapsed{
-  display:none !important;   /* hide the 2nd line under the title */
-}
-
-.step-card:not(.is-open) .step-header{
-  grid-template-rows: 56px;   /* center row */
-  align-items: center;         /* vertical centering */
-}
-
-
+#step-address + #addrow-wrap + #step-summary{margin-top:var(--stack);}
+ /* When DELIVERY is open, leave a larger, guaranteed gap before ORDER SUMMARY */
+#step-address.is-open + #addrow-wrap{margin-top:var(--stack);margin-bottom:var(--stack);}
+:root{--stack:12px;} .step-card+.step-card{margin-top:var(--stack);}
+ /* when DELIVERY is open, keep the buffer generous */
+#step-address.is-open + #addrow-wrap{margin-top:var(--stack);margin-bottom:var(--stack);}
+ /* safety: even if the wrapper is empty/hidden, keep a gap before SUMMARY */
+#step-address.is-open + #addrow-wrap[style*="display:none"] + #step-summary,#step-address.is-open + #addrow-wrap:empty + #step-summary{margin-top:calc(var(--stack) + 12px);}
+ /* absolute safety: even if the wrapper is empty/hidden, keep the gap */
+#step-address.is-open + #addrow-wrap[style*="display:none"] + #step-summary,#step-address.is-open + #addrow-wrap:empty + #step-summary{margin-top:calc(var(--stack) + 12px);}
+ /* When the DELIVERY section (#step-address) is open, show it */
+#step-address.is-open + #addrow-wrap{display:block;}
+.step-card.hide-collapsed .step-collapsed{display:none!important;}
+.step-card:not(.is-open) .step-header{grid-template-rows:56px;align-items:center;}
 /* Hide the DELIVERY "CHANGE" button while LOGIN is open */
-#step-login.is-open ~ #step-address .step-header .step-secondary{
-  display: none !important;
-}
-
-
+#step-login.is-open ~ #step-address .step-header .step-secondary{display:none!important;}
 /* keep the next section spacing consistent (if any follows) */
-#summary-confirm-wrap + .step-card {
-  margin-top: var(--stack);
-}
-
-/* --- Pro inline validation (Flipkart-like) --- */
-.field.invalid input {
-  border: 1.5px solid #ef4444 !important;
-  background: #fef2f2 !important;
-}
-.field .err {
-  display: none;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #dc2626;          /* red */
-  line-height: 1.2;
-}
-.field.invalid .err { display: block; }
-
+#summary-confirm-wrap + .step-card{margin-top:var(--stack);}
+ /* --- Pro inline validation (Flipkart-like) --- */
+.field.invalid input{border:1.5px solid #ef4444!important;background:#fef2f2!important;} .field .err{display:none;margin-top:4px;font-size:12px;color:#dc2626;line-height:1.2;} .field.invalid .err{display:block;}
 /* dark mode tweak so it’s still readable */
-html[data-theme="dark"] .field.invalid input {
-  background: #2b1b1b !important;
-  border-color: #ef4444 !important;
-}
-html[data-theme="dark"] .field .err { color: #fda4a4; }
-
+html[data-theme="dark"] .field.invalid input{background:#2b1b1b!important;border-color:#ef4444!important;} html[data-theme="dark"] .field .err{color:#fda4a4;}
 /* ——— FINAL OVERRIDES: force radios to be white circle + blue dot ——— */
-.addr-type label{
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:0 !important;
-  border:0 !important;
-  border-radius:0 !important;
-  box-shadow:none !important;
-  background:transparent !important;
-}
-
+.addr-type label{cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;}
 /* Kill any “selected pill” effect on the label */
-.addr-type label:has(input:checked){
-  border:0 !important;
-  box-shadow:none !important;
-}
-
+.addr-type label:has(input:checked){border:0!important;box-shadow:none!important;}
 /* Hard-force the radio look (even if some earlier CSS fights it) */
-.addr-type input[type="radio"]{
-  -webkit-appearance:none !important;
-  appearance:none !important;
-
-  width:22px !important;           /* size you want */
-  height:22px !important;
-  border-radius:50% !important;
-  border:2px solid #cbd5e1 !important;
-  background:#fff !important;
-
-  display:inline-grid !important;
-  place-items:center !important;
-  padding:0 !important;
-  margin:0 8px 0 0 !important;
-  box-shadow:none !important;
-  vertical-align:middle !important;
-  transition:border-color .15s ease !important;
-}
-
+.addr-type input[type="radio"]{-webkit-appearance:none!important;appearance:none!important;width:22px!important;height:22px!important;border-radius:50%!important;border:2px solid #cbd5e1!important;background:#fff!important;display:inline-grid!important;place-items:center!important;padding:0!important;margin:0 8px 0 0!important;box-shadow:none!important;vertical-align:middle!important;transition:border-color .15s ease!important;}
 /* The blue inner dot */
-.addr-type input[type="radio"]::after{
-  content:"";
-  width:11px;                      /* half of 22px */
-  height:11px;
-  border-radius:50%;
-  background:var(--brand);
-  transform:scale(0);
-  transition:transform .12s ease;
-}
-
+.addr-type input[type="radio"]::after{content:"";width:11px;height:11px;border-radius:50%;background:var(--brand);transform:scale(0);transition:transform .12s ease;}
 /* Blue ring when checked */
-.addr-type input[type="radio"]:checked{
-  border-color:rgba(40,116,240,.85) !important;
-}
-.addr-type input[type="radio"]:checked::after{
-  transform:scale(1);
-}
-
-/* Accessible focus ring (not a big blue pill) */
-.addr-type input[type="radio"]:focus-visible{
-  outline:2px solid rgba(40,116,240,.55);
-  outline-offset:2px;
-}
-
+.addr-type input[type="radio"]:checked{border-color:rgba(40,116,240,.85)!important;} .addr-type input[type="radio"]:checked::after{transform:scale(1);}
+ /* Accessible focus ring (not a big blue pill) */
+.addr-type input[type="radio"]:focus-visible{outline:2px solid rgba(40,116,240,.55);outline-offset:2px;}
 /* Keep white in dark mode too */
-html[data-theme="dark"] .addr-type input[type="radio"]{
-  background:#fff !important;
-  border-color:#475569 !important;
-}
-.addr-type-heading{
-  color: var(--text);
-  font-weight: 800;
-  margin-bottom: 6px;          /* space under the heading */
-}
-
-.addr-type{
-  display: flex;
-  gap: 24px;                   /* space between the two options */
-  align-items: center;
-  flex-wrap: wrap;
-}
-.addr-type-wrap { margin-top: 10px;  margin-bottom: 12px; } 
-
-
+html[data-theme="dark"] .addr-type input[type="radio"]{background:#fff!important;border-color:#475569!important;}
+.addr-type-heading{color:var(--text);font-weight:800;margin-bottom:6px;}
+.addr-type{display:flex;gap:24px;align-items:center;flex-wrap:wrap;} .addr-type-wrap{margin-top:10px;margin-bottom:12px;}
 /* Ensure good gap before the Save/Cancel buttons in both forms */
-.inline-edit .form-actions,
-.inline-add  .form-actions{
-  margin-top: 30px;      /* tweak 16–24px as you like */
-}
-
+.inline-edit .form-actions,.inline-add .form-actions{margin-top:30px;}
 /* --- Compact header spacing like Flipkart --- */
 /* Default: let headers size to content instead of a fixed 56px row */
-.step-header{
-  grid-template-rows: auto;           /* no forced 56px row */
-}
-
+.step-header{grid-template-rows:auto;}
 /* When a step is COLLAPSED, make it tight (title + one small line) */
-.step-card:not(.is-open) .step-header{
-  min-height: auto;
-  padding: 10px 18px 12px;            /* tighter vertical padding */
-  grid-template-rows: auto auto;      /* title + collapsed line */
-  row-gap: 2px;                       /* tiny gap between them */
-}
-
+.step-card:not(.is-open) .step-header{min-height:auto;padding:10px 18px 12px;grid-template-rows:auto auto;row-gap:2px;}
 /* The summary line sits right under the title, no extra margin */
-.step-card:not(.is-open) .step-collapsed{
-  display: block;
-  grid-row: 2;
-  margin-top: 0;
-  font-size: 14px;
-}
-
+.step-card:not(.is-open) .step-collapsed{display:block;grid-row:2;margin-top:0;font-size:14px;}
 /* Keep the “open” header tall/brand-colored as before */
-.step-card.is-open .step-header{
-  grid-template-rows: 56px;
-}
-
+.step-card.is-open .step-header{grid-template-rows:56px;}
 /* IMPORTANT: Only hide collapsed lines while LOGIN is open */
-#step-login.is-open ~ #step-address .step-collapsed,
-#step-login.is-open ~ #step-summary .step-collapsed{
-  display: none !important;
-}
-
+#step-login.is-open ~ #step-address .step-collapsed,#step-login.is-open ~ #step-summary .step-collapsed{display:none!important;}
 /* --- Flipkart-like info tooltip --- */
-.iwrap{position: relative; display: inline-flex; align-items: center; margin-left: 6px;}
-
-.iicon{ display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px;cursor: pointer; font-size: 12px; font-weight: 800; line-height: 1;
-  background: #eef2f7; color: #0b1220; border: 1px solid rgba(0,0,0,.08);}
-
-/* The bubble */
-.ttbox{position: absolute; left: 50%; top: 100%; transform: translate(-50%, 10px); min-width: 220px; max-width: 320px; padding: 12px 14px; border-radius: 10px;
-  background: #0b0f19;color: #e5e7eb; box-shadow: 0 12px 30px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.06); opacity: 0; visibility: hidden; pointer-events: none;transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
-  transition-delay: .14s; will-change: opacity, transform; white-space: normal; line-height: 1.35;z-index: 60;}
-
-/* the little arrow pointing at the icon */
-.ttbox::after{content:"";position: absolute; top: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px; background: inherit; border-left: 1px solid rgba(255,255,255,.06); border-top: 1px solid rgba(255,255,255,.06);}
-
-/* show on hover or focus, and KEEP showing if you move onto the bubble */
-.iwrap:hover .ttbox,
-.iwrap:focus-within .ttbox,
-.ttbox:hover{
-  opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 14px); transition-delay: 0s;}
-
-/* smaller, cleaner icon */
-.iicon{width: 14px; height: 14px; font-size: 10px; cursor: pointer;}
-
-/* keep tooltip open while moving from the icon to the bubble:
-   this creates an invisible 'bridge' under the icon */
-.iwrap{ position: relative; }
-.iwrap::before{content:""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); width: 26px; height: 12px; pointer-events: auto;}
-
-/* make tooltip white in dark theme so it doesn't blend in */
-html[data-theme="dark"] .ttbox{background: #ffffff; color: #0b1220; border: 1px solid rgba(0,0,0,.12); box-shadow: 0 16px 36px rgba(0,0,0,.5);}
-
-/* Make the i-icon subtle in dark mode */
-html[data-theme="dark"] .iicon{ background: rgba(255,255,255,.06); color: #94a3b8; border-color: rgba(255,255,255,.12); box-shadow: none; opacity: .75;}
-
+.iwrap{position:relative;display:inline-flex;align-items:center;margin-left:6px;}
+.iicon{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:800;line-height:1;background:#eef2f7;color:#0b1220;border:1px solid rgba(0,0,0,.08);}
+ /* The bubble */
+.ttbox{position:absolute;left:50%;top:100%;transform:translate(-50%,10px);min-width:220px;max-width:320px;padding:12px 14px;border-radius:10px;background:#0b0f19;color:#e5e7eb;box-shadow:0 12px 30px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.06);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,transform .18s ease,visibility 0s linear .18s;transition-delay:.14s;will-change:opacity,transform;white-space:normal;line-height:1.35;z-index:60;}
+ /* the little arrow pointing at the icon */
+.ttbox::after{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:inherit;border-left:1px solid rgba(255,255,255,.06);border-top:1px solid rgba(255,255,255,.06);}
+ /* show on hover or focus, and KEEP showing if you move onto the bubble */
+.iwrap:hover .ttbox,.iwrap:focus-within .ttbox,.ttbox:hover{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,14px);transition-delay:0s;}
+ /* smaller, cleaner icon */
+.iicon{width:14px;height:14px;font-size:10px;cursor:pointer;}
+ /* keep tooltip open while moving from the icon to the bubble:
+    this creates an invisible 'bridge' under the icon */
+.iwrap{position:relative;} .iwrap::before{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);width:26px;height:12px;pointer-events:auto;}
+ /* make tooltip white in dark theme so it doesn't blend in */
+html[data-theme="dark"] .ttbox{background:#ffffff;color:#0b1220;border:1px solid rgba(0,0,0,.12);box-shadow:0 16px 36px rgba(0,0,0,.5);}
+ /* Make the i-icon subtle in dark mode */
+html[data-theme="dark"] .iicon{background:rgba(255,255,255,.06);color:#94a3b8;border-color:rgba(255,255,255,.12);box-shadow:none;opacity:.75;}
 /* Only brighten a bit on hover/focus 
 html[data-theme="dark"] .iicon:hover,
 html[data-theme="dark"] .iicon:focus-visible{background: rgba(255,255,255,.12); color: #cbd5e1; border-color: rgba(255,255,255,.2); opacity: .95;} */
-
 /* Extra nudge: even quieter inside the price card by default */
-.price-card .iicon{ opacity:.7 }
-.price-card .iicon:hover,
-.price-card .iicon:focus-visible{ opacity:.95 }
-
+.price-card .iicon{opacity:.7} .price-card .iicon:hover,.price-card .iicon:focus-visible{opacity:.95}
 /* Put email + button on one row */
-.confirm-panel{display:flex; align-items:center; justify-content:space-between; gap:12px;}
-
-.confirm-panel .note{ margin:0; flex:1; }
-.confirm-panel .confirm-actions{ margin-left:auto; }
-
-.btn-pay{ padding:10px 16px; font-size:14px; border-radius:8px;
-}
-@media (max-width:700px){
-  .confirm-panel{ flex-direction:column; align-items:flex-start; }
-  .confirm-actions{ margin-left:0; }
-}
+.confirm-panel{display:flex;align-items:center;justify-content:space-between;gap:12px;} .confirm-panel .note{margin:0;flex:1;} .confirm-panel .confirm-actions{margin-left:auto;}
+.btn-pay{padding:10px 16px;font-size:14px;border-radius:8px;}
+@media (max-width:700px){.confirm-panel{flex-direction:column;align-items:flex-start;} .confirm-actions{margin-left:0;}}
 /* lay out email + button on one row, like Flipkart */
-.confirm-panel{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-}
-.confirm-panel .note{ margin:0; flex:1; }
-.confirm-panel .confirm-actions{ margin-left:auto; }
-
+.confirm-panel{display:flex;align-items:center;justify-content:space-between;gap:12px;} .confirm-panel .note{margin:0;flex:1;} .confirm-panel .confirm-actions{margin-left:auto;}
 /* smaller button */
-.confirm-panel .btn-lg{ padding:10px 16px; font-size:14px; border-radius:8px; }
-
-@media (max-width:700px){
-  .confirm-panel{ flex-direction:column; align-items:flex-start; }
-  .confirm-panel .confirm-actions{ margin-left:0; }
-}
-
+.confirm-panel .btn-lg{padding:10px 16px;font-size:14px;border-radius:8px;}
+@media (max-width:700px){.confirm-panel{flex-direction:column;align-items:flex-start;} .confirm-panel .confirm-actions{margin-left:0;}}
 /* simple confirmation card (no step header) */
-.confirm-wrap{ margin-top:12px; }
-.hidden{ display:none !important; }
-
-.confirm-card{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--card-radius); box-shadow:var(--shadow);
-  padding:14px 16px;
-}
-
-.confirm-card .note{ margin:0; color:var(--muted); }
-.confirm-card .btn-lg{ padding:10px 16px; font-size:14px; border-radius:8px; }
-@media (max-width:700px){
-  .confirm-card{ flex-direction:column; align-items:flex-start; }
-}
-
-#summary-confirm-wrap{
-  display:block;
-  margin-top: var(--stack, 12px);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-  padding: 14px 16px;
-}
-
-#step-address:not(.is-open) > .step-body,
-.step-card:not(.is-open) > .step-body{
-  padding: 0 !important;
-  max-height: 0 !important;
-  pointer-events: none !important;
-  border-top: none;  /* optional: removes the tiny seam */
-}
-
+.confirm-wrap{margin-top:12px;} .hidden{display:none!important;}
+.confirm-card{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow);padding:14px 16px;}
+.confirm-card .note{margin:0;color:var(--muted);} .confirm-card .btn-lg{padding:10px 16px;font-size:14px;border-radius:8px;}
+@media (max-width:700px){.confirm-card{flex-direction:column;align-items:flex-start;}}
+#summary-confirm-wrap{display:block;margin-top:var(--stack, 12px);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px;}
+#step-address:not(.is-open) > .step-body,.step-card:not(.is-open) > .step-body{padding:0!important;max-height:0!important;pointer-events:none!important;border-top:none;}
 /* keep the usual gap even when the +Add wrapper is closed/empty */
-#addrow-wrap:not(.is-open){
-  height: var(--stack);   /* acts like a spacer */
-  margin: 0;              /* so it doesn't double up with the step margins */
-}
+#addrow-wrap:not(.is-open){height:var(--stack);margin:0;}
 /* always ensure a gap before Order Summary */
-#step-address + #addrow-wrap + #step-summary{
-  margin-top: var(--stack);
-}
+#step-address + #addrow-wrap + #step-summary{margin-top:var(--stack);}
 /* ---- Uniform, fixed spacing between steps ---- */
-:root { --step-gap: 12px; }              /* keep your preferred gap */
-.step-card + .step-card{ margin-top: var(--step-gap) !important; }
-
+:root{--step-gap:12px;} /* keep your preferred gap */
+.step-card + .step-card{margin-top:var(--step-gap)!important;}
 /* Make the Add-row wrapper non-spacing so it never affects gaps */
-#addrow-wrap{
-  margin: 0 !important;
-  padding: 0 !important;
-  display: contents;                     /* wrapper disappears as a box */
-}
-
+#addrow-wrap{margin:0!important;padding:0!important;display:contents;}
 /* Ensure SUMMARY always gets the same gap after DELIVERY */
-#step-address ~ #step-summary{
+#step-address ~ #step-summary{margin-top:var(--step-gap)!important;}
+/* Let the gap come from #addrow-wrap only (avoid double-counting) */
+#step-summary{margin-top:0!important;}
+/* Optional: when the add-row wrapper is "closed", still keep the same space */
+#addrow-wrap:not(.is-open){display:flow-root;height:auto;margin-top:var(--stack);margin-bottom:var(--stack);}
+ /* Neutralize any earlier “+ next step” spacing for the summary card */
+.addnew-panel + #step-summary,.mini-row + #step-summary{margin-top:0!important;}
+/* Confirmation bar: stable layout */
+#confirm-wrap{display:block;width:100%;margin-top:12px;} #confirm-wrap.hidden{display:none!important;}
+/* (ensures consistent look when visible) */
+#confirm-wrap .confirm-card{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:14px 16px;} #confirm-wrap .confirm-card .note{margin:0;font-size:17px;line-height:1.4;} #confirm-wrap .btn-lg{padding:10px 16px;font-size:14px;border-radius:8px;}
+@media (max-width:700px){#confirm-wrap .confirm-card{flex-direction:column;align-items:flex-start;}}
+/* Hide the confirm bar whenever the cart has no .summary-item rows */
+#step-summary:not(:has(.summary-item)) + #confirm-wrap{display:none!important;}
+/* If there could be other elements between them, use general sibling: */
+#step-summary:not(:has(.summary-item)) ~ #confirm-wrap{display:none!important;}
+/* --- small blocking modal for empty-cart guard --- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:10050;}
+.modal-card{width:min(520px,92vw);background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:16px;}
+.modal-card h4{margin:0 0 8px;font-size:18px;} .modal-card p{margin:0 0 14px;color:var(--muted);} .modal-actions{display:flex;justify-content:flex-end;gap:10px;} .modal-actions .btn{padding:10px 14px;border-radius:8px;}
+/* --- error variant for the small modal --- */
+.modal-card.error{border-color:#fecaca;} .modal-card .modal-title{display:flex;align-items:center;gap:10px;margin:0 0 8px;} .modal-card.error .modal-title h4{margin:0;font-size:18px;color:#b91c1c;font-weight:900;} .modal-card .badge-err{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:#fee2e2;color:#b91c1c;font-weight:900;line-height:1;font-size:16px;} .modal-card.error p{margin:0 0 14px;padding:10px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;}
+/* dark theme tweaks */
+html[data-theme="dark"] .modal-card.error{border-color:#7f1d1d;} html[data-theme="dark"] .modal-card .badge-err{background:rgba(239,68,68,.18);color:#fca5a5;} html[data-theme="dark"] .modal-card.error p{background:rgba(127,29,29,.25);border-color:#7f1d1d;color:#fecaca;} .modal-card .badge-err{display:none!important;}
+/* === Uniform section spacing (single source of truth) === */
+:root{--step-gap:12px;} /* change to 16 if you want bigger */
+.step-card{margin-top:0;} .step-card + .step-card{margin-top:var(--step-gap)!important;}
+/* The “+ Add new address” wrapper sits between DELIVERY and SUMMARY */
+#addrow-wrap{display:flow-root;margin:var(--step-gap) 0!important;}
+/* SUMMARY itself contributes no extra gap above (let addrow-wrap own it) */
+#step-address + #addrow-wrap + #step-summary{margin-top:0!important;}
+/* Hide the confirm bar whenever the ORDER SUMMARY step is not open */
+#step-summary:not(.is-open) + #confirm-wrap{display:none!important;}
+.modal-card .modal-title{display:flex!important;justify-content:center!important;align-items:center!important;text-align:center!important;}
+.modal-card .modal-title>h4{margin:0 auto!important;width:100%;text-align:center!important;}
+/* --- Title color override --- */
+.modal-card .modal-title>h4{justify-content:center;text-align:center;color:#111!important;} html[data-theme="dark"] .modal-card .modal-title>h4{justify-content:center;text-align:center;color:#fff!important;}
+/* --- Remove the thin red outline on the OUTER card --- */
+.modal-card,.modal-card.error{border:0!important;box-shadow:0 12px 40px rgba(0,0,0,.16)!important;} html[data-theme="dark"] .modal-card,html[data-theme="dark"] .modal-card.error{box-shadow:0 12px 40px rgba(0,0,0,.6)!important;}
+/* Actions row centered */
+.modal-card .modal-actions{display:flex;justify-content:center;gap:10px;margin-top:12px;}
+/* Go to cart: no underline ever */
+.btn-brand,.btn-brand:hover,.btn-brand:focus{text-decoration:none;} .btn-brand{background:var(--brand);color:#fff;border:1px solid transparent;border-radius:8px;padding:10px 14px;font-weight:800;}
+/* “X” outside the card with a bit more gap */
+.modal-card{position:relative;} .modal-close{cursor:pointer;position:absolute;top:0;right:-36px;width:28px;height:28px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(0,0,0,.12);background:#fff;color:#111;box-shadow:0 4px 10px rgba(0,0,0,.12);} html[data-theme="dark"] .modal-close{background:#0b1220;color:#e5e7eb;border-color:#1f2937;} html[data-theme="dark"] .modal-close{background:#040911;color:#e5e7eb;border-color:#1f2937;}
+.step-card.is-disabled .step-body{display:none;} .step-card.is-disabled .step-done{display:none;}
+/* Keep CHANGE clickable even when the step is “disabled” */
+.step-card.is-disabled .step-secondary{pointer-events:auto;opacity:1;cursor:pointer;}
+/* trust strip directly under the price card, same right column */
+/* wrapper keeps the card and foot together and sticky */
+.price-wrap{position:sticky;top:calc(var(--header-h) + 16px);align-self:start;width:var(--sidebar-w);}
+ /* the card itself */
+.price-card{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);box-shadow:var(--shadow);max-height:calc(100vh - var(--header-h) - 32px);overflow:auto;} .price-card .card-body{padding:16px 20px 12px;}
+/* FULL-WIDTH divider under the heading */
+.price-card .card-head{margin:0 0 12px;padding-bottom:12px;font-size:16px;letter-spacing:.3px;border-bottom:1px solid var(--border);}
+.price-card .total{border-bottom:1px solid var(--border);padding:14px;margin-top:6px;}
+.price-card .save{color:#0eb03e;font-weight:900;margin-top:10px;border-top:0!important;padding-top:10px;} .price-card .sep.last{display:none!important;}
+/* Price card footer (shield + copy) */
+.price-foot{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,.08);}
+ /* Add/replace these */
+.price-foot{--shield-size:56px;} /* <— tweak this number any time */ .price-foot .shield-img{width:var(--shield-size);height:var(--shield-size);}
+ /* Optional: even bigger on wide screens */
+@media (min-width:2000px){.price-foot{--shield-size:80px;}}
+/* Nudge text if needed after growing the icon */
+.price-foot .foot-copy{margin-top:4px;}
+/* Dark theme */
+html[data-theme="dark"] .price-foot{background:#0b0f19;border-color:rgba(255,255,255,.12);} html[data-theme="dark"] .price-foot .foot-copy{color:#e5e7eb;}
+
+/* Policy note box under the price card */
+.policy-note{ margin-top: 12px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+/* keep link look consistent with brand, no underline by default */
+.policy-note a{ color: var(--brand);text-decoration: none; font-weight: 600; }
+.policy-note a:hover{ text-decoration: underline; }
+
+/* dark theme tweak */
+html[data-theme="dark"] .policy-note{ background: var(--surface);border-color: var(--border);color: var(--muted); }
+
+/* === Inline EDIT: keep it inside the address card, tidy, responsive === */
+/* 1) Make the editor look like a row inside the list */
+#step-address .addr-list>.inline-edit{margin:0;padding:14px 16px;border:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;box-shadow:none;max-width:100%;}
+/* 2) Ensure the list clips neatly, but allows the inline editor to show */
+#step-address .addr-list{overflow:hidden;border-radius:10px;} #step-address .addr-list.has-inline{overflow:visible;} /* only while editing */
+/* 3) Two-column form grid that collapses nicely */
+#step-address .inline-edit .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;} @media (max-width:900px){#step-address .inline-edit .grid-2{grid-template-columns:1fr;}}
+/* 4) Radio + label row wraps instead of stretching wide */
+#step-address .inline-edit .addr-type{display:flex;gap:16px;flex-wrap:wrap;align-items:center;} #step-address .inline-edit .addr-type label{white-space:nowrap;}
+/* 5) Keep the whole editor from causing horizontal scrollbars */
+#step-address .inline-edit,#step-address .inline-edit *{max-width:100%;box-sizing:border-box;}
+/* 6) The “inline editor replaces a row” look */
+#step-address .addr-item.is-hidden{display:none;} /* you already have this, ensure it wins */
+/* 7) Step body shouldn’t clip the editor */
+#step-address.is-open .step-body{overflow:visible;max-height:none;}
+/* — nav loader (covers flicker during full page POST/redirect) — */
+#nav-loading{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:99999;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px);} #nav-loading.is-on{display:flex;} #nav-loading .nav-spin{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.55);border-top-color:#fff;animation:nav-spin .7s linear infinite;} @keyframes nav-spin{to{transform:rotate(360deg);}}
+/* --- Price card: keep rows single-line + aligned --- */
+.price-card .row{display:flex;align-items:center;gap:12px;}
+.price-card .row>span,.price-card .row>strong{white-space:nowrap;}
+/* Make the Total row match the other rows’ spacing */
+.price-card .row.total{font-size:16px;padding:14px 0;margin-top:6px;border-top:1px solid var(--border);} .price-card .row.total>span{font-weight:700;} .price-card .row.total>strong{font-size:16px;margin-left:auto;font-weight:900;}
+/* Optional: if width is tight, truncate the left label cleanly */
+.price-card .row>span{text-overflow:ellipsis;}
+/* Base minus button look (keeps your current sizing) */
+.minus-btn{cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease,opacity .15s ease;}
+/* Hand cursor on hover when it’s usable */
+.minus-btn:hover:not(:disabled):not([aria-disabled="true"]){cursor:pointer;filter:brightness(1.02);}
+ /* Strictly disabled: red + blocked cursor */
+.minus-btn:disabled,.minus-btn[aria-disabled="true"]{cursor:not-allowed;opacity:1;}
+/* Optional: hover state while disabled (keeps blocked cursor & red look) */
+.minus-btn:disabled:hover,.minus-btn[aria-disabled="true"]:hover{cursor:not-allowed;}
+
+:root { color-scheme: light dark; }
+html[data-theme="light"] { background: #fff; color: #222; }
+html[data-theme="dark"]  { background: #222; color: #fff; }
+.checkout > :first-child { height: auto; overflow: visible; }
+/* --- ONE scroll container (the page) --- */
+html, body { overflow-x: hidden; overflow-y: auto; }
+main.checkout, .checkout { overflow: visible; }      /* no inner scroll */
+
+/* --- Grid + sticky sidebar --- */
+.checkout { display: grid; grid-template-columns: minmax(0,1fr) var(--sidebar-w); gap: var(--gutter); align-items: start; }
+
+.price-wrap { position: sticky; top: calc(var(--header-h) + 12px); align-self: start; }
+.price-card { position: static; }                    /* ensure this isn't overriding */
+
+/* (Optional) if you ever set this earlier, kill it) */
+.checkout > :first-child { height: auto; overflow: visible; }
+
+/* remove the tiny padding and compensate for the fixed bar */
+main.checkout { padding-top: calc(var(--header-h) + 16px) !important; }
+.checkout      { padding-top: 0 !important; } 
+
+.price-card { position: static !important; } 
+ 
+.topbar{ position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); z-index: 1000; overflow: visible;padding-right: 72px;}
+
+.topbar .theme-toggle-wrap{ position: absolute; right: 16px; top: 12px;}
+
+/* keep this so content starts below the fixed header */
+body > main.checkout{ padding-top: calc(var(--header-h) + 16px); }
+
+.checkout .policy-note{grid-column:2;}
+.policy-note .nowrap{white-space:nowrap;}
+.policy-note a{color:var(--brand);font-weight:600;text-decoration:none;}
+.policy-note a:hover{text-decoration:none;}
+.policy-note a:active,.policy-note a:focus{text-decoration:none;}
+
+/* Dark mode: make the policy note itself transparent, no box */
+html.dark .policy-note,
+body.dark-mode .policy-note{ background: transparent !important; border: 0 !important; box-shadow: none !important;color: var(--ink-soft);}
+
+/* One scroll container only */
+html, body, main.checkout, .checkout { overflow: visible; }
+
+/* 2-column grid with a real gap */
+.checkout{ display:grid; grid-template-columns:minmax(0,1fr) var(--sidebar-w); gap:var(--gutter); align-items:start;}
+
+/* === One consistent gap between steps === */
+:root { --step-gap: 12px; }                    /* tweak here if you want more/less */
+
+.step-card { margin-top: 0 !important; }
+.step-card + .step-card {                      /* LOGIN → DELIVERY → SUMMARY */
   margin-top: var(--step-gap) !important;
 }
 
+/* The +Add wrapper should never change spacing on its own */
+#addrow-wrap { display: contents !important;margin: 0 !important;padding: 0 !important;}
 
-/* Let the gap come from #addrow-wrap only (avoid double-counting) */
-#step-summary{ 
-  margin-top: 0 !important; 
-}
+/* If it renders anything (row or inline form), give the SAME gap before SUMMARY */
+#addrow-wrap > * { margin-top: var(--step-gap) !important; }
 
-/* Optional: when the add-row wrapper is "closed", still keep the same space */
-#addrow-wrap:not(.is-open){
-  display: flow-root;
-  height: auto;                       /* no fake height spacer */
-  margin-top: var(--stack);
-  margin-bottom: var(--stack);
-}
-
-/* Neutralize any earlier “+ next step” spacing for the summary card */
-.addnew-panel + #step-summary,
-.mini-row + #step-summary{
-  margin-top: 0 !important;
-}
-
-/* Confirmation bar: stable layout */
-#confirm-wrap{ 
-  display:block;            /* always a block when visible */
-  width:100%;
-  margin-top:12px;
-}
-#confirm-wrap.hidden{ 
-  display:none !important;  /* hide completely when empty cart */
-}
-
-/* (ensures consistent look when visible) */
-#confirm-wrap .confirm-card{
-  display:flex; 
-  align-items:center; 
-  justify-content:space-between; 
-  gap:12px;
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:10px;
-  box-shadow:var(--shadow);
-  padding:14px 16px;
-}
-#confirm-wrap .confirm-card .note{ margin:0; font-size: 17px; line-height: 1.4; }
-#confirm-wrap .btn-lg{ padding:10px 16px; font-size:14px; border-radius:8px; }
-
-@media (max-width:700px){
-  #confirm-wrap .confirm-card{ flex-direction:column; align-items:flex-start; }
-}
-
-/* Hide the confirm bar whenever the cart has no .summary-item rows */
-#step-summary:not(:has(.summary-item)) + #confirm-wrap {
-  display: none !important;
-}
-
-/* If there could be other elements between them, use general sibling: */
-#step-summary:not(:has(.summary-item)) ~ #confirm-wrap {
-  display: none !important;
-}
-
-/* --- small blocking modal for empty-cart guard --- */
-.modal-backdrop{
-  position: fixed; inset: 0; background: rgba(0,0,0,.55);
-  display: grid; place-items: center; z-index: 10050;
-}
-.modal-card{
-  width: min(520px, 92vw);
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 16px;
-}
-.modal-card h4{ margin: 0 0 8px; font-size: 18px; }
-.modal-card p{ margin: 0 0 14px; color: var(--muted); }
-.modal-actions{ display: flex; justify-content: flex-end; gap: 10px; }
-.modal-actions .btn{ padding: 10px 14px; border-radius: 8px; }
-
-/* --- error variant for the small modal --- */
-.modal-card.error{
-  border-color:#fecaca;               /* light red border */
-}
-.modal-card .modal-title{
-  display:flex; align-items:center; gap:10px;
-  margin:0 0 8px;
-}
-.modal-card.error .modal-title h4{
-  margin:0; font-size:18px; color:#b91c1c;   /* red title */
-  font-weight:900;
-}
-.modal-card .badge-err{
-  width:28px; height:28px; border-radius:999px;
-  display:grid; place-items:center;
-  background:#fee2e2; color:#b91c1c;         /* pale red bg, deep red icon */
-  font-weight:900; line-height:1; font-size:16px;
-}
-.modal-card.error p{
-  margin:0 0 14px;
-  padding:10px 12px;
-  border-radius:8px;
-  background:#fef2f2;                       /* gentle red strip for the text */
-  border:1px solid #fecaca;
-  color:#7f1d1d;
-}
-
-/* dark theme tweaks */
-html[data-theme="dark"] .modal-card.error{
-  border-color:#7f1d1d;
-}
-html[data-theme="dark"] .modal-card .badge-err{
-  background:rgba(239,68,68,.18); color:#fca5a5;
-}
-html[data-theme="dark"] .modal-card.error p{
-  background:rgba(127,29,29,.25); border-color:#7f1d1d; color:#fecaca;
-}
-.modal-card .badge-err{ display:none !important; }
+/* Absolute safety: always keep the same gap before SUMMARY regardless of wrapper state */
+#step-address ~ #step-summary { margin-top: var(--step-gap) !important; }
 
 
-/* === Uniform section spacing (single source of truth) === */
-:root { --step-gap: 12px; }                  /* change to 16 if you want bigger */
+/* global */
+:root{ --gutter: 24px; --header-h: 64px; --sidebar-w: 340px; --left-min: 720px; }
+html, body { margin: 0; }
+body{ overflow-y: scroll;  scrollbar-gutter: stable both-edges;}
 
-.step-card { margin-top: 0; }
-.step-card + .step-card { margin-top: var(--step-gap) !important; }
+/* the main container *is* the grid and can scroll horizontally if needed */
+main.checkout{
+  /* centered page container */
+  --container: min(1200px, 100%); width: var(--container); margin-inline: auto; padding-inline: var(--gutter); box-sizing: border-box;
+  /* 2-column layout that never collapses */
+  display: grid; grid-template-columns: minmax(var(--left-min), 1fr) var(--sidebar-w); gap: var(--gutter); align-items: start;
+  /* when viewport is narrower than columns, allow horizontal scroll */ overflow-x: auto; overscroll-behavior-x: contain; min-width: calc(var(--left-min) + var(--sidebar-w) + var(--gutter));}
 
-/* The “+ Add new address” wrapper sits between DELIVERY and SUMMARY */
-#addrow-wrap {
-  display: flow-root;                         /* avoids margin collapsing */
-  margin: var(--step-gap) 0 !important;       /* owns the gap below DELIVERY */
+/* right column: stays in column 2 and sticks under the header */
+.price-wrap{ grid-column: 2; position: sticky; top: calc(var(--header-h) + 16px); align-self: start; width: var(--sidebar-w); height: fit-content; }
+.price-card{ max-height: calc(100vh - var(--header-h) - 32px); overflow: auto; }
+
+/* OPTIONAL: only if you really want to stack on tiny phones */
+@media (max-width: 480px){
+  main.checkout{ grid-template-columns: 1fr; min-width: 0; overflow-x: visible; }
+  .price-wrap{ position: static; width: auto; } }
+
+
+/* prevent layout jumps when the scrollbar appears/disappears */
+body{ overflow-y: scroll; scrollbar-gutter: stable both-edges; }
+html, body, main.checkout, .checkout { overflow: visible; }
+
+/* one consistent gap between steps */
+.step-card{ margin-block: 0; }
+.step-card + .step-card{ margin-top: var(--step-gap); }
+#addrow-wrap{ display: contents; margin:0; padding:0; }
+#addrow-wrap > *{ margin-top: var(--step-gap); }
+#step-address ~ #step-summary{ margin-top: var(--step-gap); }
+
+/* ===== theming fallbacks (use your variables if you already have them) ===== */
+:root{--overlay-bg:rgba(15,16,18,.55);/* dim backdrop */--surface-elev:#ffffff;/* card surface (light) */--text-strong:#0f1115;/* text (light) */--border-soft:rgba(0,0,0,.12);--shadow-lg:0 16px 48px rgba(0,0,0,.35);}
+
+[data-theme="dark"],html.dark{--overlay-bg:rgba(0,0,0,.65);--surface-elev:#171a1f;/* card surface (dark) */--text-strong:#e9eef5;/* text (dark) */--border-soft:rgba(255,255,255,.12);--shadow-lg:0 18px 54px rgba(0,0,0,.6);}
+
+/* ===== shared overlay/backdrop (blocks all interaction) ===== */
+.nc-overlay{position:fixed;inset:0;display:none;place-items:center;background:var(--overlay-bg);z-index:10050;/* above any header/sidebars/modals */pointer-events:all;/* intercept clicks */}
+
+/* while open, prevent page scroll as well */
+body.is-overlay-open{overflow:hidden;}
+
+/* ===== shared elevated card ===== */
+.nc-card{pointer-events:auto;/* still clickable inside the card */display:inline-flex;gap:12px;align-items:center;padding:16px 20px;border-radius:14px;background:var(--surface-elev);color:var(--text-strong);border:1px solid var(--border-soft);box-shadow:var(--shadow-lg);font-weight:800;}
+
+/* spinning dot used by both loaders */
+.nc-spin{width:14px;height:14px;border-radius:999px;border:3px solid currentColor;border-top-color:transparent;animation:nc-rot .7s linear infinite;}
+@keyframes nc-rot{to{transform:rotate(360deg);}}
+
+/* ---- specific IDs both overlays already use ---- */
+#geo-wait.nc-overlay,#center-loader.nc-overlay{display:none;}
+#geo-wait.is-on,#center-loader.is-on{display:grid;}
+
+/* centered mini loader card */
+#center-loader{position:fixed;inset:0;display:grid;place-items:center;z-index:10000;/* above content, below any real modals */pointer-events:none;/* don’t block clicks */}
+.center-loader__card{pointer-events:auto;/* focusable for a11y */display:inline-flex;align-items:center;gap:10px;padding:14px 18px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:var(--shadow);font-weight:700;}
+
+/* little dot spinner */
+.center-loader__dot{width:8px;height:8px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:center-spin .6s linear infinite;opacity:.8;}
+@keyframes center-spin{to{transform:rotate(360deg);}}
+
+/* Centered mini loader card (does NOT block UI) */
+#center-loader{position:fixed;inset:0;display:none;place-items:center;z-index:10020;pointer-events:none;}
+#center-loader.is-on{display:grid;}
+.center-loader__card{pointer-events:auto;display:inline-flex;align-items:center;gap:10px;padding:14px 18px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:var(--shadow);font-weight:700;}
+.center-loader__dot{width:8px;height:8px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;opacity:.9;animation:center-spin .6s linear infinite;}
+@keyframes center-spin{to{transform:rotate(360deg)}}
+
+/* Location confirm modal — uses your existing .modal-backdrop/.modal-card */
+.modal-card.location{max-width:560px;}
+.modal-card .loc-title{display:flex;align-items:center;gap:10px;margin:0 0 6px;font-weight:900;}
+.modal-card .loc-body{margin:8px 0 14px;color:var(--muted);}
+.modal-card .btn-primary{background:var(--cta);color:#fff;}
+
+/* Flipkart-like geo button */
+.btn-geo{display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 14px;border-radius:8px;border:1px solid transparent;background:#2874f0;color:#fff;font-weight:800;cursor:pointer;box-shadow:var(--shadow);}
+.btn-geo:hover{filter:brightness(1.03);}
+.btn-geo:focus-visible{outline:2px solid rgba(40,116,240,.5);outline-offset:2px;}
+.btn-geo .geo-icn{display:inline-block;}
+
+/* Confirm modal tweaks */
+.modal-card.location{max-width:560px;}
+.modal-card .loc-title{display:flex;align-items:center;gap:10px;margin:0 0 8px;}
+.modal-card .loc-title img{width:28px;height:28px;}
+.modal-card .loc-body{margin:6px 0 14px;color:var(--muted);}
+.modal-card .btn-primary{background:#ff6a00;color:#fff;}
+
+/* Spacing only for EDIT inline form (not the Add form) */
+#step-address .inline-edit:not(.inline-add) .inline-title{margin-bottom:8px;/* title → button gap */}
+#step-address .inline-edit:not(.inline-add) .btn-geo{margin:6px 0 12px;/* button top/bottom */}
+#step-address .inline-edit:not(.inline-add) .grid-2:first-of-type{margin-top:8px !important;/* button → Name/Phone row */}
+
+/* --- Stop text selection / I-beam on static UI bits --- */
+/* Address list text */
+#step-address .addr-item .addr-name,#step-address .addr-item .addr-address{user-select:none;-webkit-user-select:none;cursor:default;}
+
+/* Inline EDIT/ADD titles + any plain labels inside those forms */
+#step-address .inline-edit .inline-title,#step-address .inline-add .inline-title,#step-address .inline-edit label,#step-address .inline-add label{user-select:none;-webkit-user-select:none;cursor:default;}
+
+/* Order summary: product name, price row, and image */
+#step-summary .summary-item .name,#step-summary .summary-item .price-row,#step-summary .summary-item img{user-select:none;-webkit-user-select:none;cursor:default;}
+
+/* --- Keep real controls behaving normally --- */
+#step-address input,#step-address textarea,#step-address select{user-select:text;cursor:text;/* typing cursor inside fields */}
+#step-address .btn,#step-address button,#step-address .addr-edit,#step-address .deliver-btn,#step-summary .qty-btn,#step-summary .remove-btn,#step-summary button,#step-summary a{user-select:none;cursor:pointer;/* hand cursor for clickable things */}
+
+/* ADD form: stop I-beam + selection on titles/labels */
+.inline-add .inline-title,.inline-add label,.inline-add .addr-type-heading{user-select:none;-webkit-user-select:none;cursor:default;}
+
+/* keep real controls normal */
+.inline-add input,.inline-add textarea,.inline-add select{user-select:text;cursor:text;}
+.inline-add .btn,.inline-add button,.inline-add .addr-type input[type="radio"]{user-select:none;cursor:pointer;}
+
+/* centered, dimmed background */
+.geo-wait{position:fixed;inset:0;display:none;place-items:center;z-index:10040;background:rgba(0,0,0,.45)}
+.geo-wait__card{display:inline-flex;gap:12px;align-items:center;padding:16px 20px;border-radius:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:0 12px 32px rgba(0,0,0,.35);font-weight:800}
+.geo-wait__dot{width:14px;height:14px;border-radius:50%;border:3px solid currentColor;border-top-color:transparent;animation:geo-spin .7s linear infinite}
+@keyframes geo-spin{to{transform:rotate(360deg)}}
+
+#center-loader{position:fixed;inset:0;display:none;place-items:center;z-index:10020;pointer-events:none}
+#center-loader.is-on{display:grid}
+.center-loader__card{pointer-events:auto;display:inline-flex;align-items:center;gap:10px;padding:14px 18px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:var(--shadow);font-weight:700}
+.center-loader__dot{width:8px;height:8px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:center-spin .6s linear infinite}
+@keyframes center-spin{to{transform:rotate(360deg)}}
+
+/* ===== shared overlay base ===== */
+.nc-overlay{position:fixed;inset:0;display:none;/* toggled via .is-on */place-items:center;background:color-mix(in oklab,#000 62%,transparent);/* nice in dark & light */z-index:10000;}
+.nc-overlay.is-on{display:grid;}
+body.is-overlay-open{overflow:hidden;}/* lock page while open */
+
+/* ===== small center card (detecting / fetching) ===== */
+.nc-card{background:var(--card,#fff);color:var(--text,#111);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.35);min-width:420px;max-width:92vw;padding:18px 24px;/* equal top/bottom */display:flex;align-items:center;justify-content:center;/* center contents */gap:12px;text-align:center;}
+.nc-card .nc-msg{font-size:17px;/* larger text */font-weight:700;line-height:1.25;}
+.nc-spin{width:18px;height:18px;border-radius:50%;border:3px solid color-mix(in oklab,var(--text,#111) 25%,transparent);border-top-color:var(--text,#111);animation:ncspin .8s linear infinite;}
+@keyframes ncspin{to{transform:rotate(1turn);}}
+
+/* ===== “Location found” modal ===== */
+.modal-backdrop{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in oklab,#000 62%,transparent);z-index:10001;}
+.modal-card.location{position:relative;width:min(560px,92vw);padding:32px 40px;/* equal, roomy */border-radius:18px;text-align:center;background:var(--card,#111);/* looks great in dark mode too */color:var(--text,#fafafa);box-shadow:0 26px 70px rgba(0,0,0,.45);}
+.modal-card.location .loc-pin{font-size:44px;line-height:1;margin-bottom:10px;opacity:.96;}
+.modal-card.location h4{font-size:24px;margin:0 0 12px;}
+.modal-card.location .loc-lines{font-size:16px;line-height:1.45;font-weight:600;opacity:.95;margin-bottom:24px;}
+.modal-card.location .modal-actions{display:flex;justify-content:center;gap:12px;}
+
+/* big close “×” outside the card, no circle */
+.modal-card.location .modal-close{position:absolute;top:-22px;right:-22px;font-size:34px;line-height:1;width:34px;height:34px;border:0;background:transparent;color:#fff;cursor:pointer;text-shadow:0 2px 8px rgba(0,0,0,.6);}
+.modal-card.location .modal-close:hover{transform:scale(1.06);}
+
+/* optional: respects your dark theme flag */
+:root[data-theme="dark"] .nc-card{background:#111418;color:#e5e7eb;}
+
+/* Force blocked cursor + clearer disabled look specifically for the minus */
+#step-summary .qty-btn.minus-btn[disabled]{cursor:not-allowed !important;opacity:.55;/* a touch dimmer makes it obvious */}
+#step-summary .qty-btn.minus-btn[disabled]:hover{cursor:not-allowed !important;}
+
+/* ----- Minus button: enabled vs disabled look ----- */
+/* Enabled (explicit so it reverts cleanly after being disabled) */
+#step-summary .qty-btn.minus-btn:not([disabled]){background:#fff;/* normal white */border-color:#cbd5e1;color:#111;}
+
+/* Disabled: light grey */
+#step-summary .qty-btn.minus-btn[disabled]{background:#f1f5f9 !important;/* lighter grey */border-color:#e5e7eb !important;color:#9ca3af !important;box-shadow:none !important;cursor:not-allowed !important;/* keep the blocked cursor */opacity:1;/* keep crisp, rely on colors */}
+
+/* Dark theme equivalents */
+html[data-theme="dark"] #step-summary .qty-btn.minus-btn:not([disabled]){background:#0b1220;/* your current dark base */border-color:#374151;color:#e5e7eb;}
+html[data-theme="dark"] #step-summary .qty-btn.minus-btn[disabled]{background:#111827 !important;/* subtle grey in dark */border-color:#374151 !important;color:#6b7280 !important;box-shadow:none !important;cursor:not-allowed !important;}
+
+/* keep it visually aligned with the price card and force exactly 1 line per span */
+.policy-note{margin:12px 0 0;padding:0 16px;}
+.policy-note .line{display:block;white-space:nowrap;}/* no extra wrapping */
+.policy-note{margin:12px 0 0;padding:0 4px;max-width:100%;box-sizing:border-box;color:var(--muted);font-size:13px;line-height:1;text-align:left;background:transparent;border:0;}
+
+/* EDIT form: hand cursor on Home/Work */
+#step-address .inline-edit .addr-type input[type="radio"],
+#step-address .inline-edit .addr-type label {
+  cursor: pointer !important;
+  user-select: none;
 }
 
-/* SUMMARY itself contributes no extra gap above (let addrow-wrap own it) */
-#step-address + #addrow-wrap + #step-summary {
-  margin-top: 0 !important;
+/* ADD form (it lives under #addrow-wrap): hand cursor on Home/Work */
+#addrow-wrap .inline-add .addr-type input[type="radio"],
+#addrow-wrap .inline-add .addr-type label {
+  cursor: pointer !important;
+  user-select: none;
 }
 
-/* Hide the confirm bar whenever the ORDER SUMMARY step is not open */
-#step-summary:not(.is-open) + #confirm-wrap {
-  display: none !important;
-}
-
-.modal-card .modal-title{
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  text-align: center !important;
-}
-
-.modal-card .modal-title > h4{
-  margin: 0 auto !important;   /* take the middle */
-  width: 100%;                  /* ensures true centering */
-  text-align: center !important;
-}
-/* --- Title color override --- */
-.modal-card .modal-title > h4 {
-  justify-content:center;text-align:center;color: #111 !important;          /* light theme: black */
-}
-html[data-theme="dark"] .modal-card .modal-title > h4 {
-  justify-content:center;text-align:center;color: #fff !important;           /* dark theme: white */
-}
-
-/* --- Remove the thin red outline on the OUTER card --- */
-.modal-card,
-.modal-card.error {
-  border: 0 !important;             /* no border at all */
-  box-shadow: 0 12px 40px rgba(0,0,0,.16) !important; /* soft shadow only */
-}
-html[data-theme="dark"] .modal-card,
-html[data-theme="dark"] .modal-card.error {
-  box-shadow: 0 12px 40px rgba(0,0,0,.6) !important;
-}
-
-/* Actions row centered */
-.modal-card .modal-actions{
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  margin-top:12px;
-}
-
-/* Go to cart: no underline ever */
-.btn-brand,
-.btn-brand:hover,
-.btn-brand:focus{
-  text-decoration:none;
-}
-.btn-brand{
-  background:var(--brand);
-  color:#fff;
-  border:1px solid transparent;
-  border-radius:8px;
-  padding:10px 14px;
-  font-weight:800;
-}
-
-/* “X” outside the card with a bit more gap */
-.modal-card{ position:relative; }
-.modal-close{
-  cursor: pointer;
-  position:absolute;
-  top:0;                      /* flush with card’s top */
-  right:-36px;                /* push outside to the right */
-  width:28px; height:28px;
-  display:grid; place-items:center;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.12);
-  background:#fff;
-  color:#111;
-  box-shadow:0 4px 10px rgba(0,0,0,.12);
-}
-html[data-theme="dark"] .modal-close{
-  background:#0b1220;
-  color:#e5e7eb;
-  border-color:#1f2937;
-}
-html[data-theme="dark"] .modal-close{
-  background:#040911; color:#e5e7eb; border-color:#1f2937;
-}
-
-.step-card.is-disabled .step-body { display: none; }
-.step-card.is-disabled .step-done { display: none; }
-/* Keep CHANGE clickable even when the step is “disabled” */
-.step-card.is-disabled .step-secondary{
-  pointer-events:auto;
-  opacity:1;
-  cursor:pointer;
-}
-/* trust strip directly under the price card, same right column */
-
-
-/* wrapper keeps the card and foot together and sticky */
-.price-wrap{
-  position: sticky;
-  top: calc(var(--header-h) + 16px);
-  align-self: start;
-  width: var(--sidebar-w);
-}
-
-/* the card itself */
-.price-card{
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--shadow);
-  max-height: calc(100vh - var(--header-h) - 32px);
-  overflow: auto;
-}
-.price-card .card-body{ padding:16px 20px 12px; }
-
-/* FULL-WIDTH divider under the heading */
-.price-card .card-head{
-  margin:0 0 12px;
-  padding-bottom:12px;
-  font-size:16px; letter-spacing:.3px;
-  border-bottom:1px solid var(--border);
-}
-
-.price-card .total{
-  border-bottom:1px solid var(--border); /* keep only one line */
-  padding:14px;       /* balanced spacing */
-  margin-top:6px;
-}
-
-.price-card .save{ color:#1a8f3d; font-weight:900; margin-top:10px;border-top: 0 !important; padding-top: 10px; }
-.price-card .sep.last{ display: none !important; }
-
-/* Price card footer (shield + copy) */
-.price-foot{ display:flex; align-items:flex-start;gap:10px;margin-top:12px; padding:12px 16px; border-radius:12px; background:#fff; border:1px solid rgba(0,0,0,.08);}
-
-/* Add/replace these */
-.price-foot{ --shield-size: 56px; }             /* <— tweak this number any time */
-.price-foot .shield-img{
-  width: var(--shield-size);
-  height: var(--shield-size);
-}
-
-/* Optional: even bigger on wide screens */
-@media (min-width: 2000px){
-  .price-foot{ --shield-size: 80px; }
-}
-
-/* Nudge text if needed after growing the icon */
-.price-foot .foot-copy{ margin-top: 4px; }
-
-/* Dark theme */
-html[data-theme="dark"] .price-foot{
-  background:#0b0f19;
-  border-color:rgba(255,255,255,.12);
-}
-html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
-
-
-/* === Inline EDIT: keep it inside the address card, tidy, responsive === */
-
-/* 1) Make the editor look like a row inside the list */
-#step-address .addr-list > .inline-edit{
-  margin: 0;                       /* no bubbles around */
-  padding: 14px 16px;              /* same as rows */
-  border: 0;                       /* remove outer border */
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  box-shadow: none;                /* no floating card look */
-  max-width: 100%;
-}
-
-/* 2) Ensure the list clips neatly, but allows the inline editor to show */
-#step-address .addr-list{ overflow: hidden; border-radius: 10px; }
-#step-address .addr-list.has-inline{ overflow: visible; } /* only while editing */
-
-/* 3) Two-column form grid that collapses nicely */
-#step-address .inline-edit .grid-2{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-@media (max-width: 900px){
-  #step-address .inline-edit .grid-2{ grid-template-columns: 1fr; }
-}
-
-/* 4) Radio + label row wraps instead of stretching wide */
-#step-address .inline-edit .addr-type{
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;                 /* allow wrap */
-  align-items: center;
-}
-#step-address .inline-edit .addr-type label{
-  white-space: nowrap;             /* keep each option on one line */
-}
-
-/* 5) Keep the whole editor from causing horizontal scrollbars */
-#step-address .inline-edit, 
-#step-address .inline-edit * { max-width: 100%; box-sizing: border-box; }
-
-/* 6) The “inline editor replaces a row” look */
-#step-address .addr-item.is-hidden{ display: none; } /* you already have this, ensure it wins */
-
-/* 7) Step body shouldn’t clip the editor */
-#step-address.is-open .step-body{
-  overflow: visible;               /* allow tooltips/validation to show */
-  max-height: none;                /* don’t squeeze the editor */
-}
-
-/* — nav loader (covers flicker during full page POST/redirect) — */
-#nav-loading{
-  position: fixed; inset: 0;
-  display: none;               /* toggled via .is-on */
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,.35);
-  z-index: 99999;
-  -webkit-backdrop-filter: blur(1px);
-  backdrop-filter: blur(1px);
-}
-#nav-loading.is-on{ display: flex; }
-
-#nav-loading .nav-spin{
-  width: 42px; height: 42px; border-radius: 50%;
-  border: 3px solid rgba(255,255,255,.55);
-  border-top-color: #fff;
-  animation: nav-spin .7s linear infinite;
-}
-@keyframes nav-spin{ to { transform: rotate(360deg); } }
-
-
-/* --- Price card: keep rows single-line + aligned --- */
-.price-card .row{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.price-card .row > span,
-.price-card .row > strong{
-  white-space: nowrap;                 /* prevent wrap */
-}
-
-/* Make the Total row match the other rows’ spacing */
-.price-card .row.total{
-  font-size: 16px;
-  padding:14px 0;                     
-  margin-top:6px;
-  border-top:1px solid var(--border);
-}
-
-.price-card .row.total > span{ font-weight:700; }
-.price-card .row.total > strong{
-  font-size: 16px;
-  margin-left:auto;                    /* push ₹ to the right */
-  font-weight:900;
-}
-
-/* Optional: if width is tight, truncate the left label cleanly */
-.price-card .row > span{
-  text-overflow:ellipsis;
-}
-
-/* Base minus button look (keeps your current sizing) */
-.minus-btn{
-  cursor: pointer;
-  transition: background-color .15s ease, color .15s ease, border-color .15s ease, opacity .15s ease;
-}
-
-/* Hand cursor on hover when it’s usable */
-.minus-btn:hover:not(:disabled):not([aria-disabled="true"]){
-  cursor: pointer;                 /* hand */
-  filter: brightness(1.02);
-}
-
-/* Strictly disabled: red + blocked cursor */
-.minus-btn:disabled,
-.minus-btn[aria-disabled="true"]{
-  cursor: not-allowed;             /* blocked icon */
-  opacity: 1;                      /* keep readable; remove if you want it faded */
-}
-
-/* Optional: hover state while disabled (keeps blocked cursor & red look) */
-.minus-btn:disabled:hover,
-.minus-btn[aria-disabled="true"]:hover{
-  cursor: not-allowed;
+/* Keep the "Address Type" heading as arrow in both forms */
+#step-address .inline-edit .addr-type-heading,
+#addrow-wrap .inline-add .addr-type-heading {
+  cursor: default !important;
 }
 
 
+.session-actions{ display:flex; gap:10px; margin-top:12px; }
+.btn-login{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
+  border-radius:8px; background:#2563eb; color:#fff; font-weight:800; text-decoration:none;
+}
+.btn-login:hover{ filter:brightness(1.05); }
+.btn-why{ background:transparent; color:var(--ink-soft); border:0; padding:0; cursor:pointer; }
+
+#session-expired-modal .btn-login{display:block;width:100%;text-align:center;justify-content:center;padding:14px 16px;border-radius:10px;
+  background:#2563eb;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+#session-expired-modal .btn-login:hover{filter:brightness(1.04);}
+
+/* center the CTA row (if not already) */ 
+.session-actions{display:flex;justify-content:center;}
+
+/* remove underline for "Why did this happen?" */ 
+#session-modal .why a{text-decoration:none;color:inherit;} 
+#session-modal .why a:hover{text-decoration:none;}
+
+/* if you use an outside X, give it a bit more too */ 
+#session-close-outside{font-size:28px;z-index:5002;}
+
+/* link highlight states */
+ #session-modal .why a:hover{color:#2563eb;}
+ #session-modal .why a.clicked{color:#ef4444;}
+
+/* yellow info block, always below the link */ 
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;position:relative;z-index:1;} 
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+
+#session-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:5000;}
+#session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:5001;overflow:visible;}
+#session-modal header{position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;}
+#session-modal header h3{margin:0;text-align:center;}
+#session-close-outside{position:absolute;top:-18px;right:-59px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;font-size:28px;line-height:1;background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;}
+.session-hero{display:block;margin:8px auto 12px;}
+.session-hero img{width:100%;height:auto;display:block;object-fit:contain;border-radius:8px;filter:none;}
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;}
+body.dark-mode #session-modal{background:#161616;color:#fff;border-color:#2a2a2a;}
+body.dark-mode #session-close-outside{background:#161616;color:#cbd5e1;border-color:#2a2a2a;box-shadow:0 6px 18px rgba(0,0,0,.6);}
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+
+/* Checkout: session modal as a compact white card (like vieworderdetails) */
+#session-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:5000;}
+#session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);background:var(--paper,#fff);color:var(--ink,#0f172a);border:1px solid var(--line,#e5e7eb);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:5001;overflow:visible;}
+#session-close-outside{position:absolute;top:-18px;right:-59px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;font-size:26px;line-height:1;background:var(--paper,#fff);color:var(--ink-soft,#64748b);border:1px solid var(--line,#e5e7eb);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;}
+.btn-login, .btn-login:link, .btn-login:visited, .btn-login:hover, .btn-login:active, .btn-login:focus { text-decoration: none !important; }
+/* Put session modal above all UI */
+#session-backdrop{ z-index:100000 !important; }
+#session-modal{ z-index:100001 !important; }
+/* Force the small, bold session title like other pages */
+#session-modal header h1,
+#session-modal header h2,
+#session-modal header h3,
+#session-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;color:var(--ink,#0f172a)!important;}
+/* If you still use the old wrapper id anywhere, cover it too */
+#session-expired-modal header h1,
+#session-expired-modal header h2,
+#session-expired-modal header h3,
+#session-expired-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;}
+/* Dark mode title color */
+body.dark-mode #session-modal header h1,
+body.dark-mode #session-modal header h2,
+body.dark-mode #session-modal header h3,
+body.dark-mode #session-modal header h4{color:#fff!important;}
+
+/* Keep common toast/snackbar chips below the backdrop */
+#price-refresh,
+.price-refresh,
+.refreshing-prices,
+.price-refresh-toast,
+.cart-recalc,
+.toast,
+.snackbar,
+[role="status"].toast,
+[data-toast]{ z-index:9999 !important; }
 
 </style>
-</head>
-<body>
-  <header class="topbar" role="banner">
-    <div class="brand">Novacart</div>
-    <div class="spacer"></div>
-    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme" title="Theme: auto">🌙</button>
-  </header>
+{% endblock %}
+
+{% block content %}
+
 
 <main class="checkout{% if not orders_data %} is-empty{% endif %}" role="main">
     <div>
@@ -1324,7 +737,8 @@ html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
                   <button id="btn-continue-login" type="button" class="btn btn-primary btn-lg">CONTINUE CHECKOUT</button>
                 </div>
 
-                <p class="note">Please note that upon clicking "Logout" you will lose all items in cart and will be redirected to home.</p>
+              <p class="note login-note">
+                Please note that upon clicking "Logout" you will lose all items in cart and will be redirected to home.</p>              
               </div>
 
               <!-- RIGHT – advantages -->
@@ -1368,7 +782,13 @@ html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
 
                 <!-- right column: form -->
                 <div class="inline-box">
-                  <div class="inline-title">EDIT ADDRESS</div>
+                <div class="inline-title">EDIT ADDRESS</div>
+                <button type="button" class="btn-geo">
+                  <svg class="geo-icn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" fill="currentColor"/>
+                  </svg>
+                  <span>Use my current location</span>
+                </button>
 
                   <div class="grid-2">
                     <div class="field"><label>Name</label><input name="name" required /></div>
@@ -1421,109 +841,122 @@ html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
       </div>
 
           <!-- Inline ADD template (cloned when you click “+ Add a new address”) -->
-      <template id="tpl-inline-add">
-        <form class="inline-edit inline-add" validate>
-          <div class="inline-radio">
-            <input class="addr-radio" type="radio" name="addr" />
-          </div>
-          <div class="inline-box">
-            <div class="inline-title">ADD NEW ADDRESS</div>
-
-            <div class="grid-2">
-              <div class="field"><label>Name</label><input name="name" required /></div>
-              <div class="field"><label>Phone</label><input name="phone" required /></div>
-            </div>
-
-            <div class="grid-2" style="margin-top:12px">
-              <div class="field"><label>Pincode</label><input name="pincode" required /></div>
-              <div class="field"><label>Area</label><input name="area" required /></div>
-            </div>
-
-            <div class="grid-2" style="margin-top:12px">
-              <div class="field"><label>Door No</label><input name="door_no" required /></div>
-              <div class="field"><label>Street</label><input name="street" required /></div>
-            </div>
-
-            <div class="grid-2" style="margin-top:12px">
-              <div class="field"><label>City</label><input name="city" required /></div>
-              <div class="field"><label>State</label><input name="state" required /></div>
-            </div>
-
-            <div class="grid-2" style="margin-top:12px" data-field="tag" >
-              <div class="field"><label>Landmark (optional)</label><input name="landmark" /></div>
-              <div class="field"><label>Alternate Phone (optional)</label><input name="altphone" /></div>
-            </div>
-           
-            <div class="field"  style="margin-top:12px"></div>
-            <label class="addr-type-heading">Address Type</label>
-            <div class="addr-type" style="margin-top:12px">
-              <label><input type="radio" name="tag" value="HOME" checked>Home (All Day Delivery)</label>
-              <label><input type="radio" name="tag" value="WORK">Work (Delivery Between 10AM - 5PM)</label>
-            </div>
-            
-            <div class="form-actions">
-              <button class="btn btn-primary" type="submit">Save &amp; deliver here</button>
-              <button class="btn btn-secondary js-cancel-add" type="button">Cancel</button>
-            </div>
-          </div>
-        </form>
-      </template>
-
- <!-- STEP 3: ORDER SUMMARY -->
-<section id="step-summary" class="step-card" aria-labelledby="h-summary">
-  <header class="step-header" id="hdr-summary">
-    <div class="step-index">3</div>
-    <h2 id="h-summary">ORDER SUMMARY <span class="step-done" id="tick-summary">✓</span></h2>
-  </header>
-
-  <div class="step-body">
-    {% if orders_data %}
-      {% for item in orders_data %}
-        <div class="summary-item" id="item-{% firstof item.product_id item.product.product_id "" %}">
-          <img
-            src="{% firstof item.image item.product.image '' %}"
-            alt="{% firstof item.product_name item.product.product_name 'Product' %}"
-          />
-
-          <div class="details">
-            <div class="name">{% firstof item.product_name item.product.product_name %}</div>
-
-            <div class="price-row">
-              <span class="price" data-unit="{% firstof item.price item.product.price '0.00' %}">
-                ₹ {% firstof item.total_price item.price item.product.price "0.00" %}
-              </span>
-            </div>
-          </div>
-
-          <!-- Quantity controls under image -->
-          <div class="qty-row">
-            <form action="{% url 'reducequantity_checkout' %}" method="post" class="minus-form">
-              {% csrf_token %}
-              <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
-              <button type="submit" aria-label="Decrease" class="qty-btn minus-btn">–</button>
-            </form>
-
-            <span class="qty-num">{{ item.quantity|default:"1" }}</span>
-
-            <form action="{% url 'addquantity_checkout' %}" method="post">
-              {% csrf_token %}
-              <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
-              <button type="submit" aria-label="Increase" class="qty-btn">+</button>
-            </form>
-          </div>
-
-          <form action="{% url 'deleteproduct_checkout' %}" method="post" class="remove-form">
-            {% csrf_token %}
-            <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
-            <button type="submit" class="remove-btn">REMOVE</button>
-          </form>
+          <!-- Inline ADD template (fixed) -->
+    <template id="tpl-inline-add">
+      <form class="inline-edit inline-add" validate>
+        <!-- left column: radio like other rows -->
+        <div class="inline-radio">
+          <input class="addr-radio" type="radio" name="addr" />
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-hint">Your checkout has no items.</div>
-    {% endif %}
-  </div>
-</section>
+
+        <!-- right column: everything else goes inside .inline-box -->
+        <div class="inline-box">
+          <div class="inline-title">ADD NEW ADDRESS</div>
+
+          <!-- Flipkart-style geo button under the title -->
+          <button type="button" class="btn-geo">
+            <svg class="geo-icn" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" fill="currentColor"/>
+            </svg>
+            <span>Use my current location</span>
+          </button>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Name</label><input name="name" required /></div>
+            <div class="field"><label>Phone</label><input name="phone" required /></div>
+          </div>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Pincode</label><input name="pincode" required /></div>
+            <div class="field"><label>Area</label><input name="area" required /></div>
+          </div>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Door No</label><input name="door_no" required /></div>
+            <div class="field"><label>Street</label><input name="street" required /></div>
+          </div>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>City</label><input name="city" required /></div>
+            <div class="field"><label>State</label><input name="state" required /></div>
+          </div>
+
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Landmark (optional)</label><input name="landmark" /></div>
+            <div class="field"><label>Alternate Phone (optional)</label><input name="altphone" /></div>
+          </div>
+
+          <div class="field" style="margin-top:12px" data-field="tag"></div>
+          <label class="addr-type-heading">Address Type</label>
+          <div class="addr-type" style="margin-top:12px">
+            <label><input type="radio" name="tag" value="HOME">Home (All Day Delivery)</label>
+            <label><input type="radio" name="tag" value="WORK">Work (Delivery Between 10AM - 5PM)</label>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Save &amp; Deliver here</button>
+            <button class="btn btn-secondary js-cancel-add" type="button">Cancel</button>
+          </div>
+        </div>
+      </form>
+    </template>
+
+
+    <!-- STEP 3: ORDER SUMMARY -->
+    <section id="step-summary" class="step-card" aria-labelledby="h-summary">
+      <header class="step-header" id="hdr-summary">
+        <div class="step-index">3</div>
+        <h2 id="h-summary">ORDER SUMMARY <span class="step-done" id="tick-summary">✓</span></h2>
+      </header>
+
+      <div class="step-body">
+        {% if orders_data %}
+          {% for item in orders_data %}
+            <div class="summary-item" id="item-{% firstof item.product_id item.product.product_id "" %}">
+              <img
+                src="{% firstof item.image item.product.image '' %}"
+                alt="{% firstof item.product_name item.product.product_name 'Product' %}"
+              />
+
+              <div class="details">
+                <div class="name">{% firstof item.product_name item.product.product_name %}</div>
+
+                <div class="price-row">
+                  <span class="price" data-unit="{% firstof item.price item.product.price '0.00' %}">
+                    ₹ {% firstof item.total_price item.price item.product.price "0.00" %}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Quantity controls under image -->
+              <div class="qty-row">
+                <form action="{% url 'reducequantity_checkout' %}" method="post" class="minus-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
+                  <button type="submit" aria-label="Decrease" class="qty-btn minus-btn">–</button>
+                </form>
+
+                <span class="qty-num">{{ item.quantity|default:"1" }}</span>
+
+                <form action="{% url 'addquantity_checkout' %}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
+                  <button type="submit" aria-label="Increase" class="qty-btn">+</button>
+                </form>
+              </div>
+
+              <form action="{% url 'deleteproduct_checkout' %}" method="post" class="remove-form">
+                {% csrf_token %}
+                <input type="hidden" name="product_id" value="{% firstof item.product_id item.product.product_id %}">
+                <button type="submit" class="remove-btn">REMOVE</button>
+              </form>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-hint">Your checkout has no items.</div>
+        {% endif %}
+      </div>
+    </section>
 
 <!--order confirmation-->
 <div id="confirm-wrap" class="confirm-wrap hidden">
@@ -1535,15 +968,14 @@ html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
 
     <form id="paymentForm" action="{% url 'start_payment' %}" method="post" style="margin:0;">
   {% csrf_token %}
-  <input type="hidden" name="address_id" value="{{ addresses.0.address_id }}">
+  <input type="hidden" name="address_id" id="address_id_input" value="{{ addresses.0.address_id }}">
   <input type="hidden" name="item_count"    value="{{ orders_data|length|default:'0' }}">
   <input type="hidden" name="cart_total"    value="{{ cart_total|floatformat:0 }}">
   <input type="hidden" name="shipping_fee"  value="{{ shipping_fee|floatformat:0 }}">
   <input type="hidden" name="platform_fee"  value="{{ platform_fee|floatformat:0 }}">
   <input type="hidden" name="total_payable" value="{{ total_payable|floatformat:0 }}">
 
-  <button type="submit" class="btn btn-primary btn-lg">
-    CONTINUE TO PAYMENT
+  <button type="submit" class="btn btn-primary btn-lg">CONTINUE TO PAYMENT
   </button>
 </form>
 
@@ -1631,10 +1063,52 @@ html[data-theme="dark"] .price-foot .foot-copy{ color:#e5e7eb; }
       <img src="{% static 'images/shield.png' %}" alt="" class="shield-img">
       <span class="foot-copy">Safe and Secure Payments. Easy returns. 100% Authentic products.</span>
     </p>
+<p class="policy-note">
+  <span class="line">By continuing with the order, you confirm that you are</span><br>
+  <span class="line">above 18 years of age, and you agree to the Novacart’s</span><br>
+  <span class="line">
+    <a href="#" class="nolink">Terms of Use</a> and
+    <a href="#" class="nolink">Privacy Policy</a>.
+  </span>
+</p>
+
+
 </div>
 {% endif %}
 
 </main>
+
+{% load static %}
+
+<div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+<div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+  <header>
+    <h4 id="session-title">Your session expired</h4>
+    <button id="session-close-outside" aria-label="Close">×</button>
+  </header>
+
+  <div class="session-hero" aria-hidden="true">
+    <img src="{% static 'images/sessionend.png' %}" alt="">
+  </div>
+
+  <div class="why" id="why-link-wrap">
+    <a href="#" id="why-link">Why did this happen?</a>
+  </div>
+  <div id="session-why-text">For security, we auto-sign out after inactivity or when your session token expires.</div>
+
+  <div class="session-actions">
+    <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+  </div>
+</div>
+
+
+<div id="center-loader" aria-live="polite" aria-atomic="true">
+  <div class="center-loader__card" role="status" aria-label="Detecting location">
+    <span class="center-loader__dot" aria-hidden="true"></span>
+    <span id="center-loader-text">Detecting location…</span>
+  </div>
+</div>
+
 <div id="snack-root" aria-live="polite" aria-atomic="true"></div>
 
 <div id="nav-loading" aria-hidden="true">
@@ -1678,30 +1152,8 @@ async function api(method, url, body){
   }
   return data;
 }
-
-    (function(){
-  const KEY='nc_theme';
-  const root=document.documentElement;
-  const btn=document.getElementById('themeToggle');
-
-  function apply(mode){
-    const m = (mode==='dark') ? 'dark' : 'light';     // clamp to 2 modes
-    root.setAttribute('data-theme', m);
-    localStorage.setItem(KEY, m);
-    btn && (btn.textContent = m==='dark' ? '🌞' : '🌙');
-    btn && (btn.title      = `Theme: ${m}`);
-  }
-
-  apply(localStorage.getItem(KEY) || 'light');         // default = light
-  btn?.addEventListener('click', ()=> {
-    apply(root.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
-  });
-    })();
-  </script>
-
-  <script>
     /* ===== Utilities ===== */
-    const HEADER_OFFSET=72;
+    const HEADER_OFFSET=64 + 6;
     function gentleScrollInto(el){
       const rect = el.getBoundingClientRect();
       const off = rect.top < 72 || rect.top > (innerHeight - 120);
@@ -1962,7 +1414,7 @@ document.addEventListener('change', (e)=>{
 
     const paymentForm = document.getElementById('paymentForm');
     const confirmWrap = document.getElementById('confirm-wrap');
-    const addressIdField = document.getElementById('addressIdField');
+    const addressIdField = document.getElementById('address_id_input');
 
     // collapsed address header refs
     const addrColName = document.getElementById('addr-col-name');
@@ -2603,19 +2055,21 @@ document.querySelectorAll('.summary-item').forEach(row=>{
   const plusForm  = row.querySelector('form:not(.minus-form):has(button:not(.minus-btn))'); // your + form
   const removeForm= row.querySelector('.remove-form');
 
-  if (minusBtn && minusForm){
-    if (qty <= 1){
-      // hard-disable at qty=1
-      minusBtn.setAttribute('disabled','disabled');
-      minusForm.addEventListener('submit', (ev)=>ev.preventDefault(), { once:true });
-    } else {
-      minusBtn.removeAttribute('disabled');
-      minusForm.addEventListener('submit', ()=>{
-        localStorage.setItem('nc_step','summary');
-        localStorage.setItem('nc_can_summary','1');
-      }, { once:true });
-    }
+  if (qty <= 1) {
+  minusBtn.setAttribute('disabled', '');
+  minusBtn.classList.add('is-disabled');
+  minusBtn.title = 'Minimum quantity is 1';
+  if (minusForm) {
+    // Only block the submit while the button is actually disabled
+    minusForm.addEventListener('submit', (ev) => {
+      if (minusBtn.hasAttribute('disabled')) ev.preventDefault();
+    });
   }
+} else {
+  minusBtn.removeAttribute('disabled');
+  minusBtn.classList.remove('is-disabled');
+  minusBtn.removeAttribute('title');
+}
 
   // also remember the step for + and REMOVE submits
   [plusForm, removeForm].forEach(f=>{
@@ -2639,13 +2093,12 @@ function enforceMinQty() {
     if (qty <= 1) {
       minus.setAttribute('disabled', '');
       minus.classList.add('is-disabled');
-      if (mform) {
-        // block any accidental form submit at 1
-        mform.addEventListener('submit', (ev) => ev.preventDefault(), { once: true });
-      }
+      minus.title = 'Minimum quantity is 1';
+      if (mform) {mform.addEventListener('submit', (ev) => ev.preventDefault(), { once: true }); }
     } else {
       minus.removeAttribute('disabled');
       minus.classList.remove('is-disabled');
+      minus.removeAttribute('title'); 
     }
   });
 }
@@ -2764,22 +2217,108 @@ function showToast({ message, type = 'success', timeout = 2500 }) {
   showSnack(message, { type: type === 'error' ? 'error' : 'ok', timeout, close: false });
 }
 
-(function () {
-  // Try modern Navigation Timing; fall back to the deprecated API
-  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
-  var isReload = nav ? (nav.type === 'reload') : (performance.navigation && performance.navigation.type === 1);
 
-  if (isReload) {
-    var url = new URL(location.href);
-    if (!url.searchParams.has('seed')) {
-      url.searchParams.set('seed', '1');
-      // Hit the server with ?seed=1 so it rebuilds the snapshot from the real cart
-      location.replace(url.pathname + '?' + url.searchParams.toString());
-      return; // stop; the rest of the scripts will run on the next load
-    }
+// ---- Center loader (for reload/reseed only) ----
+function showCenterLoader(text){
+  const root = ensureCenterLoader(text);
+  const t = root.querySelector('#center-loader-text');
+  if (t && text) t.textContent = text;
+  root.classList.add('is-on');
+  document.body.classList.add('is-overlay-open');  // lock the page
+}
+function hideCenterLoader(){
+  const root = document.getElementById('center-loader');
+  if (root) root.classList.remove('is-on');
+  document.body.classList.remove('is-overlay-open');
+}
+
+
+// === SILENT RESEED ON HARD-REFRESH (always reseed; show loader only if cart was changed) ===
+(function reseedOnReload(){
+  // Robust reload detection
+  const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+  const isReload = nav ? (nav.type === 'reload') : (performance.navigation && performance.navigation.type === 1);
+  if (!isReload) return;
+
+  // Read flag – only controls the loader visibility
+  let cartDirty = '0';
+  try { cartDirty = localStorage.getItem('nc_cart_dirty') || '0'; } catch {}
+
+  // We will reseed regardless (so removed items/prices are correct)
+  try {
+    localStorage.setItem('nc_step', 'address');      // keep flow at Delivery
+    localStorage.setItem('nc_can_summary', '0');     // never auto-open summary after reload
+  } catch {}
+
+  const url = new URL(location.href);
+  url.searchParams.set('seed', '1');
+
+  if (cartDirty === '1' && typeof showCenterLoader === 'function') {
+    showCenterLoader('Refreshing prices…');
   }
+
+  fetch(url.toString(), { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+    .then(r => r.text())
+    .then(html => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      // 1) Swap ORDER SUMMARY body
+      const newSumBody = doc.querySelector('#step-summary .step-body');
+      const curSumBody = document.querySelector('#step-summary .step-body');
+      if (newSumBody && curSumBody) curSumBody.innerHTML = newSumBody.innerHTML;
+
+      // 2) Swap right PRICE card
+      const newPriceWrap = doc.querySelector('.price-wrap');
+      const curPriceWrap = document.querySelector('.price-wrap');
+      if (newPriceWrap && curPriceWrap)      curPriceWrap.replaceWith(newPriceWrap);
+      else if (!newPriceWrap && curPriceWrap) curPriceWrap.remove();
+      else if (newPriceWrap && !curPriceWrap) {
+        const grid = document.querySelector('main.checkout');
+        if (grid) grid.appendChild(newPriceWrap);
+      }
+
+      // 3) Enforce "Delivery open only"
+      const openOnlyDelivery = () => {
+        // Prefer your helper
+        if (typeof window.setOpen === 'function') {
+          window.setOpen('address');
+        }
+        // Hard fallback: close all steps, open address
+        const allSteps = document.querySelectorAll('[id^="step-"]');
+        allSteps.forEach(s => { s.classList.remove('is-open'); s.setAttribute('aria-expanded','false'); });
+        const addr = document.getElementById('step-address');
+        if (addr) { addr.classList.add('is-open'); addr.setAttribute('aria-expanded','true'); }
+
+        // your existing guards
+        if (typeof window.updateConfirmVisibility === 'function') window.updateConfirmVisibility();
+        if (typeof window.applyCartEmptyStateToAddress === 'function') window.applyCartEmptyStateToAddress();
+        if (typeof window.enforceMinQty === 'function') window.enforceMinQty();
+
+        // Make absolutely sure summary is closed
+        const sum = document.getElementById('step-summary');
+        if (sum) { sum.classList.remove('is-open'); sum.setAttribute('aria-expanded','false'); }
+      };
+
+      // Run now and again after other scripts settle
+      openOnlyDelivery();
+      setTimeout(openOnlyDelivery, 30);
+      setTimeout(openOnlyDelivery, 150);
+
+      // Reset flags for next time
+      try {
+        localStorage.setItem('nc_can_summary', '0');
+        localStorage.setItem('nc_cart_dirty', '0');  // consumed
+        localStorage.setItem('nc_step', 'address');
+      } catch {}
+    })
+    .catch(() => { /* ignore – page will just look like default */ })
+    .finally(() => {
+      if (cartDirty === '1' && typeof hideCenterLoader === 'function') hideCenterLoader();
+    });
 })();
- (function () {
+
+
+(function () {
   const CART_URL = "{% url 'cart' %}";
 
   // Normalize the current entry to plain /api/checkout/ (no ?open=, no #hash)
@@ -2932,6 +2471,446 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 })();
+
+
+ (function () {
+    const html = document.documentElement;
+    const moonIcon = document.getElementById('moon-icon');
+    const sunIcon  = document.getElementById('sun-icon');
+    const tooltip  = document.getElementById('theme-tooltip');
+    const BTN      = document.getElementById('theme-toggle');
+
+    function setTheme(mode) {
+      html.setAttribute('data-theme', mode);
+      html.style.colorScheme = mode; 
+      const dark = (mode === 'dark');
+      sunIcon.style.display  = dark ? '' : 'none';
+      moonIcon.style.display = dark ? 'none' : '';
+      tooltip.textContent    = dark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+      try { localStorage.setItem('theme', mode); } catch {}
+    }
+
+    // initial: saved → system → light
+    const saved = (function () { try { return localStorage.getItem('theme'); } catch { return null; } })();
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(saved || (systemPrefersDark ? 'dark' : 'light'));
+
+    BTN.addEventListener('click', () => {
+      const now = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(now);
+    });
+  })();
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.policy-note a.nolink').forEach(a => {
+      a.addEventListener('click', e => e.preventDefault());
+    });
+  });
+
+
+  // ---------- tiny modal helpers (safe: only define if missing) ----------
+if (typeof window.showModal !== 'function') {
+  window.showModal = function(html){
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop';
+    wrap.innerHTML = html;
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+    return wrap;
+  };
+}
+if (typeof window.closeModal !== 'function') {
+  window.closeModal = function(el){ if (el) el.remove(); };
+}
+
+// ---------- reverse geocode (OpenStreetMap / Nominatim) ----------
+async function reverseGeocode(lat, lon){
+  const url = new URL('https://nominatim.openstreetmap.org/reverse');
+  url.searchParams.set('format','jsonv2');
+  url.searchParams.set('lat', lat);
+  url.searchParams.set('lon', lon);
+  url.searchParams.set('addressdetails','1');
+  url.searchParams.set('zoom','18');
+
+  const res = await fetch(url.toString(), { headers: { 'Accept-Language': 'en-IN' } });
+  if (!res.ok) throw new Error('Reverse geocoding failed');
+  return res.json();
+}
+
+// ---------- map OSM address → your form fields ----------
+function mapOsmToForm(addr){
+  const a = addr || {};
+  const pick = (...keys) => keys.map(k => a[k]).find(Boolean) || '';
+  return {
+    pincode:  pick('postcode'),
+    area:     pick('suburb','neighbourhood','residential','quarter','locality','village','hamlet'),
+    street:   pick('road','pedestrian','footway'),
+    door_no:  pick('house_number','house_name'),
+    city:     pick('city','town','municipality','village'),
+    state:    pick('state'),
+    display:  [
+      pick('house_number','house_name'), pick('road'),
+      pick('suburb','neighbourhood','locality'),
+      pick('city','town','municipality','village'),
+      pick('state'), pick('postcode')
+    ].filter(Boolean).join(', ')
+  };
+}
+
+function fillAddressForm(form, mapped){
+  const set = (name, val) => { const el = form.querySelector(`[name="${name}"]`); if (el && val) el.value = val; };
+  set('pincode',  mapped.pincode);
+  set('area',     mapped.area);
+  set('street',   mapped.street);
+  set('door_no',  mapped.door_no);
+  set('city',     mapped.city);
+  set('state',    mapped.state);
+
+  // title-case some fields (keep ALL-CAPS untouched)
+  ['area','street','city','state'].forEach(n=>{
+    const el = form.querySelector(`[name="${n}"]`);
+    if (el && el.value && el.value !== el.value.toUpperCase()) {
+      el.value = el.value.replace(/\b([A-Za-z][A-Za-z']*)\b/g,
+        w => /^[A-Z0-9]{2,}$/.test(w) ? w : w[0].toUpperCase()+w.slice(1));
+    }
+  });
+}
+
+/* ---------- NEW: format two-line address for the modal ---------- */
+function formatTwoLineAddress(mapped, rawAddr) {
+  const pick = (obj, ...keys) => keys.map(k => obj?.[k]).find(Boolean) || '';
+  const locality = pick(rawAddr, 'neighbourhood','suburb','residential','quarter','locality','village','hamlet');
+  const road     = pick(rawAddr, 'road','pedestrian','footway');
+  const line1 = [locality, road].filter(Boolean).join(', ') || (mapped.street || mapped.area || '');
+  const city  = mapped.city  || pick(rawAddr,'city','town','municipality','village');
+  const state = mapped.state || pick(rawAddr,'state');
+  const pin   = mapped.pincode || pick(rawAddr,'postcode');
+  const left  = [city, state].filter(Boolean).join(', ');
+  const line2 = [left, pin].filter(Boolean).join(' - ');
+  return { line1: line1 || '—', line2: line2 || '—' };
+}
+
+/* ===== GEO WAIT overlay (Use my current location) ===== */
+function ensureGeoWait(text){
+  let root = document.getElementById('geo-wait');
+  if (!root){
+    root = document.createElement('div');
+    root.id = 'geo-wait';
+    root.className = 'nc-overlay';
+    root.innerHTML = `
+      <div class="nc-card" role="status" aria-live="polite">
+        <span class="nc-spin" aria-hidden="true"></span>
+        <span id="geo-wait-text">${text || 'Detecting your address… please wait'}</span>
+      </div>`;
+    document.body.appendChild(root);
+  }
+  return root;
+}
+function showGeoWait(text){
+  const root = ensureGeoWait(text);
+  const t = root.querySelector('#geo-wait-text');
+  if (t && text) t.textContent = text;
+  root.classList.add('is-on');
+  document.body.classList.add('is-overlay-open');  // lock the page
+}
+function updateGeoWait(text){
+  const t = document.querySelector('#geo-wait #geo-wait-text');
+  if (t && text) t.textContent = text;
+}
+function hideGeoWait(){
+  const root = document.getElementById('geo-wait');
+  if (root) root.classList.remove('is-on');
+  document.body.classList.remove('is-overlay-open');
+}
+
+/* ===== CENTER LOADER (refreshing prices on reseed) ===== */
+function ensureCenterLoader(text){
+  let root = document.getElementById('center-loader');
+  if (!root){
+    root = document.createElement('div');
+    root.id = 'center-loader';
+    root.className = 'nc-overlay';
+    root.innerHTML = `
+      <div class="nc-card" role="status" aria-live="polite">
+        <span class="nc-spin" aria-hidden="true"></span>
+        <span id="center-loader-text">${text || 'Refreshing prices…'}</span>
+      </div>`;
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+
+// ---------- main handler (NO top-level await anywhere) ----------
+async function handleUseLocation(btn){
+  const form =
+    btn.closest('form.inline-edit') ||       
+    btn.closest('form.inline-add')  ||       
+    btn.closest('form');                     
+  if (!form) return;
+
+  // 1) ask for device location
+  showGeoWait('Detecting your location…');
+  let coords;
+  try{
+    coords = await new Promise((resolve, reject)=>{
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        err => reject(err),
+        { enableHighAccuracy:true, timeout:12000, maximumAge:30000 }
+      );
+    });
+  }catch(err){
+    hideGeoWait();
+    showSnack({ message:'Location permission denied or unavailable.', type:'error', timeout:2500 });
+    return;
+  }
+
+  // 2) reverse geocode
+  updateGeoWait('Fetching address details…');
+  let rev;
+  try{
+    rev = await reverseGeocode(coords.lat, coords.lon); // your function
+  }catch(_){
+    hideGeoWait();
+    showSnack({ message:'Could not fetch address. Try again.', type:'error', timeout:2500 });
+    return;
+  }
+
+  // 3) done: hide wait and show your "Location found" confirm modal
+  hideGeoWait();
+
+  const mapped = mapOsmToForm(rev.address || {}); // your function
+  const two = formatTwoLineAddress(mapped, rev.address || {});
+
+  /* ====== REPLACED MODAL (overlay on top; close only via ×) ====== */
+  const overlay = document.createElement('div');
+  overlay.setAttribute('id', 'loc-found-overlay');
+  Object.assign(overlay.style, {
+    position:'fixed', inset:'0', background:'rgba(0,0,0,.52)',
+    display:'grid', placeItems:'center', zIndex:'99999'
+  });
+
+  const isDark = (document.documentElement.getAttribute('data-theme') === 'dark');
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    width:'min(92vw,560px)', background: isDark ? '#111418' : '#ffffff',
+    color: isDark ? '#e5e7eb' : '#1f2937',
+    borderRadius:'14px', boxShadow: isDark ? '0 18px 60px rgba(0,0,0,.6),0 6px 18px rgba(0,0,0,.35)' : '0 18px 60px rgba(0,0,0,.25),0 6px 18px rgba(0,0,0,.12)',
+    padding:'28px 28px 22px', position:'relative'
+  });
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.textContent = '×';
+  Object.assign(closeBtn.style, {
+    position:'absolute', top:'-22px', right:'-58px',
+    fontSize:'68px', lineHeight:'1', border:'0', background:'transparent',
+    cursor:'pointer', color:'#fff', padding:'4px 8px'
+  });
+
+  const hero = document.createElement('div');
+  hero.style.display = 'grid';
+  hero.style.placeItems = 'center';
+  hero.style.gap = '16px';
+  hero.style.marginTop = '6px';
+
+  const pin = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  pin.setAttribute('viewBox','0 0 24 24');
+  pin.setAttribute('aria-hidden','true');
+  pin.style.width = '56px'; pin.style.height='56px';
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','M12 2C8.14 2 5 5.14 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z');
+  path.setAttribute('fill','currentColor');
+  pin.appendChild(path);
+
+  const title = document.createElement('div');
+  title.textContent = 'Location found';
+  title.style.fontSize = '24px';
+  title.style.fontWeight = '700';
+
+  const addr = document.createElement('div');
+  addr.style.textAlign = 'center';
+  addr.innerHTML = `
+    <div style="font-size:16px;font-weight:600;">${two.line1}</div>
+    <div style="font-size:15px;opacity:.9;margin-top:2px;">${two.line2}</div>
+  `;
+
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.justifyContent = 'center';
+  actions.style.gap = '12px';
+  actions.style.marginTop = '22px';
+
+  const confirm = document.createElement('button');
+  confirm.type = 'button';
+  confirm.textContent = 'CONFIRM ADDRESS';
+  Object.assign(confirm.style, {
+    border:'0', borderRadius:'8px', padding:'12px 20px', fontWeight:'700',
+    background:'#ff6a00', color:'#fff', cursor:'pointer'
+  });
+
+  // compose
+  hero.appendChild(pin);
+  hero.appendChild(title);
+  hero.appendChild(addr);
+  actions.appendChild(confirm);
+  card.appendChild(closeBtn);
+  card.appendChild(hero);
+  card.appendChild(actions);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  // block page scroll while open
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  // close only with × (backdrop clicks do nothing)
+  closeBtn.addEventListener('click', () => {
+    overlay.remove();
+    document.body.style.overflow = prevOverflow;
+  });
+
+  // confirm: fill and close
+  confirm.addEventListener('click', () => {
+    fillAddressForm(form, mapped);
+    overlay.remove();
+    document.body.style.overflow = prevOverflow;
+    showSnack('Address filled from current location.', { timeout: 2200 });
+  });
+  /* ====== /REPLACED MODAL ====== */
+}
+
+// keep your global document listener as-is
+document.addEventListener('click', (e)=>{
+  const b = e.target.closest('.btn-geo');
+  if (!b) return;
+  e.preventDefault();
+  if (b.dataset.busy === '1') return;
+  b.dataset.busy = '1';
+  handleUseLocation(b).finally(()=> b.dataset.busy = '0');
+});
+
+// NEW: also listen on the inline-add wrapper (covers dynamically mounted form)
+document.getElementById('addrow-wrap')?.addEventListener('click', (e)=>{
+  const b = e.target.closest('.btn-geo');
+  if (!b) return;
+  e.preventDefault();
+  if (b.dataset.busy === '1') return;
+  b.dataset.busy = '1';
+  handleUseLocation(b).finally(()=> b.dataset.busy = '0');
+});
+
+// === Mark cart as "dirty" whenever ORDER SUMMARY is changed ===
+(function cartDirtyTracker(){
+  const setDirty = () => { try { localStorage.setItem('nc_cart_dirty', '1'); } catch {} };
+
+  // Common buttons in your Summary area
+  document.addEventListener('click', (e) => {
+    if (
+      e.target.closest(
+        '#step-summary .step-body .qty-plus, ' +
+        '#step-summary .step-body .qty-minus, ' +
+        '#step-summary .step-body .btn-remove, ' +
+        '#step-summary .step-body .btn-delete, ' +
+        '#step-summary .step-body .remove, ' +
+        '#step-summary .step-body [data-action="inc"], ' +
+        '#step-summary .step-body [data-action="dec"], ' +
+        '#step-summary .step-body [data-action="remove"]'
+      )
+    ) setDirty();
+  });
+
+  // Typing a quantity directly
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('#step-summary .step-body input.qty, #step-summary .step-body input[name="qty"], #step-summary .step-body [data-qty-input]')) {
+      setDirty();
+    }
+  });
+
+  // As a safety net: if *anything* in the summary rows mutates (qty text, row removed), mark dirty.
+  const sumBody = document.querySelector('#step-summary .step-body');
+  if (sumBody) {
+    const mo = new MutationObserver(() => setDirty());
+    mo.observe(sumBody, { childList: true, subtree: true, characterData: true });
+  }
+})();
+
+function selectAddress(addrId) {
+    const input = document.getElementById('address_id_input');
+    if (input) input.value = String(addrId);
+}
+
+
+(function(){
+  const modal = document.getElementById('session-modal');
+  const back  = document.getElementById('session-backdrop');
+  const closeOutside = document.getElementById('session-close-outside');
+  const whyLink  = document.getElementById('why-link');
+  const whyBlock = document.getElementById('session-why-text');
+
+  function open(){ modal.style.display='block'; back.style.display='block'; }
+  function shut(){ modal.style.display='none'; back.style.display='none'; }
+
+  // NEW: read the flag if present
+  const initialExpired =
+    (document.getElementById('order-root')?.dataset.sessionExpired === '1') ||
+    (document.body.dataset.sessionExpired === '1');
+
+  if (initialExpired) {
+    open();
+  } else {
+    // Fallback: ping userview; open if unauthorized
+    fetch('/api/userview/', { credentials:'same-origin' })
+      .then(r => { if (r.status !== 200) open(); })
+      .catch(open);
+  }
+
+
+  // modal-only scroll lock
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+
+  function open(){ modal.style.display='block'; back.style.display='block'; lockScroll(); }
+  function shut(){ modal.style.display='none'; back.style.display='none'; unlockScroll(); }
+
+  // Why toggle: blue on hover via CSS; red once clicked via .clicked class
+  function toggleWhy(e){
+    e.preventDefault();
+    if (!whyLink || !whyBlock) return;
+    const open = whyBlock.style.display !== 'block';
+    whyBlock.style.display = open ? 'block' : 'none';
+    whyLink.classList.toggle('clicked', open);              // red when open
+    whyLink.textContent = open ? 'Hide details' : 'Why did this happen?';
+  }
+
+  closeOutside?.addEventListener('click', shut);
+  back?.addEventListener('click', shut);
+  whyLink?.addEventListener('click', toggleWhy);
+
+  // Only show the modal if the session is STILL bad now
+  fetch('/api/userview/', { credentials:'same-origin' })
+    .then(r => { if (r.status !== 200) open(); })
+    .catch(open);
+})();
+
 </script>
-</body>
-</html>
+{% endblock %}

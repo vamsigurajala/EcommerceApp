@@ -23,6 +23,26 @@ from productservice.settings import user_url, product_url, cart_url, order_url, 
 # Create your views here.
 
 
+# products/utils.py
+import hashlib, random, string
+
+ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no confusing chars
+def encode_pk(pk: int, salt: str = "prd-v1") -> str:
+    # deterministic short id from pk (base32-like)
+    h = hashlib.sha1(f"{salt}-{pk}".encode()).digest()
+    # 10 chars from hash
+    n = int.from_bytes(h[:8], "big")
+    out = []
+    for _ in range(10):
+        n, r = divmod(n, len(ALPHABET))
+        out.append(ALPHABET[r])
+    return "".join(out)
+
+def gen_product_code(pk: int) -> str:
+    return f"PR{encode_pk(pk)}"
+
+
+
 class PageSizePagination(PageNumberPagination): 
     page_size = 2 #default pagesize is 2
 
@@ -165,3 +185,12 @@ class SingleProductAPIView(APIView):
         serializer = ProductSerializer(product, context={'request':request})
         #print(serializer)
         return Response(serializer.data)
+    
+from django.shortcuts import get_object_or_404
+
+class ProductByCodeAPIView(APIView):
+    def get(self, request, code, **kwargs):
+        product = get_object_or_404(Product, product_code=code)
+        serializer = ProductSerializer(product, context={'request': request})
+        return Response(serializer.data)
+

@@ -1,235 +1,1042 @@
 {% extends 'changemode.html' %}
+{% load static %}
+{% block title %}Novacart Orders Page{% endblock %}
+
 {% block extra_style %}
 <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
 <style>
-  body, .orders-container, table, th, td, .order-datetime { font-family: 'Inter', Arial, sans-serif; }
+/* root variables */ :root{--ink:#0f172a;--ink-soft:#64748b;--paper:#ffffff;--bg:#f6f7f9;--line:#e5e7eb;--radius:12px;--shadow:0 2px 6px rgba(0,0,0,.06),0 12px 28px rgba(0,0,0,.08);--ok:#16a34a;--warn:#f59e0b;--bad:#ef4444;--nav-height:64px;--header-h:64px;--top-gap:14px;--search-h:48px;--content-max:1360px;--right-w:440px;--gap-xl:40px;}
+/* base body (light) */ body{background:var(--bg);font-family:'Inter',system-ui,Arial,sans-serif;color:var(--ink);}
+/* base body (dark) */ body.dark-mode{background:#0d0d0d;color:#fff;}
+/* shell width */ .orders-shell{max-width:1100px;margin:0 auto;padding:0 16px;}
+/* spacer strip off */ .filters-spacer{height:0;}
+/* search wrapper */ .search-wrap{position:relative;}
+/* search input */ .search-wrap input{width:100%;height:48px;padding:12px 14px 12px 44px;border:1px solid var(--line);border-radius:6px;background:#fff;outline:none;font-size:15px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+/* search icon */ .search-wrap .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:url("{% static 'images/magnifier.png' %}") center/contain no-repeat;opacity:.7;}
+/* dark input */ body.dark-mode .search-wrap input{background:#1b1b1b;border-color:#2a2a2a;color:#fff;}
+/* dark icon */ body.dark-mode .search-wrap .icon{opacity:.85;}
+/* layout grid */ .layout{display:grid;grid-template-columns:300px 1fr;gap:16px;margin:8px 0 16px;}
+/* layout stack (≤640px) */ @media (max-width:640px){.layout{grid-template-columns:1fr;}}
+/* filters panel */ .filters{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);height:max-content;}
+/* filters panel dark */ body.dark-mode .filters{background:#161616;border-color:#2a2a2a;}
+/* filters header row */ .filters .header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+/* filters title */ .filters h3{margin:0;font-size:18px;}
+/* clear all link (hidden by default) */ .clear-all{display:none;background:none;border:none;padding:0;color:#2563eb;font-weight:700;font-size:13px;cursor:pointer;}
+/* clear all visible */ .clear-all.show{display:inline-block;}
+/* group block */ .group{margin-top:14px;}
+/* group title */ .group-title{font-weight:800;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.03em;color:#374151;}
+/* group title dark */ body.dark-mode .group-title{color:#e5e7eb;}
+/* group row grid */ .row{display:grid;gap:8px;}
+/* filter label */ .filters label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;}
+/* filter checkbox */ .filters input[type="checkbox"]{cursor:pointer;}
+/* sticky header adjustments */ header.topbar{position:fixed;top:0;left:0;right:0;height:var(--header-h);z-index:1000;overflow:visible;padding-right:72px;}
+/* theme toggle in header */ header.topbar #theme-toggle{margin-right:8px;position:relative;}
+/* tooltip under toggle */ header.topbar .theme-tooltip{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);margin:0;z-index:2000;}
+/* cards grid */ .cards{display:grid;grid-template-columns:1fr;gap:12px;}
+/* card container */ .card{display:grid;grid-template-columns:80px 1fr 120px 260px;grid-template-rows:auto auto;align-items:start;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:var(--shadow);transform:translateZ(0);transition:transform .12s ease,box-shadow .12s ease;height:110px;position:relative;content-visibility:auto;contain-intrinsic-size:110px 860px;cursor:pointer;}
+/* card thumb align */ .card .thumb{align-self:start;}
+/* card hover lift */ .card:hover{transform:translateY(-2px);box-shadow:0 3px 8px rgba(0,0,0,.08),0 14px 30px rgba(0,0,0,.10);}
+/* card dark */ body.dark-mode .card{background:#171717;border-color:#2a2a2a;}
+/* hover chip */ .hover-chip{position:absolute;top:-10px;right:12px;background:#111827;color:#fff;font-size:11px;padding:3px 6px;border-radius:4px;opacity:0;transform:translateY(4px);transition:all .12s ease;pointer-events:none;box-shadow:0 4px 10px rgba(0,0,0,.25);}
+/* hover chip show */ .card:hover .hover-chip{opacity:1;transform:translateY(0);}
+/* hover chip dark */ body.dark-mode .hover-chip{background:#0b0b0b;}
+/* product thumb */ .thumb{width:80px;height:80px;border-radius:8px;background:#f7f7f7;display:grid;place-items:center;overflow:hidden;}
+/* thumb img */ .thumb img{width:100%;height:100%;object-fit:contain;}
+/* thumb dark */ body.dark-mode .thumb{background:#262626;}
+/* top row (title/price/status) */ .top-row{grid-column:2 / 5;display:grid;grid-template-columns:1fr 120px 220px;gap:14px;align-items:baseline;}
+/* meta block for title */ .meta{min-width:0;align-self:start;padding-top:2px;}
+/* product name */ .name{font-weight:500;font-size:15px;line-height:1.25;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* price column */ .price-col{display:grid;place-items:center;font-weight:600;font-size:16px;}
+/* actions column */ .act{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:8px;}
+/* status line */ .statusline{font-size:12px;color:#6b7280;display:flex;align-items:center;gap:8px;white-space:nowrap;}
+/* status line dark */ body.dark-mode .statusline{color:#cbd5e1;}
+/* square status swatch */ .sq{width:10px;height:10px;border-radius:2px;display:inline-block;}
+/* square colors */ .sq.ok{background:var(--ok);} .sq.warn{background:var(--warn);} .sq.bad{background:var(--bad);}
 
-  .orders-container{
-  width: 70vw;            /* same as cart */
-  max-width: 1900px;      /* same as cart */
-  min-height: 300px;      /* keeps the box visible when empty */
-  margin: 32px auto 0;
-  padding: 16px 20px 24px;
-  background:#fff;
-  border-radius:12px;
-  box-shadow:0 0 22px rgba(0,0,0,.13);
-  position:relative;
+/* empty state container */ .empty{min-height:40vh;display:grid;place-items:center;text-align:center;gap:6px;background:transparent;border:1px dashed var(--line);border-radius:12px;padding:24px;}
+/* empty state image */ .empty img{width:220px;height:auto;object-fit:contain;margin-bottom:8px;}
+/* empty state title */ .empty h4{margin:0;font-size:18px;font-weight:600;color:#111827;}
+/* empty state text */ .empty p{margin:2px 0 0;font-size:13px;color:#6b7280;}
+/* empty state button */ .empty .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:6px;background:#1e40af;color:#fff;text-decoration:none;font-weight:600;}
+/* wider columns on ≥681px */ @media (min-width: 681px){.card{grid-template-columns:80px minmax(180px,1fr) 110px 300px;}}
+/* hide spacer on mobile ≤640px */ @media (max-width:640px){.filters-spacer{display:none;}}
+/* search container width rules */ .search-wrap{width:100% !important;max-width:none !important;margin:0 !important;position:relative;}
+/* search input height/radius */ .search-wrap input{height:var(--search-h) !important;border-radius:8px !important;}
+/* explicit search input sizing */ .search-wrap input{height:56px !important;border-radius:8px !important;}
+/* top gap variable */ :root{--top-gap:18px;}
+/* left placeholder width/height */ .filters-spacer{width:300px;height:0;}
+/* empty box solid border */ .empty{border:1px solid var(--line) !important;}
+/* empty box dark border */ body.dark-mode .empty{border-color:#2a2a2a !important;}
+/* cards list becomes flex */ .cards{display:flex;flex-direction:column;gap:12px;}
+/* tall empty for viewport calc */ .empty{min-height:calc(100vh - (var(--header-h) + var(--search-h) + 120px));margin-top:0 !important;display:grid;place-items:center;text-align:center;gap:6px;background:transparent;border:1px solid var(--line);border-radius:12px;padding:24px;}
+/* filters spacer 1px row align */ .filters-spacer{width:300px;height:1px;}
+/* sticky bars base */ header,.navbar,nav,.site-header{position:sticky;top:0;z-index:1200;width:100%;}
+/* prevent horizontal overflow */ html,body{box-sizing:border-box;overflow-x:hidden;}
+/* inherit border-box */ *,*::before,*::after{box-sizing:inherit;}
+/* shared sidebar width var */ .orders-shell{--side-w:300px;}
+/* sticky search under header */ .orders-topbar-wrap{position:sticky;top:var(--header-h);background:transparent;padding:8px 0;margin:0;box-shadow:none;}
+/* ensure header above */ header,.navbar,.site-header{position:sticky;top:0;z-index:100;}
+/* tooltip libs on top */ .tooltip,[data-tooltip],.tippy-box{z-index:3000 !important;}
+/* row: spacer + search */ .orders-topbar{display:grid !important;grid-template-columns:var(--side-w) 1fr;gap:16px;align-items:center;padding:0 !important;}
+/* mode toggle spacing */ header .mode-toggle{margin-right:16px !important;}
+/* filters spacer width|h */ .filters-spacer{width:var(--side-w);height:1px;}
+/* page two-column grid */ .layout{display:grid;grid-template-columns:var(--side-w) 1fr;gap:16px;margin:0;align-items:start;}
+/* search spans cards col */ .search-wrap{width:100% !important;max-width:none !important;margin:0 !important;position:relative;}
+/* search input sizing var */ :root{--search-h:56px;}
+/* search input height */ .search-wrap input{height:var(--search-h) !important;border-radius:8px !important;}
+/* space under sticky search */ .orders-topbar-wrap + .layout{padding:4px 0;}
+/* mobile single column */ @media (max-width:640px){.orders-topbar{grid-template-columns:1fr;}.filters-spacer{display:none;}.layout{grid-template-columns:1fr;}}
+/* border-box + no x-scroll */ html,body{box-sizing:border-box;overflow-x:hidden;}
+/* inherit box sizing */ *,*::before,*::after{box-sizing:inherit;}
+/* keep content below search */ .orders-topbar-wrap + .layout{margin-top:8px;}
+/* (typo preserved intentionally) */ before,*::after{box-sizing:inherit;}
+/* allow page to grow */ body,main,.orders-shell{min-height:100vh;}
+/* no extra top margins */ .cards,.empty{margin-top:0 !important;}
+/* prevent horizontal scroll */ html,body{overflow-x:hidden;}
+/* tiny gap under search */ .orders-topbar-wrap + .layout{margin-top:4px;}
+/* duplicate side width var */ .orders-shell{--side-w:300px;}
+/* sticky search row again */ .orders-topbar-wrap{position:sticky;top:var(--header-h);background:transparent;padding:8px 0;margin:0;box-shadow:none;}
+/* spacer|search grid row */ .orders-topbar{display:grid !important;grid-template-columns:var(--side-w) 1fr;gap:16px;align-items:center;padding:0 !important;}
+/* 2-col grid mirrors row */ .layout{display:grid;grid-template-columns:var(--side-w) 1fr;gap:16px;margin:0;align-items:start;}
+/* placeholder width/height */ .filters-spacer{width:var(--side-w);height:1px;}
+/* gap under sticky search */ .orders-topbar-wrap + .layout{margin-top:4px;}
+/* empty min-height tuned */ .empty{min-height:calc(100vh - (var(--header-h) + var(--search-h) + 120px));margin-top:0 !important;display:grid;place-items:center;text-align:center;gap:6px;background:transparent;border:1px solid var(--line);border-radius:12px;padding:24px;}
+/* no extra top margins */ .cards,.empty{margin-top:0 !important;}
+/* search height var */ :root{--search-h:56px;}
+/* search sizing keep */ .search-wrap{width:100% !important;max-width:none !important;margin:0 !important;position:relative;}
+/* search input sizing */ .search-wrap input{height:var(--search-h) !important;border-radius:8px !important;}
+/* tiny gap under search */ .orders-topbar-wrap + .layout{margin-top:4px;}
+/* column width sync */ .orders-shell{--side-w:300px;}
+/* topbar row grid */ .orders-topbar{display:grid !important;grid-template-columns:var(--side-w) 1fr;gap:16px;align-items:center;}
+/* page grid sync */ .layout{display:grid;grid-template-columns:var(--side-w) 1fr;gap:16px;align-items:start;}
+/* spacer dims */ .filters-spacer{width:var(--side-w);height:1px;}
+/* search height var note */ :root{--search-h:56px;}
+/* row padding match */ .orders-topbar-wrap{padding:8px 0;}
+/* visual nudge var */ :root{--filters-nudge:16px;}
+/* filters sticky + translate */ .filters{position:sticky;top:var(--header-h);transform:translateY(calc(-1 * (var(--search-h) + var(--filters-nudge))));margin-top:0 !important;}
+/* empty height tweak */ .empty{min-height:calc(100vh - (var(--header-h) + var(--search-h) + 110px));margin-top:0 !important;}
+/* no extra margins */ .cards,.empty{margin-top:0 !important;}
+/* lock search width */ .search-wrap{width:100% !important;margin:0 !important;position:relative;}
+/* search input radius */ .search-wrap input{height:var(--search-h) !important;border-radius:8px !important;}
+/* make columns equal height when empty exists */ .layout:has(.empty){align-items:stretch;}
+/* empty fills track */ .layout:has(.empty) .empty{height:82%;min-height:0;}
+/* navbar above all */ header.topbar{position:fixed;top:0;z-index:2000;}
+/* sticky search below navbar */ .orders-topbar-wrap{position:sticky;top:var(--header-h);}
+/* ensure base stacking contexts */ .orders-shell,.layout{position:relative;z-index:0;}
+/* allow scroll; avoid x jiggle */ html,body{overflow-y:auto;overflow-x:hidden;height:auto;}
+/* prefer min-height over 100vh */ body,main,.orders-shell{min-height:100vh;}
+/* unhide overflow if forced hidden (optional) */ body *[style*="overflow:hidden"]{overflow:visible;}
+/* pad page below fixed header */ .orders-shell{padding-top:calc(var(--header-h) + 8px);}
+/* allow any axis scroll; auto height */ html,body{overflow-x:auto;overflow-y:auto;height:auto;}
+/* footer container */ .list-footer{margin:16px 0 24px;display:flex;justify-content:center;align-items:center;gap:12px;}
+/* primary hues */ :root{--primary:#2563eb;}
+/* dark primary hue */ body.dark-mode{--primary:#60a5fa;}
+/* “No more results” chip (old variant) */ .nomore{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:transparent;border:none;box-shadow:none;color:var(--primary);font-weight:600;border-radius:999px;width:max-content;}
+/* tiny dot before chip text */ .nomore::before{content:"";width:6px;height:6px;border-radius:999px;background:var(--primary);opacity:.6;}
+/* pager no panel */ .pager{background:transparent;border:none;box-shadow:none;padding:0;display:flex;justify-content:center;align-items:center;gap:8px;}
+/* pager buttons and current */ .pager a,.pager span.current{padding:8px 12px;border-radius:8px;border:1px solid var(--line);text-decoration:none;font-weight:600;background:transparent;}
+/* current page pill */ .pager span.current{background:var(--primary);color:#fff;border-color:var(--primary);}
+/* disabled pager link */ .pager a.disabled{pointer-events:none;opacity:.45;}
+/* hide footer when empty present (modern) */ .cards:has(.empty) + .list-footer{display:none;}
+/* hide footer safety rule */ .layout:has(.empty) .list-footer{display:none;}
+/* footer layout repeat */ .list-footer{margin:16px 0 24px;display:flex;justify-content:center;}
+/* hide footer when empty present (repeat) */ .cards:has(.empty) + .list-footer{display:none;}
+/* new “No more results” chip */ .nomore{all:unset;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#f8fafc;color:#1e40af;font-weight:600;box-shadow:var(--shadow);}
+/* chip dot currentColor */ .nomore::before{content:"";width:6px;height:6px;border-radius:999px;background:currentColor;opacity:.75;}
+/* dark chip style */ body.dark-mode .nomore{background:rgba(255,255,255,.06);border-color:#2a2a2a;color:#60a5fa;box-shadow:none;}
+/* pager reset -> pills */ .pager{all:unset;display:flex;align-items:center;gap:8px;}
+/* pager items */ .pager a,.pager span.current{display:inline-flex;justify-content:center;align-items:center;min-width:36px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);text-decoration:none;font-weight:600;background:transparent;color:var(--ink);}
+/* pager hover bg */ .pager a:hover{background:rgba(0,0,0,.04);}
+/* disabled pager */ .pager a.disabled{pointer-events:none;opacity:.5;}
+/* active page pill */ .pager span.current{background:#1e40af;border-color:#1e40af;color:#fff;}
+/* dark mode pager links */ body.dark-mode .pager a{border-color:#2a2a2a;color:#e5e7eb;}
+/* dark mode pager hover */ body.dark-mode .pager a:hover{background:rgba(255,255,255,.06);}
+/* dark active page */ body.dark-mode .pager span.current{background:#2563eb;border-color:#2563eb;color:#fff;}
+/* press effect text only */ .pager a:active{color:#ef4444;background:transparent;border-color:inherit;}
+/* dark press effect */ body.dark-mode .pager a:active{color:#f87171;background:transparent;}
+/* force remove dot */ .nomore::before{display:none !important;}
+/* filters: stick above search + z-index */ .filters{position:sticky !important;top:calc(var(--header-h) + var(--search-h) - 6px) !important;transform:translateY(calc(-1 * (var(--search-h) + var(--filters-nudge, 12px)))) !important;z-index:1501 !important;isolation:isolate;}
+/* pointer-events pass through row except input */ .orders-topbar{pointer-events:none;}
+/* keep search interactive */ .search-wrap,.search-wrap *{pointer-events:auto;}
+/* header row clickable over filters */ .filters .header-row{position:relative;z-index:2;}
+/* clear all button hand cursor */ #clearAll.clear-all{cursor:pointer !important;pointer-events:auto !important;}
+
+/* 1) Let clicks go THROUGH the top row everywhere except on the actual search input area */ .orders-topbar,.orders-topbar .filters-spacer{pointer-events:none !important;/* no interception over the filters */}
+/* search stays usable */ .orders-topbar .search-wrap{pointer-events:auto !important;}
+/* 2) Keep the stacking order sane: filters above, topbar below */ .filters{z-index:1600 !important;isolation:isolate;/* create its own stacking context */}
+/* 3) Make sure "Clear all" looks and behaves like a button */ .clear-all{cursor:pointer !important;pointer-events:auto !important;}
+/* Make the orders page render at ~110% even when browser zoom is 100% */ @supports not (zoom:1){.orders-shell{transform:scale(1.1);transform-origin:top center;width:calc(100% / 1.1);/* prevents horizontal overflow after scale */}}
+/* Give the content a little more width and trim the sidebar slightly */ .orders-shell{max-width:var(--content-max);} /* was 1100px */
+/* Sidebar width tweak */ .orders-shell{--side-w:280px;} /* was 300px */
+/* Flipkart-like breadcrumb (smaller, nudged right/down) */ .crumbs{display:flex;align-items:center;gap:6px;font-size:12px;line-height:1;color:var(--ink-soft);margin:10px 0 4px 12px;}
+/* breadcrumb link */ .crumbs a{color:inherit;text-decoration:none;font-weight:500;}
+/* breadcrumb hover */ .crumbs a:hover{color:#2563eb;}
+/* breadcrumb separator */ .crumbs .sep{opacity:.6;}
+/* breadcrumb current */ .crumbs .current{font-weight:500;}
+/* breadcrumb results count */ .crumb-results{margin-left:6px;font-size:12px;color:var(--ink-soft);}
+ /* breadcrumb results dark */ body.dark-mode .crumb-results{color:#9aa4b2;}
+/* crumbs dark base */ body.dark-mode .crumbs{color:#94a3b8;}
+/* crumbs dark hover */ body.dark-mode .crumbs a:hover{color:#60a5fa;}
+/* Make the whole card clickable without blocking the action buttons */ .card{position:relative;}
+/* stretched link layer */ .card .stretched-link{position:absolute;inset:0;z-index:1;color:inherit;text-decoration:none;}
+/* action buttons above link */ .act a,.btn-action{position:relative;z-index:2;}
+/* Search wrapper */ .search-wrap{position:relative;width:100%;}
+/* search icon */ .search-wrap .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;opacity:.65;}
+/* Beautiful input (light + dark) */ .search-wrap input{width:100%;height:56px;padding:12px 44px 12px 44px;/* room for 🔍 and × */border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#ffffff,#fafafa);box-shadow:0 1px 2px rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.6);font-size:15px;color:var(--ink);outline:none;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;}
+/* placeholder color */ .search-wrap input::placeholder{color:#9ca3af;}
+/* Hover state */ .search-wrap input:hover{border-color:#cbd5e1;}
+/* Focus state */ .search-wrap input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15),0 1px 2px rgba(0,0,0,.05);background:#fff;}
+/* Dark mode input */ body.dark-mode .search-wrap input{background:linear-gradient(180deg,#1a1a1a,#171717);border-color:#2a2a2a;color:#e5e7eb;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}
+ /* Dark placeholder */ body.dark-mode .search-wrap input::placeholder{color:#9aa4b2;}
+/* Dark focus */ body.dark-mode .search-wrap input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.18);}
+ /* Dark icon opacity */ body.dark-mode .search-wrap .icon{opacity:.85;}
+/* Minimal fixes for the × button */ .search-wrap{position:relative;}
+/* clear (×) button */ .search-wrap .search-clear{cursor:pointer !important;/* hand cursor */pointer-events:auto !important;z-index:3;/* stay above input */}
+/* clear in dark */ body.dark-mode .search-wrap .search-clear{color:#fff !important;/* white in dark mode */}
+/* clear hover dark */ body.dark-mode .search-wrap .search-clear:hover{background:rgba(255,255,255,.12);}
+ /* Make the card link cover the whole card without changing layout */ .card{position:relative;}
+/* absolute full-cover link */ .card .card-link{position:absolute;inset:0;/* top:0 right:0 bottom:0 left:0 */z-index:5;/* above card content */text-indent:-9999px;/* hide text if any */background:transparent;cursor:pointer;/* hand cursor */}
+/* Safety: ensure nothing inside the card blocks the click */ .card *{pointer-events:none;}
+/* but the link itself clickable */ .card .card-link{pointer-events:auto;}
+/* ---- aligned status chip on the right ---- */ .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1;border:1px solid transparent;white-space:nowrap;}
+/* failed chip */ .chip-failed{background:#251317;/* dark red bg (works in dark mode too) */color:#ffb3c1;/* soft red text */border-color:rgba(255,154,162,.35);}
+ /* ---- small blue note that lives under the product title ---- */ .order-note{margin-top:6px;/* sits just under the title */max-width:560px;/* stays beneath the title column */font-size:12px;line-height:1.35;padding:8px 10px;border-radius:8px;background:#eef2ff;/* blue-ish */border:1px solid #dbeafe;color:#0f172a;}
+/* dark note */ body.dark-mode .order-note{background:rgba(56,139,253,.10);border-color:rgba(56,139,253,.35);color:#b9cffc;}
+/* slightly smaller title so the note feels tucked under it */ .name{font-size:14px;}
+/* The actions/status column sits at the far right; contents align left */ .act{justify-self:end;/* push the whole block to the card’s right edge */width:max-content;/* shrink-wrap to its content */max-width:360px;/* safety cap so it never gets too wide */align-items:flex-start;/* keep left edges aligned inside the block */text-align:left;}
+/* Buttons stick to that left edge as well */ .btn-action{align-self:flex-start;}
+/* Flipkart-ish blue outlined payment note (stronger rim, smaller text) */ .card .order-note{display:inline-block;margin-top:6px;max-width:560px;font-size:10px;/* smaller text */line-height:1.35;padding:6px 10px;border-radius:8px;background:#f5f9ff;/* very light blue */border:1px solid #7aa7ff;/* visible blue border */box-shadow:inset 0 0 0 1px rgba(122,167,255,.35);/* extra rim for punch */color:#0f172a;}
+/* dark variant of card note */ body.dark-mode .card .order-note{background:rgba(122,167,255,.10);border-color:#6ea8ff;box-shadow:inset 0 0 0 1px rgba(110,168,255,.35);color:#dbe7ff;}
+/* tuck the title */ .card .meta .name{font-size:14px;margin-bottom:2px;}
+/* right column layout right aligned */ .act{display:flex;flex-direction:column;align-items:flex-end;/* hard right */gap:10px;text-align:right;}
+/* status wrapper right aligned */ .status-wrap{display:flex;flex-direction:column;align-items:flex-end;max-width:320px;}
+/* status line */ .statusline{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;line-height:1.2;}
+/* status subtext */ .status-sub{margin-top:2px;font-size:12px;line-height:1.35;color:#6b7280;}
+/* status sub dark */ body.dark-mode .status-sub{color:#9aa4b2;}
+/* --- hard alignment: image | title | price | STATUS/BUTTON (fixed) --- */ .card{grid-template-columns:80px minmax(220px,1fr) 120px 260px;/* last col fixed */}
+/* pin right column and align left inside */ .act{justify-self:end;/* sits at the card's right edge */width:260px;/* same width as the grid track above */align-items:flex-start;/* LEFT-align contents inside */text-align:left;gap:10px;}
+/* keep status + subtext left-aligned within that column */ .status-wrap{width:100%;display:flex;flex-direction:column;align-items:flex-start;}
+/* status line repeat for left block */ .statusline{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;line-height:1.2;}
+/* status sub repeat for left block */ .status-sub{margin-top:2px;font-size:12px;line-height:1.35;color:#6b7280;}
+/* dark sub repeat */ body.dark-mode .status-sub{color:#9aa4b2;}
+/* price right-aligned and locked width */ .price-col{justify-self:end;width:120px;display:flex;justify-content:flex-end;font-weight:700;}
+/* === widen cards + push the right column further right =================== */ .orders-shell{max-width:min(1360px,96vw) !important;/* wider than before, but still responsive */--side-w:260px;/* was 280/300 earlier */}
+/* Card column widths expanded */ .card{grid-template-columns:80px minmax(260px,1fr) 120px 380px !important;/* <- more space on the far right */column-gap:28px !important;/* a touch more gap between columns */}
+/* Right block fixed width behavior */ .act{justify-self:end;/* push to the far right */width:380px !important;/* match the grid’s last track */max-width:380px !important;align-items:flex-start;text-align:left;gap:10px;}
+/* Price narrow + right */ .price-col{width:120px !important;display:flex;justify-content:flex-end;font-weight:700;}
+/* Subtext ellipsis */ .act .status-sub,.act .subtext{ /* whichever class you used */ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+/* Slightly tighter card padding */ .card{padding:12px 16px !important;}
+/* === FINAL LAYOUT TWEAKS (right column pinned far right; page a bit narrower) === */ :root{--content-max:1300px;/* slightly narrower than before */--side-w:260px;/* sidebar width */--right-w:420px;/* wider right column, anchored to far right */--gap-xl:32px;/* space between price and right column */}
+/* shell width cap */ .orders-shell{max-width:min(var(--content-max),98vw) !important;}
+/* image | title | price | RIGHT column (fixed width) */ .card{grid-template-columns:80px minmax(300px,1fr) 120px var(--right-w) !important;column-gap:var(--gap-xl) !important;padding:12px 14px !important;}
+/* price: narrow & right-aligned */ .price-col{width:120px !important;justify-self:end !important;display:flex;justify-content:flex-end;font-weight:700;}
+/* right block: fixed width, pinned right edge */ .act{justify-self:end !important;width:var(--right-w) !important;max-width:none !important;align-items:flex-start !important;text-align:left !important;gap:8px;padding-right:6px;/* tiny inner gutter from the edge */}
+/* keep two lines single-line with ellipsis */ .statusline,.status-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* === Buttons with icons =================================================== */ .btn-action{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;}
+/* inline SVG size */ .btn-action svg{width:16px;height:16px;display:block;}
+/* --- align the 3 elements inside the right block without changing its position/size --- */ 
+/* keep both lines on one row so heights match card-to-card */ .statusline,.status-sub,.eta-date{white-space:nowrap !important;line-height:1.45 !important;/* consistent line height = consistent vertical spacing */}
+/* keep your code as-is */ .card{grid-template-columns:80px minmax(220px,1fr) 120px 1fr !important;padding-right:16px !important;}
+/* right column fixed inner width */ .act{justify-self:end !important;width:var(--act-w,360px) !important;/* fixed inner width keeps left edges aligned */display:flex;flex-direction:column;align-items:flex-start;/* keeps status/subtext/button in one vertical line */gap:8px;}
+/* statusline inside act */ .act .statusline{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
+/* status-sub inside act */ .act .status-sub{white-space:nowrap;}
+/* ↑ alignment done */ :root{--price-right-gap:28px;} /* tweak: 24–40px */
+/* price column spacing */ .price-col{padding-right:var(--price-right-gap);/* adds space after the ₹ column */justify-self:end;/* keep price flush to its right edge */white-space:nowrap;/* prevent wrapping */}
+/* how far the right column sits from the ₹ price */ :root{--price-right-gap:74px;} /* try 44–72px */
+/* keep price flush right, but add space after it */ .price-col{padding-right:var(--price-right-gap);justify-self:end;white-space:nowrap;}
+/* optional: scale the gap on wider screens */ @media (min-width:1280px){:root{--price-right-gap:56px;}}
+/* optional: scale the gap on wider screens */ @media (min-width:1440px){:root{--price-right-gap:72px;}}
+/* backdrop for simple modal */ .se-backdrop{position:fixed;inset:0;display:none;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center;}
+/* show backdrop */ .se-backdrop.show{display:flex;}
+/* modal panel */ .se-modal{width:min(440px,92vw);background:#fff;color:#111;border-radius:12px;padding:18px 16px;box-shadow:0 14px 40px rgba(0,0,0,.25);border:1px solid #e5e7eb;}
+/* modal title */ .se-modal h3{margin:0 0 6px;font-size:18px;}
+/* modal text */ .se-modal p{margin:6px 0 14px;font-size:14px;color:#4b5563;}
+/* modal actions row */ .se-actions{display:flex;gap:10px;justify-content:flex-end;}
+/* modal buttons */ .se-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:600;border:1px solid #d1d5db;}
+/* primary btn */ .se-btn.primary{background:#1e40af;color:#fff;border-color:#1e40af;}
+/* ghost btn */ .se-btn.ghost{background:#fff;color:#111;}
+
+/* dark mode modal panel */ body.dark-mode .se-modal{background:#181818;color:#fff;border-color:#2a2a2a;}
+/* dark mode modal paragraph */ body.dark-mode .se-modal p{color:#9aa4b2;}
+/* dark mode ghost button */ body.dark-mode .se-btn.ghost{background:#181818;color:#e5e7eb;border-color:#2a2a2a;}
+
+/* order card container */ .order-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;margin-bottom:12px;}
+/* order card left cluster */ .order-card .left{display:flex;align-items:center;gap:12px;}
+/* order card thumbnail */ .order-card .thumb{width:64px;height:64px;object-fit:cover;border-radius:8px;}
+/* order card name */ .order-card .name{font-weight:600;}
+/* order card muted text */ .order-card .muted{color:#6b7280;font-weight:500;margin-left:6px;}
+/* order card price */ .order-card .price{font-weight:800;}
+/* order card status subtext */ .order-card .status .sub{font-size:12px;color:#6b7280;margin-top:2px;}
+/* status dot base */ .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+/* status dot colors */ .dot.red{background:#ef4444}.dot.amber{background:#f59e0b}.dot.green{background:#10b981}
+/* link covering whole order row */ .order-link{display:flex;align-items:center;justify-content:space-between;gap:16px;text-decoration:none;color:inherit;width:100%;}
+
+/* restore boxed buttons for Review/Edit (scoped to the cards area) */
+.orders-shell .act .btn-action{display:inline-flex!important;align-items:center;gap:8px;padding:10px 12px;border-radius:6px;border:1px solid #d8d8d8;background:#fff;color:#1f2937;font-weight:700;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:filter .15s ease,transform .06s ease;}
+.orders-shell .act .btn-action:hover{filter:brightness(1.03);}
+.orders-shell .act .btn-action:active{transform:translateY(1px);}
+.orders-shell .act .btn-action svg{width:16px;height:16px;display:block;}
+/* specific colors like before */
+.orders-shell .act .btn-review{background:#f5f0ff;border-color:#e5d7ff;color:#5b21b6;}
+.orders-shell .act .btn-edit{background:#eef5ff;border-color:#d5e5ff;color:#1d4ed8;}
+/* dark mode tweaks so boxes still look boxed */
+body.dark-mode .orders-shell .act .btn-action{background:#1a1a1a;border-color:#2a2a2a;color:#e5e7eb;box-shadow:none;}
+body.dark-mode .orders-shell .act .btn-review{background:rgba(91,33,182,.12);border-color:#3f2a5e;color:#c4b5fd;}
+body.dark-mode .orders-shell .act .btn-edit{background:rgba(29,78,216,.12);border-color:#2a3d71;color:#93c5fd;}
+
+/* allow clicks inside the card again */
+.card *{ pointer-events:auto; }
+
+/* keep the full-card overlay below action buttons */
+.card .card-link{ z-index:1; }
+
+/* make sure action buttons sit above and are clickable */
+.card .act, .card .act *{ position:relative; z-index:2; pointer-events:auto; }
+
+.session-actions{ display:flex; gap:10px; margin-top:12px; }
+.btn-login{
+  display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
+  border-radius:8px; background:#2563eb; color:#fff; font-weight:800; text-decoration:none;
 }
-body.dark-mode .orders-container{ background:#232323; color:#fff; }
+.btn-login:hover{ filter:brightness(1.05); }
+.btn-why{ background:transparent; color:var(--ink-soft); border:0; padding:0; cursor:pointer; }
 
-  h1{ text-align:center; font-size:2.2rem; margin-bottom:10px; font-weight:700; color:#222; }
-  body.dark-mode h1{ color:#fff; }
+#session-expired-modal .btn-login{display:block;width:100%;text-align:center;justify-content:center;padding:14px 16px;border-radius:10px;
+  background:#2563eb;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+#session-expired-modal .btn-login:hover{filter:brightness(1.04);}
+
+/* center the CTA row (if not already) */ 
+.session-actions{display:flex;justify-content:center;}
+
+/* remove underline for "Why did this happen?" */ 
+#session-modal .why a{text-decoration:none;color:inherit;} 
+#session-modal .why a:hover{text-decoration:none;}
+
+/* if you use an outside X, give it a bit more too */ 
+#session-close-outside{font-size:28px;z-index:5002;}
+
+/* link highlight states */
+ #session-modal .why a:hover{color:#2563eb;}
+ #session-modal .why a.clicked{color:#ef4444;}
+
+/* yellow info block, always below the link */ 
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;position:relative;z-index:1;} 
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+
+#session-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:5000;}
+#session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:5001;overflow:visible;}
+#session-modal header{position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;}
+#session-modal header h4{margin:0;text-align:center;}
+#session-close-outside{position:absolute;top:-18px;right:-59px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;font-size:26px;line-height:1;background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;}
+.session-hero{display:block;margin:8px auto 12px;}
+.session-hero img{width:100%;height:auto;display:block;object-fit:contain;border-radius:8px;filter:none;}
+#session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;}
+body.dark-mode #session-modal{background:#161616;color:#fff;border-color:#2a2a2a;}
+body.dark-mode #session-close-outside{background:#161616;color:#cbd5e1;border-color:#2a2a2a;box-shadow:0 6px 18px rgba(0,0,0,.6);}
+body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+
+/* Force the small, bold session title like other pages */
+#session-modal header h1,
+#session-modal header h2,
+#session-modal header h3,
+#session-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;color:var(--ink,#0f172a)!important;}
+/* If you still use the old wrapper id anywhere, cover it too */
+#session-expired-modal header h1,
+#session-expired-modal header h2,
+#session-expired-modal header h3,
+#session-expired-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;}
+/* Dark mode title color */
+body.dark-mode #session-modal header h1,
+body.dark-mode #session-modal header h2,
+body.dark-mode #session-modal header h3,
+body.dark-mode #session-modal header h4{color:#fff!important;}
+
+:root{--spin-color:#7c3aed;}
+/* overlay */
+#vo-spin{position:fixed;inset:0;z-index:99999;display:none;place-items:center;background:rgba(10,10,14,.35);backdrop-filter:blur(2px);}
+#vo-spin.show{display:grid;}
+/* stack + tiny gap */
+#vo-spin .wrap{display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;}
+/* ring */
+#vo-spin .ring{width:64px;height:64px;border-radius:50%;display:block;border:6px solid color-mix(in srgb,var(--spin-color) 20%,transparent);border-top-color:var(--spin-color);border-right-color:color-mix(in srgb,var(--spin-color) 60%,transparent);animation:vo-rot .8s linear infinite;}
+/* label (no extra space) */
+#vo-spin .txt{margin:0;font:700 14px/1.1 Inter,system-ui,Arial,sans-serif;color:#fff;letter-spacing:.2px;opacity:.95;text-shadow:0 1px 0 rgba(0,0,0,.25);}
+/* motion */
+@keyframes vo-rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#vo-spin .ring{animation:none}}
+/* lock page + interaction */
+html.vo-spinning,html.vo-spinning *{cursor:auto !important;}
+html.vo-spinning{caret-color:transparent}
+html.vo-spinning body{user-select:none;overflow:hidden;overscroll-behavior:none;position:fixed;left:0;right:0;width:100%}
+#vo-spin.show{pointer-events:all}
+#vo-spin.show{cursor:pointer;}
+html.vo-lock { overflow:hidden; }
 
 
-  .orders-table-scroll{
-  max-height: calc(70vh - 140px);
-  min-height: 200px;      /* prevents tiny collapse if there are few rows */
-  overflow-y:auto;
-  margin-bottom:20px;
-  border-radius:7px;
-  box-shadow:0 0 3px #eaeaea;
-  scrollbar-width:none;
-}
-.orders-table-scroll::-webkit-scrollbar{ display:none; }
+#toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;display:none;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid #e5e7eb;background:#fff;color:#0f172a;box-shadow:0 8px 30px rgba(0,0,0,.15);font:700 14px/1.2 Inter,system-ui,Arial,sans-serif;pointer-events:auto;}
+#toast.show{display:flex;animation:toastFade 2.1s ease forwards;}
+@keyframes toastFade{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
+#toast .dot{width:22px;height:22px;border-radius:9999px;display:grid;place-items:center;flex:0 0 auto;}
+#toast .dot svg{width:14px;height:14px;display:block;}
+#toast.success .dot{background:#16a34a;}
+#toast.error .dot{background:#ef4444;}
+#toast button{margin-left:6px;border:0;background:transparent;font-size:16px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:8px;color:#6b7280;}
+#toast button:hover{color:#111;}
 
-  .orders-table-scroll table thead th{
-    position:sticky; top:0; z-index:2; background:#222; color:#fff;
-  }
-  body.dark-mode .orders-table-scroll table thead th{ background:#181818; color:#fff; }
-
-  table{ border-collapse:collapse; width:100%; min-width:760px; }
-
-  th,td{ text-align:left; padding:15px 12px; font-size:16px; vertical-align:middle; }
-  th{ background:#222; color:#fff; font-weight:600; letter-spacing:.03em; font-size:17px; }
-  body.dark-mode th{ background:#181818; color:#fff; }
-
-  tr:nth-child(even){ background:#fafafd; }
-  body.dark-mode tr:nth-child(even){ background:#232323; }
-  td{ color:#232323; }
-  body.dark-mode td{ color:#fff; }
-
-  img{ width:64px; height:64px; object-fit:contain; border-radius:7px; background:#f7f7f7; box-shadow:0 1px 5px #eee; display:block; margin:auto; }
-  td.product-name{ font-weight:600; text-align:left; }
-
-  .order-datetime{ text-align:center; font-size:15px; font-weight:500; }
-
-  .order-total-box{
-    display:inline-block; background:#eef3fb; color:#273755; padding:7px 15px 8px; border-radius:7px;
-    font-weight:700; font-size:17px; box-shadow:0 1px 6px rgba(130,130,180,0.09);
-  }
-  body.dark-mode .order-total-box{ background:#222c33; color:#e8e8ff; }
-
-  /* Actions cell */
-  .actions-cell{ white-space:nowrap; }
-  .btn-icon{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:8px 12px; border-radius:8px; border:1px solid #e5e7eb;
-    background:#fff; color:#111827; font-weight:700; text-decoration:none; cursor:pointer;
-    box-shadow:0 1px 2px rgba(0,0,0,.05); transition:transform .05s ease, background .15s;
-    margin-left:8px;
-  }
-  .btn-icon:first-child{ margin-left:0; }
-  .btn-icon:hover{ background:#f8fafc; }
-  .btn-icon:active{ transform:translateY(1px); }
-  .btn-icon svg{ width:16px; height:16px; }
-
-  /* variants */
-  .btn-icon.review{ border-color:#e9d5ff; background:#faf5ff; color:#6b21a8; }
-  .btn-icon.review:hover{ background:#f3e8ff; }
-
-  .btn-icon.edit{ border-color:#dbeafe; background:#eff6ff; color:#1d4ed8; }
-  .btn-icon.edit:hover{ background:#dbeafe; }
-
-  body.dark-mode .btn-icon{ background:#2a2a2a; border-color:#3a3a3a; color:#f3f4f6; }
-  body.dark-mode .btn-icon.review{ background:#341b4f; border-color:#5b2d86; color:#f5e9ff; }
-  body.dark-mode .btn-icon.edit{ background:#1f2a44; border-color:#2b3b65; color:#e8f0ff; }
-  body.dark-mode .btn-icon:hover{ filter:brightness(1.08); }
-
-  .fixed-back-btn{
-    position:fixed; left:30px; top:40px; z-index:1000;
-    background:#333; color:#fff; font-weight:bold; font-size:16px; padding:8px 16px; border-radius:6px; border:none; cursor:pointer;
-  }
-  .fixed-back-btn:hover{ background:#555; }
-
-  @media (max-width: 800px){
-    .orders-container{ max-width:97vw; padding:8px 2vw 16px; }
-    .orders-table-scroll{ max-height:220px; }
-    .fixed-back-btn{ left:10px; top:16px; }
-    table, th, td{ font-size:13px; }
-    h1{ font-size:20px; }
-    .btn-icon{ padding:7px 10px; font-size:12px; }
-  }
-
-  /* Toasts */
-  .toast{
-    position:fixed; right:22px; bottom:22px; display:none; align-items:center; gap:10px;
-    background:#232323; color:#fff; padding:12px 16px; border-radius:10px;
-    box-shadow:0 8px 22px rgba(0,0,0,.25); z-index:2000; font-weight:600;
-  }
-  .toast.show{ display:inline-flex; }
-  .toast.success{ background:#0a7b34; } .toast.error{ background:#b02a37; } .toast.info{ background:#1e5aad; }
-  .toast .spinner{ width:16px; height:16px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation:spin .9s linear infinite; }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
 </style>
 {% endblock %}
 
 {% block content %}
-<button class="btn-back fixed-back-btn" onclick="location.href='/api/paginate/'">Home</button>
-
-<div class="orders-container">
-  <h1>Placed Orders</h1>
-
-  {% if order_data %}
-  <div class="orders-table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Order ID</th>
-          <th>User ID</th>
-          <th>Image</th>
-          <th>Product Name</th>
-          <th>Placed Time</th>
-          <th>Order Status</th>
-          <th>Total Amount</th>
-          <th>Actions</th>   {# NEW COLUMN #}
-        </tr>
-      </thead>
-      <tbody>
-        {% for order in order_data %}
-          {% for item in order.order_items %}
-          <tr>
-            {% if forloop.first %}
-              <td rowspan="{{ order.order_items|length }}">{{ order.order_id }}</td>
-              <td rowspan="{{ order.order_items|length }}">{{ order.user_id }}</td>
-            {% endif %}
-
-            <td><img src="{{ item.image }}" alt="{{ item.product_name }}"></td>
-            <td class="product-name">{{ item.product_name }}</td>
-
-            {% if forloop.first %}
-              <td rowspan="{{ order.order_items|length }}">
-                <div class="order-datetime" data-datetime="{{ order.placed_time|escape }}"></div>
-              </td>
-              <td rowspan="{{ order.order_items|length }}">{{ order.order_status }}</td>
-             <!-- <td rowspan="{{ order.order_items|length }}"><span class="order-total-box">Rs.{{ order.total_amount }}</span></td>-->
-              {% firstof order.summary.final_total order.summary.total_payable order.total_amount "0" as raw_total %}
-              <td rowspan="{{ order.order_items|length }}">
-                <span class="order-total-box">Rs.{{ raw_total|floatformat:2 }}</span>
-              </td>
-            {% endif %}
+<div class="orders-shell" id="order-root"
+     data-session-expired="{% if session_expired %}1{% else %}0{% endif %}">
 
 
-            {# Actions per PRODUCT (sits next to Total Amount) #}
-            <td class="actions-cell">
-              {% if item.my_review_id %}
-            <a class="btn-icon edit" href="/api/reviews/{{ item.product_id }}/?edit=1">
-                  <!-- pencil icon -->
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" stroke-width="2" fill="none"/>
-                    <path d="M14 6l4 4" stroke="currentColor" stroke-width="2" fill="none"/>
-                  </svg>
-                  Edit the Review
-                </a>
-              {% else %}
-                <a class="btn-icon review" href="/api/reviews/{{ item.product_id }}/">
-                  <!-- star icon -->
-                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 17.3l-5.5 3 1.1-6.3L3 9.8l6.3-.9L12 3l2.7 5.9 6.3.9-4.6 4.2 1.1 6.3-5.5-3Z"/>
-                  </svg>
-                  Review Product
-                </a>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        {% endfor %}
-      </tbody>
-    </table>
-
-    {% if messages %}
-      {% for message in messages %}
-        <div id="toast-{{ forloop.counter }}" class="toast {% if message.tags %}{{ message.tags }}{% endif %}" role="status" aria-live="polite" aria-atomic="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.35"/>
-            <path d="M8 12l3 3 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>{{ message }}</span>
-        </div>
-      {% endfor %}
-    {% endif %}
-  </div>
-  {% else %}
-<div style="
-    min-height: 40vh;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; text-align: center;">
-  <p style="font-size:2rem; font-weight:700; margin: 10px 0 6px;">
-    No orders found
-  </p>
-  <p style="font-size:1.2rem; opacity:.85;">
-    Start shopping to place your first order ✨
-  </p>
-</div>
+     
+{% if flash_toast %}
+  <div id="seed-toast" data-kind="{{ flash_toast.kind }}" data-text="{{ flash_toast.text|escape }}" hidden></div>
 {% endif %}
 
+
+{% if dj_messages %}
+  <div id="djMsgs" hidden>
+    {% for m in dj_messages %}
+      <div class="msg" data-tags="{{ m.tags }}" data-text="{{ m.text|escape }}"></div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+
+
+  {% if session_expired %}
+<div id="sessionExpired" class="se-backdrop show" role="dialog" aria-modal="true" aria-labelledby="se-title">
+  <div class="se-modal">
+    <h3 id="se-title">Your session has ended</h3>
+    <p>Please log in again to continue.</p>
+    <div class="se-actions">
+      <a class="se-btn primary" href="/api/login/?next={{ request.path|urlencode }}">Log in</a>
+      <button type="button" id="seDismiss" class="se-btn ghost">Close</button>
+    </div>
+  </div>
 </div>
-
 <script>
-  // Pretty date/time in “Placed Time”
-  document.querySelectorAll('.order-datetime').forEach(function(el){
-    var iso = el.getAttribute('data-datetime'); if(!iso) return;
-    var dt = new Date(iso.replace('Z','')); if (dt.toString()==='Invalid Date'){ el.innerHTML=''; return; }
-    var dateStr = dt.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-    var timeStr = dt.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
-    el.innerHTML = dateStr + "<br><span style='display:block;text-align:center;font-size:14px;'>" + timeStr + "</span>";
-  });
-
-  // Toasts
   (function(){
-    document.querySelectorAll('.toast').forEach(function(t){
-      t.classList.add('show');
-      setTimeout(function(){ t.classList.remove('show'); }, 4800);
-    });
+    var d = document.getElementById('seDismiss');
+    if(d){ d.addEventListener('click', function(){
+      var b = document.getElementById('sessionExpired');
+      if(b){ b.classList.remove('show'); }
+    });}
   })();
 </script>
+{% endif %}
+
+  
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="/api/paginate/">Home</a>
+  <span class="sep">›</span>
+  <a href="/account/">My Account</a>
+  <span class="sep">›</span>
+  <a class="current" href="/api/vieworders/">My Orders</a>
+  <span id="crumbResults" class="crumb-results" hidden>› Search Results</span>
+</nav>
+
+
+  <!-- sticky search row (clean gap below the blue navbar) -->
+  <div class="orders-topbar-wrap">
+  <div class="orders-topbar">
+    <div class="filters-spacer"></div>
+    <div class="search-wrap" role="search">
+        <i class="icon" aria-hidden="true"></i>
+        <input id="orderSearch" type="search" placeholder="Search your orders" autocomplete="off" aria-label="Search orders by product name">
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Filters -->
+    <aside class="filters" aria-label="Filters">
+      <div class="header-row">
+        <h3>Filters</h3>
+        <button id="clearAll" class="clear-all" type="button">Clear all</button>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Order Status</div>
+        <div class="row" id="statusGroup">
+          <label><input type="checkbox" value="On the way"> On the way</label>
+          {# Placed removed as requested #}
+          <label><input type="checkbox" value="Delivered"> Delivered</label>
+          <label><input type="checkbox" value="Cancelled"> Cancelled</label>
+          <label><input type="checkbox" value="Returned"> Returned</label>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-title">Order Time</div>
+        <div class="row" id="timeGroup">
+          <label><input type="checkbox" value="last30"> Last 30 days</label>
+          <label><input type="checkbox" value="year0"><span id="label-year0">This year</span></label>
+          <label><input type="checkbox" value="year1"><span id="label-year1">Last year</span></label>
+          <label><input type="checkbox" value="year2"><span id="label-year2">-2 years</span></label>
+          <label><input type="checkbox" value="year3"><span id="label-year3">-3 years</span></label>
+          <label><input type="checkbox" value="older"> Older</label>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Cards -->
+    <section class="cards" id="cardsList" aria-live="polite">
+      {% if order_data %}
+          {% for order in order_data %}
+          {% with items=order.order_items %}
+              {% with first=items.0 %}
+                {% with more=items|length|add:"-1" %}
+                  {# fallback price from the first item only if you still need it elsewhere #}
+                  {% firstof first.price first.final_price first.total_price first.amount "0" as first_price %}
+
+                  <article class="card"
+                          data-name="{{ first.product_name|lower }}"
+                          data-status="{{ order.order_status|default:'Placed' }}"
+                          data-time="{{ order.placed_ts|default:0 }}">
+
+                    <div class="thumb">
+                      <img src="{{ first.image }}" alt="{{ first.product_name }}" loading="lazy" decoding="async" fetchpriority="low">
+                    </div>
+
+                    <div class="meta">
+                      <div class="name">
+                        {{ first.product_name }}
+                          {% if more > 0 %}
+                          <span class="muted">+ {{ more }} more</span>
+                        {% endif %}
+                      </div>
+
+                      {% if order.order_status == 'Payment Failed' or order.order_status == 'Order Not Placed' %}
+                        <div class="order-note">
+                          Payment not successful. Please contact your bank for any money deducted.
+                        </div>
+                      {% endif %}
+                    </div>
+
+                    {# go to the order (shows all items) #}
+                    <a class="card-link" href="{% url 'vieworderdetails' order.order_id %}" aria-label="Open order details"></a>
+
+                    {# show the full order total here #}
+                    <div class="price-col">₹{{ order.total_amount|floatformat:0 }}</div>
+
+                    <div class="act">
+                      <div class="status-wrap">
+                        <div class="statusline">
+                          {% if order.order_status == 'On the way' %}
+                            <span class="sq warn"></span>
+                            <span class="eta-date" data-ts="{{ order.delivery_eta_ts|default:0 }}" data-mode="eta"></span>
+                          {% elif order.order_status == 'Delivered' %}
+                            <span class="sq ok"></span>
+                            <span class="eta-date" data-ts="{{ order.delivery_eta_ts|default:0 }}" data-mode="delivered"></span>
+                          {% elif order.order_status == 'Cancelled' %}
+                            <span class="sq bad"></span> Order Cancelled
+                          {% elif order.order_status == 'Returned' %}
+                            <span class="sq bad"></span> Order Returned
+                          {% elif order.order_status == 'Payment Failed' or order.order_status == 'Order Not Placed' %}
+                            <span class="sq bad"></span> Order Not Placed
+                          {% endif %}
+                        </div>
+
+                        {% if order.order_status == 'On the way' %}
+                          <div class="status-sub">Your order is on the way.</div>
+                        {% elif order.order_status == 'Delivered' %}
+                          <div class="status-sub">Your item has been delivered.</div>
+                        {% elif order.order_status == 'Cancelled' %}
+                          <div class="status-sub">Your order was cancelled.</div>
+                        {% elif order.order_status == 'Returned' %}
+                          <div class="status-sub">Your item has been returned.</div>
+                        {% elif order.order_status == 'Payment Failed' or order.order_status == 'Order Not Placed' %}
+                          <div class="status-sub">Your payment was not confirmed by the bank.</div>
+                        {% endif %}
+                      </div>
+
+                      {# keep your review/edit buttons; show them for the FIRST item only on the list page #}
+                      {# show review/edit ONLY if the whole order is delivered #}
+                      {% if order.order_status == 'Delivered' %}
+                        {% if first.my_review_id %}
+                          <a class="btn-action btn-edit" href="/api/reviews/{{ first.product_id }}/?edit=1" aria-label="Edit review for {{ first.product_name }}">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" stroke-width="2"/>
+                              <path d="M14 6l4 4" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                            Edit Review
+                          </a>
+                        {% else %}
+                          <a class="btn-action btn-review" href="/api/reviews/{{ first.product_id }}/" aria-label="Review {{ first.product_name }}">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M12 17.3l-5.5 3 1.1-6.3L3 9.8l6.3-.9L12 3l2.7 5.9 6.3.9-4.6 4.2 1.1 6.3-5.5-3Z" fill="currentColor"/>
+                            </svg>
+                            Review Product
+                          </a>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                  </article>
+                {% endwith %}
+              {% endwith %}
+            {% endwith %}
+          {% endfor %}
+
+         {# --- LIST FOOTER (paging or no-more) --- #}
+        <div class="list-footer">
+          {% if page_obj.paginator.count > page_obj.paginator.per_page %}
+            <nav class="pager" aria-label="Pagination">
+              {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" rel="prev">‹ Prev</a>
+              {% else %}
+                <a class="disabled">‹ Prev</a>
+              {% endif %}
+
+              {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                  <span class="current">{{ num }}</span>
+                {% else %}
+                  <a href="?page={{ num }}">{{ num }}</a>
+                {% endif %}
+              {% endfor %}
+
+              {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" rel="next">Next ›</a>
+              {% else %}
+                <a class="disabled">Next ›</a>
+              {% endif %}
+            </nav>
+          {% else %}
+            <div class="nomore">No more results to display</div>
+          {% endif %}
+        </div>
+
+      {% else %}
+        <div class="empty">
+          <div>
+            <img src="{% static 'images/failedsearch.png' %}" alt="No results">
+            <p>Try changing your filters or search</p>
+            <a class="btn" href="/api/vieworders/">Go to Orders</a>
+          </div>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+  
+{% load static %}
+
+<div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+<div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+  <header>
+    <h4 id="session-title">Your session expired</h4>
+    <button id="session-close-outside" aria-label="Close">×</button>
+  </header>
+
+  <div class="session-hero" aria-hidden="true">
+    <img src="{% static 'images/sessionend.png' %}" alt="">
+  </div>
+
+  <div class="why" id="why-link-wrap">
+    <a href="#" id="why-link">Why did this happen?</a>
+  </div>
+  <div id="session-why-text">For security, we auto-sign out after inactivity or when your session token expires.</div>
+
+  <div class="session-actions">
+    <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+  </div>
+</div>
+
+<div id="vo-spin" aria-live="polite" aria-busy="true" hidden>
+  <div class="wrap">
+    <span class="ring"></span>
+    <span class="txt" id="vo-spin-text">Loading…</span>
+  </div>
+</div>
+
+
+
+<div id="toast" role="status" aria-live="polite">
+  <span class="dot"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+  <span id="toast-msg"></span>
+</div>
+
+
+<script>
+(function () {
+  const $  = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+  /* dynamic year labels */
+  const now = new Date(), Y = now.getFullYear();
+  [['label-year0', Y], ['label-year1', Y-1], ['label-year2', Y-2], ['label-year3', Y-3]]
+    .forEach(([id,val]) => { const el = document.getElementById(id); if (el) el.textContent = String(val); });
+
+function fmtDate(ts, mode){
+  if (!ts) return '';
+  let n = Number(ts);
+  // normalize: if backend ever sends milliseconds, convert to seconds
+  if (n > 1e12) n = Math.round(n / 1000);
+  const d = new Date(n * 1000);
+  const dateStr = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  return mode === 'delivered' ? `Delivered on ${dateStr}` : `Delivery by ${dateStr}`;
+}
+
+document.querySelectorAll('.eta-date').forEach(el => {
+  const ts   = el.dataset.ts || '0';
+  const mode = el.dataset.mode === 'delivered' ? 'delivered' : 'eta';
+  el.textContent = fmtDate(ts, mode);
+});
+
+
+  /* elements */
+  const searchInput   = $('#orderSearch');
+  const cardsList     = $('#cardsList');
+  const cards         = $$('.card', cardsList);
+  const clearAllBtn   = $('#clearAll');
+  const crumbResults  = document.getElementById('crumbResults');   // <<< span after “My Orders”
+
+  /* helpers */
+  function anyFiltersOn(){
+    // search is NOT a filter; only checkboxes
+    return $$('#statusGroup input:checked, #timeGroup input:checked').length > 0;
+  }
+  function updateClearAll(){
+    if (clearAllBtn) clearAllBtn.classList.toggle('show', anyFiltersOn());
+  }
+  function updateBreadcrumbResults(){
+    if (!crumbResults) return;
+    crumbResults.hidden = !anyFiltersOn(); // show only when any filter is checked
+  }
+
+  function matchTimeBuckets(card){
+    const ts = Number(card.dataset.time || 0) * 1000;
+    if (!ts) return true;
+    const d = new Date(ts), year = d.getFullYear();
+    const chosen = $$('#timeGroup input[type="checkbox"]:checked').map(i => i.value);
+    if (!chosen.length) return true;
+
+    const in30 = (Date.now() - ts) <= 30 * 86400000;
+    const buckets = new Set();
+    if (in30) buckets.add('last30');
+    if (year === Y)   buckets.add('year0');
+    if (year === Y-1) buckets.add('year1');
+    if (year === Y-2) buckets.add('year2');
+    if (year === Y-3) buckets.add('year3');
+    if (year <= Y-4)  buckets.add('older');
+
+    return chosen.some(v => buckets.has(v));
+  }
+
+  function applyAll(){
+    const q = (searchInput?.value || '').trim().toLowerCase();
+    const statuses = $$('#statusGroup input[type="checkbox"]:checked').map(i => i.value.toLowerCase());
+
+    cards.forEach(c=>{
+      const okSearch = (c.dataset.name || '').includes(q);
+      const okStatus = statuses.length ? statuses.includes((c.dataset.status || '').toLowerCase()) : true;
+      const okTime   = matchTimeBuckets(c);
+      c.style.display = (okSearch && okStatus && okTime) ? '' : 'none';
+    });
+
+    // empty state toggle
+    const anyVisible = cards.some(c => c.style.display !== 'none');
+    let empty = $('.empty', cardsList);
+    if (!anyVisible){
+      if (!empty){
+        empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.innerHTML = `
+          <div>
+            <img src="{% static 'images/failedsearch.png' %}" alt="No results">
+            <p>Try changing your filters or search</p>
+            <a class="btn" href="/api/vieworders/">Go to Orders</a>
+          </div>`;
+        cardsList.appendChild(empty);
+      }
+    } else if (empty){
+      empty.remove();
+    }
+
+    updateClearAll();
+    updateBreadcrumbResults();                 // <<< make the breadcrumb text appear/disappear
+  }
+
+  /* events */
+  if (searchInput) searchInput.addEventListener('input', applyAll);
+  $$('#statusGroup input, #timeGroup input').forEach(i => i.addEventListener('change', applyAll));
+
+  if (clearAllBtn){
+    clearAllBtn.addEventListener('click', ()=>{
+      $$('#statusGroup input, #timeGroup input').forEach(i => i.checked = false);
+      applyAll();                              // this will also update breadcrumb now
+    });
+  }
+
+  // initial paint
+  applyAll();
+})();
+
+
+
+
+(function(){
+  const modal = document.getElementById('session-modal');
+  const back  = document.getElementById('session-backdrop');
+  const closeOutside = document.getElementById('session-close-outside');
+  const whyLink  = document.getElementById('why-link');
+  const whyBlock = document.getElementById('session-why-text');
+
+  function open(){ modal.style.display='block'; back.style.display='block'; }
+  function shut(){ modal.style.display='none'; back.style.display='none'; }
+
+  // NEW: read the flag if present
+  const initialExpired =
+    (document.getElementById('order-root')?.dataset.sessionExpired === '1') ||
+    (document.body.dataset.sessionExpired === '1');
+
+  if (initialExpired) {
+    open();
+  } else {
+    // Fallback: ping userview; open if unauthorized
+    fetch('/api/userview/', { credentials:'same-origin' })
+      .then(r => { if (r.status !== 200) open(); })
+      .catch(open)
+      .finally(() => { window.hideSpinner && window.hideSpinner(); });
+
+  }
+
+
+  // modal-only scroll lock
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+
+  function open(){ modal.style.display='block'; back.style.display='block'; lockScroll(); }
+  function shut(){ modal.style.display='none'; back.style.display='none'; unlockScroll(); }
+
+  // Why toggle: blue on hover via CSS; red once clicked via .clicked class
+  function toggleWhy(e){
+    e.preventDefault();
+    if (!whyLink || !whyBlock) return;
+    const open = whyBlock.style.display !== 'block';
+    whyBlock.style.display = open ? 'block' : 'none';
+    whyLink.classList.toggle('clicked', open);              // red when open
+    whyLink.textContent = open ? 'Hide details' : 'Why did this happen?';
+  }
+
+  closeOutside?.addEventListener('click', shut);
+  back?.addEventListener('click', shut);
+  whyLink?.addEventListener('click', toggleWhy);
+
+  // Only show the modal if the session is STILL bad now
+  fetch('/api/userview/', { credentials:'same-origin' })
+    .then(r => { if (r.status !== 200) open(); })
+    .catch(open)
+    .finally(() => { window.hideSpinner && window.hideSpinner(); });
+
+})();
+
+
+
+/* =====================  GLOBAL SPINNER OVERLAY  ===================== */
+(function(){
+  // 1) Build overlay DOM once (no HTML needed in the template)
+  const overlay = document.createElement('div');
+  overlay.id = 'vo-spin';
+  overlay.setAttribute('aria-live','polite');
+  overlay.setAttribute('aria-busy','true');
+  overlay.style.cssText = [
+    "position:fixed","inset:0","z-index:99999","display:none","place-items:center",
+    "background:rgba(10,10,14,.35)","backdrop-filter:blur(2px)","pointer-events:all"
+  ].join(";");
+
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  wrap.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;";
+
+  const ring = document.createElement('span');
+  ring.className = 'ring';
+  ring.style.cssText = [
+    "width:64px","height:64px","border-radius:50%","display:block","--spin-color:#7c3aed",
+    "border:6px solid color-mix(in srgb,var(--spin-color) 20%,transparent)",
+    "border-top-color:var(--spin-color)",
+    "border-right-color:color-mix(in srgb,var(--spin-color) 60%,transparent)",
+    "animation:vo-rot .8s linear infinite"
+  ].join(";");
+
+  const txt = document.createElement('span');
+  txt.id = 'vo-spin-text';
+  txt.className = 'txt';
+  txt.textContent = 'Loading…';
+  txt.style.cssText = "margin:0;font:700 14px/1.1 Inter,system-ui,Arial,sans-serif;color:#fff;letter-spacing:.2px;opacity:.95;text-shadow:0 1px 0 rgba(0,0,0,.25);";
+
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes vo-rot{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){#vo-spin .ring{animation:none}}
+    html.vo-spinning,html.vo-spinning *{cursor:none!important}
+    html.vo-spinning{caret-color:transparent}
+    html.vo-spinning body{user-select:none;overflow:hidden;overscroll-behavior:none;position:fixed;left:0;right:0;width:100%}
+    #vo-spin.show{display:grid}
+  `;
+
+  wrap.appendChild(ring);
+  wrap.appendChild(txt);
+  overlay.appendChild(wrap);
+  document.body.appendChild(style);
+  document.body.appendChild(overlay);
+
+  // 2) Scroll lock helpers
+  let lockY = 0, guardTimer = null;
+  function lockScroll(){
+    lockY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.documentElement.classList.add('vo-spinning');
+    document.body.style.top = `-${lockY}px`;
+  }
+  function unlockScroll(){
+    document.documentElement.classList.remove('vo-spinning');
+    document.body.style.top = '';
+    window.scrollTo(0, lockY || 0);
+  }
+
+  // 3) Show / hide API
+ function showSpinner(label){
+  window.showSpinner = showSpinner;
+  const box = document.getElementById('vo-spin');
+  if (label) {
+    const t = box?.querySelector('.txt');
+    if (t) t.textContent = label;
+  }
+  box?.classList.add('show');
+
+  // use a neutral lock class that ONLY blocks scroll — not cursor
+  document.documentElement.classList.add('vo-lock');
+  document.body.style.overflow = 'hidden';
+}
+function hideSpinner(){
+  window.hideSpinner = hideSpinner;
+  document.getElementById('vo-spin')?.classList.remove('show');
+  document.documentElement.classList.remove('vo-lock');
+  document.body.style.overflow = '';
+}
+
+
+  // 4) Decide the message for a clicked element
+  function messageFor(el){
+    if (!el) return 'Loading…';
+    const ds = (el.dataset && (el.dataset.spin||'')).toLowerCase();
+    if (ds === 'refresh') return 'Refreshing orders…';
+    if (ds === 'load')    return 'Loading…';
+
+    const label = (el.getAttribute('aria-label') || el.textContent || '').toLowerCase();
+    if (/\brefresh\b/.test(label)) return 'Refreshing orders…';
+    return 'Loading…';
+  }
+
+  // 5) Internal navigation detector
+  function isInternalNavAnchor(ev, a){
+    if(!a) return false;
+    // ignore new tabs / modifiers
+    if (a.target && a.target !== '_self') return false;
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return false;
+
+    const href = a.getAttribute('href') || '';
+    if(!href || href.startsWith('#') || href.startsWith('javascript:')) return false;
+
+    try {
+      const url = new URL(href, window.location.origin);
+      if (url.origin !== window.location.origin) return false; // external
+    } catch { return false; }
+
+    // Only the pages you care about:
+    if (
+      a.matches('.card-link, .btn-action, .pager a, nav.crumbs a, a[href^="/api/"], [data-spin]')
+    ){
+      return true;
+    }
+    return false;
+  }
+
+  // 6) Wire up lifecycle and interactions
+  // 6a) Hide when fully loaded / bfcache restore
+  window.addEventListener('load', hideSpinner);
+  window.addEventListener('pageshow', (e)=>{ if(e.persisted) hideSpinner(); });
+
+  // 6b) Show while the browser navigates away (reload or same-window link)
+  window.addEventListener('beforeunload', ()=>{ showSpinner('Loading…'); });
+
+  // 6c) Clicks we care about (delegate)
+  document.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('[data-spin]');
+    if (btn){ showSpinner(messageFor(btn)); return; }
+
+    const a = ev.target.closest('a');
+    if (!isInternalNavAnchor(ev, a)) return;
+    showSpinner(messageFor(a));
+  }, true);
+
+  // 6d) Forms (if any)
+  document.addEventListener('submit', (ev)=>{
+    const el = ev.target;
+    const trigger = el?.querySelector('[data-spin]'); // use inner button hint if present
+    showSpinner(messageFor(trigger));
+  }, true);
+
+  // 7) Optional: expose convenience helpers for your own code
+  // VOSpin.show('Refreshing orders…'); VOSpin.hide();
+})();
+
+
+
+(function () {
+  function forceToast(text, kind){
+    const el = document.getElementById('toast');
+    const msgEl = document.getElementById('toast-msg');
+    if(!el || !msgEl || !text) return;
+    msgEl.textContent = text;
+    el.classList.remove('success','error','show');
+    el.classList.add(kind === 'error' ? 'error' : 'success');
+    void el.offsetWidth;                 // restart CSS animation
+    el.classList.add('show');
+    clearTimeout(el._h);
+    el._h = setTimeout(()=> el.classList.remove('show'), 3100);
+  }
+
+  // 1) Prefer the session "flash" toast set by payment_* views
+  const seed = document.getElementById('seed-toast');
+  if (seed) {
+    forceToast(seed.dataset.text || '', seed.dataset.kind || 'success');
+    return; // done
+  }
+
+  // 2) Fallback: Django messages (you already render them as #djMsgs)
+  const box = document.getElementById('djMsgs');
+  if (box) {
+    const last = box.querySelector('.msg:last-child');
+    if (last) {
+      const tags = (last.dataset.tags || '').toLowerCase();
+      const kind = /\b(success|info)\b/.test(tags) ? 'success' : 'error';
+      forceToast(last.dataset.text || '', kind);
+    }
+  }
+})();
+</script>
+
 {% endblock %}

@@ -1,0 +1,48 @@
+# --- Envs / tooling ----------------------------------------------------------
+.venv/
+venv/
+.env
+.env.*                  # e.g. .env.local
+.idea/
+.vscode/
+*.code-workspace
+
+# --- Python bytecode / caches ------------------------------------------------
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyi
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Django local artifacts --------------------------------------------------
+# Keep migrations tracked; only ignore their caches.
+**/migrations/**/__pycache__/
+
+db.sqlite3
+*.sqlite3
+
+# If this service ever writes files (unlikely for payments), keep them out:
+media/
+media/**
+
+# Collected/static build outputs (if you ever run collectstatic here)
+staticfiles/
+static_collected/
+assets-built/
+
+# Logs
+logs/
+*.log
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Docker (optional)
+.docker/
+docker-data/

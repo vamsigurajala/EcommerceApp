@@ -1,23 +1,44 @@
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyc
+# --- Python bytecode & build junk (any depth)
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+*.egg-info/
+.build/
+dist/
+build/
 
-# Virtual environments
-.venv/
-venv/
+# --- Virtual environments (any depth)
+**/.venv/
+**/venv/
 
-# IDEs / tooling
+# --- Editors / tooling
 .env
+*.env
+.env.*
 .idea/
 .vscode/
+*.code-workspace
 
-# Django specific
-db.sqlite3
-/media/
-/staticfiles/
+# --- Django (runtime)
+**/db.sqlite3
+**/db.sqlite3-journal
+**/media/                 # user uploads (your review images, etc.)
+**/media/*
 
-# OS generated
+
+
+# --- Tests & tooling caches
+.pytest_cache/
+.coverage*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.cache/
+
+# --- Logs & misc
+*.log
+*.tmp
+*.swp
 .DS_Store
 Thumbs.db

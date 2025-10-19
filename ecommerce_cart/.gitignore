@@ -1,8 +1,41 @@
-# Envs / tooling
+# --- Envs / tooling ----------------------------------------------------------
 .venv/
 venv/
 .env
+.env.*          # e.g. .env.local
 .idea/
 .vscode/
-*.pyc
+*.code-workspace
+
+# --- Python bytecode / caches ------------------------------------------------
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyi
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Django local artifacts --------------------------------------------------
+# Keep migrations in VCS; just ignore their caches.
+**/migrations/**/__pycache__/
+
+db.sqlite3
+*.sqlite3
+
+/media/
+/staticfiles/
+/static_collected/
+/assets-built/
+/logs/
+*.log
+
+# --- OS cruft ----------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# --- Docker / compose (if you use them) -------------------------------------
+.docker/
+docker-data/
