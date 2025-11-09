@@ -1,7 +1,9 @@
 from django.urls import path
 from . import views
-from .views import (UserDetailsView, GetUserIdAPIView, UserLoginAPIView, LogoutView, AddressView, review_stats,payment_timeout,invoice_pdf,
-                    add_to_wishlist_ajax, remove_wishlist_item, move_wishlist_to_cart, move_cart_to_wishlist)
+from .views import (UserDetailsView, GetUserIdAPIView, UserLoginAPIView, LogoutView, AddressView,
+    review_stats, payment_timeout, invoice_pdf, add_to_wishlist_ajax, remove_wishlist_item,
+    move_wishlist_to_cart, move_cart_to_wishlist, UpdatePanView,
+    saved_method_default, saved_method_delete ,pay_start)
 
 
 from drf_yasg.views import get_schema_view 
@@ -33,6 +35,8 @@ urlpatterns = [
     path('login/',UserLoginAPIView.as_view(),name="loginuser"),
     path('logout',LogoutView.as_view(),name="logout"),
     path('getaddress/', AddressView.as_view(), name='address'),
+    path('updatepan/', UpdatePanView.as_view(), name='update_pan'),
+    path('profile/', views.profile, name='profile'),
     path('allproducts/', views.product_info, name='allproducts'),
     path('orderaddress/', views.order_address, name='orderaddress'),
     path('cart/', views.cart, name='cart'),
@@ -71,6 +75,9 @@ urlpatterns = [
     path("pay/success/", views.payment_success, name="payment_success"),
     path("pay/failure/", views.payment_failure,name="payment_failure"),
     path("pay/timeout/", views.payment_timeout, name="pay_timeout"),
+    path('api/pay/start/', views.pay_start, name='pay_start'),
+    path("saved-methods/<int:mid>/default/", views.saved_method_default, name="saved_method_default"),
+    path("saved-methods/<int:mid>/delete/",  views.saved_method_delete,  name="saved_method_delete"),
     path('checkout/addquantity/', views.add_quantity_checkout, name='addquantity_checkout'),
     path('checkout/reducequantity/', views.reduce_quantity_checkout, name='reducequantity_checkout'),
     path('checkout/deleteproduct/', views.delete_product_checkout, name='deleteproduct_checkout')

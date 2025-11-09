@@ -5,6 +5,10 @@ from django.utils.decorators import method_decorator
 from .utils import generate_txn_id 
 from .models import Payment, PaymentEvent, Refund
 from .serializers import PaymentSerializer, PaymentEventSerializer, RefundSerializer
+from rest_framework import permissions
+from django.db import transaction
+from .models import SavedPaymentMethod
+from .serializers import SavedPaymentMethodSerializer
 
 
 # List / create / get payments
@@ -73,3 +77,54 @@ class TxLookupAPIView(views.APIView):
         if not p:
             return Response({"error": "not found"}, status=404)
         return Response(PaymentSerializer(p).data)
+
+# >>> ADD: Saved methods endpoints
+from rest_framework import permissions
+from .models import SavedPaymentMethod
+from .serializers import SavedPaymentMethodSerializer
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SavedPaymentMethodListCreate(generics.ListCreateAPIView):
+    serializer_class = SavedPaymentMethodSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = SavedPaymentMethod.objects.all().order_by('-is_default', '-created_at')
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return qs
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SavedPaymentMethodDelete(generics.DestroyAPIView):
+    serializer_class = SavedPaymentMethodSerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = SavedPaymentMethod.objects.all()
+
+    def perform_destroy(self, instance):
+        # (optional) enforce user ownership via ?user_id=
+        req_uid = self.request.query_params.get('user_id')
+        if req_uid and str(instance.user_id) != str(req_uid):
+            raise PermissionError("user mismatch")
+        return super().perform_destroy(instance)
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SavedPaymentMethodSetDefault(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def patch(self, request, pk):
+        # expects ?user_id=...&type=card|upi
+        user_id = request.query_params.get('user_id')
+        method_type = request.query_params.get('type')
+        if not (user_id and method_type):
+            return Response({"error": "user_id and type required"}, status=400)
+
+        try:
+            target = SavedPaymentMethod.objects.get(pk=pk, user_id=user_id, method_type=method_type)
+        except SavedPaymentMethod.DoesNotExist:
+            return Response({"error": "not found"}, status=404)
+
+        SavedPaymentMethod.objects.filter(user_id=user_id, method_type=method_type).update(is_default=False)
+        target.is_default = True
+        target.save()
+        return Response(SavedPaymentMethodSerializer(target).data)

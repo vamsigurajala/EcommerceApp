@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .profile-page{max-width:1200px;margin:32px auto 64px;padding:0 16px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;} /* main wrapper */
+  .profile-grid{display:grid;grid-template-columns:1.1fr 1.4fr;gap:24px;align-items:flex-start;} /* 2-col layout */
+  @media (max-width:992px){.profile-grid{grid-template-columns:1fr;}} /* stack on mobile */
+
+  .profile-card{background:#0b1120;border-radius:20px;padding:32px 24px;box-shadow:0 18px 45px rgba(15,23,42,.8);text-align:center;} /* profile card dark */
+  body:not([data-theme="dark"]) .profile-card{background:#ffffff;box-shadow:0 18px 45px rgba(15,23,42,.12);} /* profile card light */
+
+  .profile-avatar{width:150px;height:150px;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#e5e7eb,#9ca3af,#020617);color:#111827;font-size:56px;font-weight:700;border:4px solid #2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.3);} /* avatar circle */
+  body[data-theme="dark"] .profile-avatar{color:#020617;} /* avatar text dark */
+
+  .profile-name{font-size:22px;font-weight:600;margin-top:4px;margin-bottom:4px;color:#111827;} /* name */
+  body[data-theme="dark"] .profile-name{color:#e5e7eb;} /* name dark */
+
+  .profile-link{color:#2563eb;font-size:14px;text-decoration:none;font-weight:500;} /* my orders link */
+  .profile-link:hover{text-decoration:underline;} /* link hover */
+
+  .profile-pill-row{display:flex;justify-content:center;gap:8px;margin-top:12px;margin-bottom:20px;flex-wrap:wrap;} /* email / phone row */
+  .pill{padding:4px 10px;border-radius:999px;background:rgba(15,23,42,.04);border:1px solid rgba(148,163,184,.6);font-size:12px;color:#4b5563;} /* pill light */
+  body[data-theme="dark"] .pill{background:rgba(15,23,42,.7);border-color:rgba(148,163,184,.5);color:#e5e7eb;} /* pill dark */
+
+  .profile-help{margin-top:8px;font-size:12px;color:#6b7280;} /* help text */
+  body[data-theme="dark"] .profile-help{color:#9ca3af;} /* help text dark */
+
+  .section-card{background:#0b1120;border-radius:18px;padding:18px 20px;box-shadow:0 16px 40px rgba(15,23,42,.9);margin-top:20px;} /* generic section card dark */
+  body:not([data-theme="dark"]) .section-card{background:#ffffff;box-shadow:0 16px 40px rgba(15,23,42,.14);} /* section card light */
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;} /* accordion header */
+  .section-title{font-size:16px;font-weight:600;color:#111827;} /* header title */
+  body[data-theme="dark"] .section-title{color:#e5e7eb;} /* header title dark */
+  .section-arrow{font-size:16px;color:#6b7280;transition:transform .2s ease;} /* arrow glyph */
+  .section-header.open .section-arrow{transform:rotate(90deg);} /* rotate arrow when open */
+
+  .section-body{margin-top:14px;border-top:1px solid rgba(148,163,184,.35);padding-top:14px;} /* body wrapper */
+  .section-body.hidden{display:none;} /* collapsed body */
+
+  .two-col{display:flex;flex-direction:column;gap:20px;} /* right column stack */
+
+  .logout-card{background:#0b1120;border-radius:18px;padding:18px 20px;box-shadow:0 18px 45px rgba(15,23,42,.9);margin-top:20px;text-align:center;} /* logout card dark */
+  body:not([data-theme="dark"]) .logout-card{background:#ffffff;box-shadow:0 18px 45px rgba(15,23,42,.16);} /* logout card light */
+  .btn-primary-full{display:inline-flex;align-items:center;justify-content:center;width:100%;height:48px;background:#2563eb;border-radius:999px;border:none;color:#ffffff;font-weight:600;font-size:15px;cursor:pointer;box-shadow:0 12px 32px rgba(37,99,235,.55);} /* logout button */
+  .btn-primary-full:hover{background:#1d4ed8;} /* logout hover */
+
+  .pan-row{display:flex;align-items:center;gap:10px;margin-top:10px;} /* pan row */
+  .pan-input{flex:1;height:40px;border-radius:999px;border:1px solid rgba(148,163,184,.7);padding:0 14px;font-size:14px;outline:none;} /* pan input */
+  .pan-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.35);} /* pan focus */
+  .btn-small{height:40px;padding:0 18px;border-radius:999px;border:none;background:#2563eb;color:#ffffff;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 10px 26px rgba(37,99,235,.6);} /* small blue button */
+  .btn-small:hover{background:#1d4ed8;} /* small blue hover */
+
+  .note-text{font-size:11px;margin-top:8px;color:#6b7280;} /* note text */
+  body[data-theme="dark"] .note-text{color:#9ca3af;} /* note dark */
+
+  .addr-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;} /* manage address header row */
+  .addr-add-btn{padding:8px 16px;border-radius:999px;border:1px solid rgba(148,163,184,.6);background:transparent;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;} /* + Add New */
+  .addr-add-btn:hover{background:rgba(37,99,235,.08);} /* add new hover */
+
+  .addr-list{display:flex;flex-direction:column;gap:10px;max-height:380px;overflow:auto;padding-right:4px;} /* address list */
+  .addr-card{background:#020617;border-radius:14px;padding:14px 14px 10px;border:1px solid rgba(31,41,55,.9);position:relative;} /* address card dark */
+  body:not([data-theme="dark"]) .addr-card{background:#f9fafb;border-color:rgba(209,213,219,1);} /* address card light */
+
+  .addr-name-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;} /* name + tag row */
+  .addr-name{font-weight:600;font-size:14px;color:#111827;} /* name text */
+  body[data-theme="dark"] .addr-name{color:#e5e7eb;} /* name text dark */
+
+  .chip{padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;background:rgba(37,99,235,.1);color:#2563eb;text-transform:uppercase;} /* HOME / WORK chip */
+
+  .addr-line{font-size:13px;color:#4b5563;margin-bottom:2px;} /* address line */
+  body[data-theme="dark"] .addr-line{color:#9ca3af;} /* address line dark */
+
+  .addr-phone{font-size:12px;color:#6b7280;} /* phone line */
+  body[data-theme="dark"] .addr-phone{color:#9ca3af;} /* phone line dark */
+
+  .addr-actions{display:flex;gap:8px;margin-top:8px;} /* buttons under address */
+  .btn-ghost{flex:0 0 auto;height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(148,163,184,.6);background:transparent;color:#2563eb;font-size:12px;font-weight:600;cursor:pointer;} /* grey outline button */
+  .btn-ghost:hover{background:rgba(37,99,235,.08);} /* ghost hover */
+
+  .btn-primary-mini{flex:0 0 auto;height:32px;padding:0 14px;border-radius:999px;border:none;background:#2563eb;color:#ffffff;font-size:12px;font-weight:600;cursor:pointer;} /* small blue button */
+  .btn-primary-mini[disabled]{opacity:.6;cursor:not-allowed;} /* disabled deliver */
+
+  .kebab{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:999px;border:none;cursor:pointer;background:rgba(15,23,42,.05);color:#6b7280;font-size:18px;line-height:1;} /* kebab button light */
+  .kebab:hover{background:rgba(15,23,42,.12);color:#111827;} /* kebab hover light */
+  body[data-theme="dark"] .kebab{background:rgba(15,23,42,.7);color:#9ca3af;} /* kebab dark */
+  body[data-theme="dark"] .kebab:hover{background:rgba(15,23,42,.9);color:#e5e7eb;} /* kebab hover dark */
+
+  .menu{position:absolute;top:40px;right:8px;min-width:140px;background:#0b1120;border-radius:10px;border:1px solid rgba(55,65,81,.9);box-shadow:0 16px 40px rgba(15,23,42,.9);display:none;overflow:hidden;z-index:30;} /* context menu dark */
+  body:not([data-theme="dark"]) .menu{background:#ffffff;border-color:rgba(209,213,219,1);box-shadow:0 16px 40px rgba(15,23,42,.16);} /* context menu light */
+  .menu button{display:block;width:100%;padding:8px 10px;border:none;background:transparent;text-align:left;font-size:13px;color:#111827;cursor:pointer;} /* menu item */
+  body[data-theme="dark"] .menu button{color:#e5e7eb;} /* menu item dark */
+  .menu button:hover{background:rgba(15,23,42,.05);} /* menu hover light */
+  body[data-theme="dark"] .menu button:hover{background:rgba(15,23,42,.8);} /* menu hover dark */
+
+  .subtle-empty{font-size:13px;color:#6b7280;padding:4px 0;} /* empty state */
+  body[data-theme="dark"] .subtle-empty{color:#9ca3af;} /* empty state dark */
+
+  .backdrop{position:fixed;inset:0;background:rgba(15,23,42,.7);display:none;place-items:center;z-index:50;} /* modal backdrop */
+  .backdrop.on{display:grid;} /* show backdrop */
+
+  .modal-card{width:min(92vw,520px);border-radius:18px;padding:18px 18px 16px;background:#0b1120;color:#e5e7eb;box-shadow:0 28px 80px rgba(15,23,42,.95);} /* modal dark */
+  body:not([data-theme="dark"]) .modal-card{background:#ffffff;color:#111827;box-shadow:0 28px 80px rgba(15,23,42,.28);} /* modal light */
+
+  .modal-title{font-size:17px;font-weight:600;margin-bottom:8px;} /* modal title */
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;} /* modal grid */
+  .col-span-2{grid-column:1 / -1;} /* span full width */
+
+  .field label{display:block;font-size:12px;margin-bottom:3px;color:#6b7280;} /* field label */
+  body[data-theme="dark"] .field label{color:#9ca3af;} /* field label dark */
+
+  .field input,.field select{width:100%;height:38px;border-radius:10px;border:1px solid rgba(148,163,184,.7);padding:0 9px;font-size:13px;background:#0b1120;color:#e5e7eb;outline:none;} /* modal input dark */
+  body:not([data-theme="dark"]) .field input,body:not([data-theme="dark"]) .field select{background:#f9fafb;color:#111827;} /* modal input light */
+  .field input:focus,.field select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.35);} /* modal focus */
+
+  .err{font-size:11px;color:#dc2626;margin-top:2px;} /* validation text */
+
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;} /* modal footer */
+  .note{font-size:11px;margin-top:6px;color:#6b7280;} /* modal note */
+  body[data-theme="dark"] .note{color:#9ca3af;} /* modal note dark */
+
+  .pill-muted{font-size:13px;color:#6b7280;} /* muted paragraph */
+  body[data-theme="dark"] .pill-muted{color:#9ca3af;} /* muted paragraph dark */
+</style>
+
+<main class="profile-page">
+  <div class="profile-grid">
+
+    <!-- LEFT COLUMN: profile + account settings -->
+    <section>
+      <div class="profile-card">
+        <div class="profile-avatar">{{ user_name|first|default:"U"|upper }}</div>
+        <div class="profile-name">{{ user_name }}</div>
+        <a href="/api/vieworders/" class="profile-link">My Orders</a>
+        <div class="profile-pill-row">
+          {% if user_email %}<span class="pill">{{ user_email }}</span>{% endif %}
+          {% if user_phone %}<span class="pill">{{ user_phone }}</span>{% endif %}
+        </div>
+        <p class="profile-help">Manage your account details, addresses, and preferences from here.</p>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header open" data-target="account-body">
+          <div class="section-title">Account Settings</div>
+          <span class="section-arrow">▶</span>
+        </div>
+        <div id="account-body" class="section-body">
+          <h4 style="font-size:13px;font-weight:600;margin-bottom:6px;color:#6b7280;">PAN &amp; KYC</h4>
+          <div class="pan-row">
+            <input id="panInput" class="pan-input" maxlength="10" placeholder="Enter PAN" value="{{ user_pan|default:'' }}">
+            <button id="panSaveBtn" class="btn-small" type="button">Save PAN</button>
+          </div>
+          <p class="note-text">PAN is required only if you want to <a href="/api/become-seller/" style="color:#2563eb;text-decoration:underline;text-underline-offset:2px;">become a seller</a> for KYC.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: sections + logout -->
+    <section class="two-col">
+
+      <!-- Manage Address -->
+      <div class="section-card">
+        <div class="section-header open" data-target="addr-body">
+          <div class="section-title">Manage Address</div>
+          <span class="section-arrow">▶</span>
+        </div>
+        <div id="addr-body" class="section-body">
+          <div class="addr-header-row">
+            <span style="font-size:13px;color:#6b7280;">Saved delivery addresses</span>
+            <button id="addAddrBtn" class="addr-add-btn" type="button">+ Add New Address</button>
+          </div>
+          <div id="addrList" class="addr-list">
+            {% for a in addresses %}
+              <div class="addr-card" data-id="{{ a.address_id }}">
+                <button class="kebab" type="button" aria-label="Address menu">⋮</button>
+                <div class="menu" role="menu">
+                  <button class="js-edit" type="button">Edit</button>
+                  <button class="js-delete" type="button">Delete</button>
+                </div>
+                <div class="addr-name-row">
+                  <div class="addr-name">{{ a.name|default:"" }}</div>
+                  {% if a.tag %}<span class="chip">{{ a.tag }}</span>{% endif %}
+                </div>
+                <div class="addr-line">{{ a.door_no }}, {{ a.street }}, {{ a.area }}, {{ a.city }}, {{ a.state }} - {{ a.pincode }}</div>
+                <div class="addr-phone">Phone: {{ a.phone|default:"—" }}</div>
+                <div class="addr-actions">
+                  <button class="btn-ghost js-quick-edit" type="button">Quick Edit</button>
+                  <button class="btn-primary-mini js-deliver-here" type="button" disabled>Deliver Here</button>
+                </div>
+              </div>
+            {% empty %}
+              <div class="subtle-empty">You don't have any saved addresses yet. Click "Add New Address".</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Payments (placeholder, wired to future pages) -->
+      <div class="section-card">
+        <div class="section-header" data-target="payments-body">
+          <div class="section-title">Payments</div>
+          <span class="section-arrow">▶</span>
+        </div>
+        <div id="payments-body" class="section-body hidden">
+          <p class="pill-muted">Manage saved UPI IDs and cards from the payment page after you place an order.</p>
+        </div>
+      </div>
+
+      <!-- My Stuff (placeholder text) -->
+      <div class="section-card">
+        <div class="section-header" data-target="mystuff-body">
+          <div class="section-title">My Stuff</div>
+          <span class="section-arrow">▶</span>
+        </div>
+        <div id="mystuff-body" class="section-body hidden">
+          <p class="pill-muted">Use your wishlist and orders pages to see products you've saved and reviewed.</p>
+        </div>
+      </div>
+
+      <!-- Logout CTA -->
+      <div class="logout-card">
+        <form method="post" action="/api/logout/">
+          {% csrf_token %}
+          <button type="submit" class="btn-primary-full">Log out</button>
+        </form>
+      </div>
+
+    </section>
+  </div>
+</main>
+
+<!-- Address Modal (Add / Edit) -->
+<div id="addrModal" class="backdrop" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <div class="modal-title" id="mTitle">Add Address</div>
+    <form id="addrForm">
+      <div class="fgrid">
+        <div class="field"><label>Name</label><input name="name" autocomplete="name"><div class="err" data-for="name"></div></div>
+        <div class="field"><label>Phone</label><input name="phone" inputmode="numeric" maxlength="10" autocomplete="tel"><div class="err" data-for="phone"></div></div>
+        <div class="field"><label>Door No</label><input name="door_no"><div class="err" data-for="door_no"></div></div>
+        <div class="field col-span-2"><label>Street</label><input name="street"><div class="err" data-for="street"></div></div>
+        <div class="field"><label>Area / Locality</label><input name="area"><div class="err" data-for="area"></div></div>
+        <div class="field"><label>City</label><input name="city"><div class="err" data-for="city"></div></div>
+        <div class="field"><label>State</label><input name="state"><div class="err" data-for="state"></div></div>
+        <div class="field"><label>Pincode</label><input name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code"><div class="err" data-for="pincode"></div></div>
+        <div class="field"><label>Country</label><input name="country" value="India"><div class="err" data-for="country"></div></div>
+        <div class="field"><label>Address Type</label>
+          <select name="tag">
+            <option value="HOME">Home</option>
+            <option value="WORK">Work (10 AM - 8 PM)</option>
+          </select>
+          <div class="err" data-for="tag"></div>
+        </div>
+        <div class="field col-span-2"><label>Landmark (Optional)</label><input name="landmark"></div>
+        <div class="field col-span-2"><label>Alternate Phone (Optional)</label><input name="altphone" inputmode="numeric" maxlength="10" autocomplete="tel"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="mCancel">Cancel</button>
+        <button type="submit" class="btn-small" id="mSave">Save</button>
+      </div>
+      <div class="note" id="mNote"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ---------- CSRF helper (simple Django-style) ---------- */
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        var cookies = document.cookie.split(";");
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+  async function api(method,url,body){const opts={method,headers:{'X-Requested-With':'fetch','Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')||''},credentials:'same-origin'};if(body!==undefined)opts.body=JSON.stringify(body);const res=await fetch(url,opts);let data;try{data=await res.json();}catch{data=await res.text();}if(!res.ok){throw new Error((data&&data.detail)||(typeof data==='string'?data:res.statusText));}return data;} /* small fetch wrapper */
+
+  function toast(msg,type='ok'){const wrap=document.createElement('div');wrap.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999';wrap.innerHTML='<div style="background:'+(type==='err'?'#dc2626':'#16a34a')+';color:#fff;padding:10px 16px;border-radius:999px;box-shadow:0 12px 30px rgba(0,0,0,.4);font-weight:600;font-size:13px;min-width:180px;text-align:center">'+msg+'</div>';document.body.appendChild(wrap);setTimeout(()=>wrap.remove(),2000);} /* quick toast */
+
+  document.getElementById('panSaveBtn')?.addEventListener('click',async()=>{const pan=document.getElementById('panInput').value.trim().toUpperCase();if(pan&&!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan)){toast('Invalid PAN format','err');return;}try{await api('PUT','/api/updatepan/',{pan_card:pan});toast('PAN updated');}catch(e){toast(e.message||'Failed to update PAN','err');}}); /* PAN save */
+
+  const modal=document.getElementById('addrModal');const form=document.getElementById('addrForm');const mTitle=document.getElementById('mTitle');const mNote=document.getElementById('mNote');let editingId=null; /* modal refs */
+
+  function openModal(title,seed){mTitle.textContent=title||'Add Address';mNote.textContent='';editingId=seed?.address_id||null;['name','phone','door_no','street','area','city','state','pincode','country','tag','landmark','altphone'].forEach(n=>{const el=form.querySelector(`[name="${n}"]`);if(!el)return;if(seed){const key=(n==='altphone'?'alt_phone':n);el.value=seed[key]||'';}else{el.value=(n==='country'?'India':'');}});modal.classList.add('on');modal.setAttribute('aria-hidden','false');} /* open modal */
+
+  function closeModal(){modal.classList.remove('on');modal.setAttribute('aria-hidden','true');} /* close modal */
+
+  document.getElementById('addAddrBtn')?.addEventListener('click',()=>openModal('Add Address')); /* open new */
+  document.getElementById('mCancel')?.addEventListener('click',closeModal); /* cancel */
+  modal.addEventListener('click',e=>{if(e.target===modal)closeModal();}); /* click outside */
+
+  const list=document.getElementById('addrList'); /* list container */
+
+/* ---------- Attach handlers to a single address card ---------- */
+function attachCardHandlers(card) {
+    var kebab = card.querySelector(".kebab");
+    var menu  = card.querySelector(".menu");
+
+    if (!kebab || !menu) {
+        return;
+    }
+
+    // Open / close menu
+    kebab.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (menu.style.display === "block") {
+            menu.style.display = "none";
+        } else {
+            menu.style.display = "block";
+        }
+    });
+
+    // Close when clicking anywhere else
+    document.addEventListener("click", function (e) {
+        if (!menu.contains(e.target) && !kebab.contains(e.target)) {
+            menu.style.display = "none";
+        }
+    });
+
+    // Edit
+    var editBtn = card.querySelector(".js-edit");
+    if (editBtn) {
+        editBtn.addEventListener("click", function () {
+            menu.style.display = "none";
+            fetchOneAndEdit(card.dataset.id);
+        });
+    }
+
+    // Quick edit (same as edit)
+    var quickEditBtn = card.querySelector(".js-quick-edit");
+    if (quickEditBtn) {
+        quickEditBtn.addEventListener("click", function () {
+            fetchOneAndEdit(card.dataset.id);
+        });
+    }
+
+    // Delete
+    var deleteBtn = card.querySelector(".js-delete");
+    if (deleteBtn) {
+        deleteBtn.addEventListener("click", async function () {
+            menu.style.display = "none";
+            if (!confirm("Delete this address?")) {
+                return;
+            }
+            try {
+                await api("DELETE", "/api/getaddress/?address_id=" + encodeURIComponent(card.dataset.id));
+                card.remove();
+                toast("Address deleted");
+                if (!list.querySelector(".addr-card")) {
+                    list.innerHTML = "<div class=\"subtle-empty\">You don't have any saved addresses yet. Click \"Add New Address\".</div>";
+                }
+            } catch (e) {
+                toast(e.message || "Delete failed", "err");
+            }
+        });
+    }
+}
+
+  document.querySelectorAll('.addr-card').forEach(attachCardHandlers); /* attach initial cards */
+
+  async function fetchOneAndEdit(id){try{const res=await fetch('/api/getaddress/',{credentials:'same-origin'});const data=await res.json();const a=(data.addresses||[]).find(x=>String(x.address_id)===String(id));if(!a)throw new Error('Address not found');openModal('Edit Address',a);}catch(e){openModal('Edit Address');}} /* load single before editing */
+
+  form.addEventListener('submit',async e=>{e.preventDefault();const fd=new FormData(form);const payload={name:(fd.get('name')||'').trim(),phone:(fd.get('phone')||'').trim(),door_no:(fd.get('door_no')||'').trim(),street:(fd.get('street')||'').trim(),area:(fd.get('area')||'').trim(),city:(fd.get('city')||'').trim(),state:(fd.get('state')||'').trim(),pincode:(fd.get('pincode')||'').trim(),country:(fd.get('country')||'India').trim(),tag:(fd.get('tag')||'HOME').toUpperCase(),landmark:(fd.get('landmark')||'').trim()||null,alt_phone:(fd.get('altphone')||'').trim()||null};const errs={};if(!payload.name)errs.name='Required';if(!/^\d{10}$/.test(payload.phone||''))errs.phone='10-digit phone required';if(!payload.door_no)errs.door_no='Required';if(!payload.street)errs.street='Required';if(!payload.area)errs.area='Required';if(!payload.city)errs.city='Required';if(!payload.state)errs.state='Required';if(!/^\d{6}$/.test(payload.pincode||''))errs.pincode='6-digit PIN required';if(!payload.country)errs.country='Required';if(!payload.tag)errs.tag='Required';form.querySelectorAll('.err').forEach(x=>x.textContent='');Object.entries(errs).forEach(([k,v])=>{const el=form.querySelector(`.err[data-for="${k}"]`);if(el)el.textContent=v;});if(Object.keys(errs).length)return;try{if(editingId){await api('PUT',`/api/getaddress/?address_id=${encodeURIComponent(editingId)}`,payload);toast('Address updated');}else{await api('POST','/api/getaddress/',payload);toast('Address added');}closeModal();await refreshAddressList();}catch(e){mNote.textContent=e.message||'Something went wrong.';mNote.style.color='#dc2626';}}); /* save add/edit */
+
+/* ---------- Refresh the entire address list from the API ---------- */
+async function refreshAddressList() {
+    try {
+        var res  = await fetch("/api/getaddress/", { credentials: "same-origin" });
+        var data = await res.json();
+
+        var listEl = document.getElementById("addrList");
+        listEl.innerHTML = "";
+
+        (data.addresses || []).forEach(function (a) {
+            var card = document.createElement("div");
+            card.className = "addr-card";
+            card.dataset.id = a.address_id;
+
+            var tagHtml = a.tag ? ("<span class=\"chip\">" + a.tag + "</span>") : "";
+
+            card.innerHTML =
+                "<button class=\"kebab\" type=\"button\" aria-label=\"Address menu\">⋮</button>" +
+                "<div class=\"menu\" role=\"menu\">" +
+                    "<button class=\"js-edit\" type=\"button\">Edit</button>" +
+                    "<button class=\"js-delete\" type=\"button\">Delete</button>" +
+                "</div>" +
+                "<div class=\"addr-name-row\">" +
+                    "<div class=\"addr-name\">" + (a.name || "") + "</div>" +
+                    tagHtml +
+                "</div>" +
+                "<div class=\"addr-line\">" +
+                    a.door_no + ", " + a.street + ", " + a.area + ", " + a.city + ", " + a.state + " - " + a.pincode +
+                "</div>" +
+                "<div class=\"addr-phone\">Phone: " + (a.phone || "—") + "</div>" +
+                "<div class=\"addr-actions\">" +
+                    "<button class=\"btn-ghost js-quick-edit\" type=\"button\">Quick Edit</button>" +
+                    "<button class=\"btn-primary-mini js-deliver-here\" type=\"button\" disabled>Deliver Here</button>" +
+                "</div>";
+
+            listEl.appendChild(card);
+            attachCardHandlers(card);
+        });
+
+        if (!(data.addresses || []).length) {
+            listEl.innerHTML = "<div class=\"subtle-empty\">You don't have any saved addresses yet. Click \"Add New Address\".</div>";
+        }
+    } catch (e) {
+        // optional: show a toast or console error
+        console.error(e);
+    }
+}
+
+  document.querySelectorAll('.section-header').forEach(h=>{const targetId=h.dataset.target;const body=document.getElementById(targetId);if(h.classList.contains('open')){h.querySelector('.section-arrow').textContent='▼';}else{h.querySelector('.section-arrow').textContent='▶';if(body)body.classList.add('hidden');}h.addEventListener('click',()=>{const isOpen=h.classList.toggle('open');if(body)body.classList.toggle('hidden',!isOpen);h.querySelector('.section-arrow').textContent=isOpen?'▼':'▶';});}); /* accordion arrows */
+</script>
+{% endblock %}

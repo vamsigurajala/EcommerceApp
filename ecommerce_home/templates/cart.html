@@ -262,7 +262,7 @@ body.dark-mode .cart-sticky::before{background:linear-gradient(to bottom,rgba(35
 .wish-empty .ghost-cta:hover{filter:brightness(1.05);}
 .wish-empty .ghost-cta:focus-visible{outline:3px solid rgba(255,255,255,.6);outline-offset:3px;border-color:#fff;}
 @media (max-width:640px){.wish-empty .ghost-cta{bottom:42px;font-size:12.5px;padding:7px 12px;}}
-
+#session-backdrop { touch-action: none; }
 
 </style>
 {% endblock %}
@@ -568,17 +568,33 @@ Includes “Why did this happen?” toggle and closes on backdrop/“×”.
 Locks page scroll while open using fixed-body technique.
 ============================================================= */
 (function(){
-  const modal=document.getElementById('session-modal'),back=document.getElementById('session-backdrop'),closeBtn=document.getElementById('session-close-outside'),whyLink=document.getElementById('why-link'),whyBlock=document.getElementById('session-why-text');
+  const modal=document.getElementById('session-modal'),
+  back=document.getElementById('session-backdrop'),
+  closeBtn=document.getElementById('session-close-outside'),
+  whyLink=document.getElementById('why-link'),
+  whyBlock=document.getElementById('session-why-text');
+   // hard fixed-body lock (same UX as confirm modal)
   function lockScroll(){
-  lockY = window.scrollY || document.documentElement.scrollTop || 0;
-  document.documentElement.classList.add('vo-spinning','vo-lock');
-  // no fixing/offsetting the body for spinner
-}
-function unlockScroll(){
-  document.documentElement.classList.remove('vo-spinning','vo-lock');
-  // restore the exact position (harmless if unchanged)
-  window.scrollTo(0, lockY || 0);
-}
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.documentElement.classList.add('vo-lock'); // overscroll guard you already have
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.documentElement.classList.remove('vo-lock');
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
   function open(){modal.style.display='block';back.style.display='block';lockScroll();}
   function shut(){modal.style.display='none';back.style.display='none';unlockScroll();}
   function toggleWhy(e){e.preventDefault();const openState=whyBlock.style.display!=='block';whyBlock.style.display=openState?'block':'none';whyLink.classList.toggle('clicked',openState);whyLink.textContent=openState?'Hide details':'Why did this happen?';}
@@ -642,7 +658,6 @@ Disables qty buttons and blocks form submits/clicks for mutating endpoints.
       }, true);
     }
   });
-  document.querySelectorAll('.qty-btn').forEach(b => b.setAttribute('disabled', ''));
 })();
 
 
@@ -693,7 +708,7 @@ function getNameFrom(el){
 document.querySelectorAll('form[action$="move-cart-to-wishlist/"]').forEach(form=>{
   form.addEventListener('submit', ()=>{
     const name = getNameFrom(form);
-    window.__toast.queue(`${name} saved for later`);
+    window.__toast.queue(`${name} has been saved for later`);
   });
 });
 
@@ -772,7 +787,7 @@ Falls back to native form submit if XHR fails.
 document.querySelectorAll('form[action^="/api/move-wishlist-to-cart"]').forEach(form=>{
   form.addEventListener('submit', ()=>{
     const name = getNameFrom(form.querySelector('[data-product-name]') || form);
-    window.__toast.queue(`${name} moved to cart`);
+    window.__toast.queue(`${name} has been moved to cart`);
   });
 });
 
@@ -947,7 +962,30 @@ Closes on Cancel/×/backdrop.
 ========================================================================= */
 
 (function(){
-  // ---------- helpers ----------
+  // --- tiny helper to open the session modal (duplication is fine here) ---
+  function openSessionModal() {
+    const modal = document.getElementById('session-modal');
+    const back  = document.getElementById('session-backdrop');
+    if (modal && back) { modal.style.display = 'block'; back.style.display = 'block'; }
+  }
+
+  // If page is read-only, intercept remove/clear and show session modal.
+  const isReadOnly = (document.getElementById('order-root')?.dataset.readOnly === '1');
+  if (isReadOnly) {
+    const roTargets = document.querySelectorAll('form.remove-form, form.remove-wish-form, form[action$="/api/clearcart/"]');
+    roTargets.forEach(f => {
+      f.addEventListener('submit', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openSessionModal();
+        return false;
+      }, true);
+    });
+    // Early return: do NOT proceed to the disarming/confirm logic
+    return;
+  }
+
+  // ---------- helpers (original confirm-modal code continues) ----------
   function disarmForm(f){
     const clone = f.cloneNode(true);
     f.parentNode.replaceChild(clone, f);
@@ -1050,6 +1088,7 @@ Exposes window.__openConfirm/__closeConfirm if needed elsewhere.
     });
   });
 })();
+
 
 
 </script>

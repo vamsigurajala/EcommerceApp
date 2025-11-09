@@ -14,6 +14,7 @@ class User(AbstractUser):
     age = models.IntegerField()
     gender = models.CharField(max_length=10)
     phone = models.CharField(max_length=15, blank=True, null=True)
+    pan_card = models.CharField(max_length=15, blank=True, null=True)
     user_role = models.ForeignKey(UserRole, on_delete=models.CASCADE, null=True)
 
     USERNAME_FIELD='email'

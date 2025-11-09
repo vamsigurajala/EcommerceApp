@@ -18,6 +18,9 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+# Python cache
+__pycache__/
+*.py[cod]
 
 # --- Django local artifacts --------------------------------------------------
 # Keep migrations tracked; only ignore their caches.

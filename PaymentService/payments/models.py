@@ -148,3 +148,61 @@ class Refund(models.Model):
             'metadata': self.metadata,
             'created_at': self.created_at.isoformat(),
         }
+
+# >>> ADD AFTER Refund <<<
+class SavedPaymentMethod(models.Model):
+    """
+    Non-sensitive saved methods: UPI or tokenized card metadata.
+    Never store PAN/CVV/UPI PIN here.
+    """
+    id = models.AutoField(primary_key=True)
+    user_id = models.BigIntegerField(db_index=True)
+
+    provider = models.CharField(max_length=50, default='mock')  # 'razorpay'|'stripe'|'mock'
+    method_type = models.CharField(max_length=16, choices=(('upi', 'UPI'), ('card', 'CARD')))
+
+    # card (tokenized)
+    token = models.CharField(max_length=128, blank=True, null=True)     # provider token/id only
+    card_brand = models.CharField(max_length=20, blank=True, null=True)
+    last4 = models.CharField(max_length=4, blank=True, null=True)
+    exp_month = models.IntegerField(blank=True, null=True)
+    exp_year  = models.IntegerField(blank=True, null=True)
+    card_holder_name = models.CharField(max_length=120, blank=True, null=True)
+
+    # upi
+    upi_vpa = models.CharField(max_length=120, blank=True, null=True)
+    upi_provider_name = models.CharField(max_length=50, blank=True, null=True)
+
+    # common
+    masked_display = models.CharField(max_length=64, default='', blank=True)
+    consented = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'saved_payment_methods'
+        indexes = [
+            models.Index(fields=['user_id']),
+            models.Index(fields=['method_type']),
+        ]
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "provider": self.provider,
+            "method_type": self.method_type,
+            "token": self.token,
+            "card_brand": self.card_brand,
+            "last4": self.last4,
+            "exp_month": self.exp_month,
+            "exp_year": self.exp_year,
+            "card_holder_name": self.card_holder_name,
+            "upi_vpa": self.upi_vpa,
+            "upi_provider_name": self.upi_provider_name,
+            "masked_display": self.masked_display,
+            "consented": self.consented,
+            "is_default": self.is_default,
+            "created_at": self.created_at.isoformat(),
+        }

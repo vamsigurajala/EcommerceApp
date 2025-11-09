@@ -43,6 +43,9 @@ from jwt import ExpiredSignatureError, InvalidTokenError
 from .utils.payment_utils import normalize_payment_attempt, headline_from_attempts
 from .utils.words import amount_in_words_rupees
 from django.contrib import messages as dj_messages
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.exceptions import AuthenticationFailed
 
 
 
@@ -310,7 +313,28 @@ class AddressView(APIView):
         addr.delete()
         return Response(status=204)
 
+class UpdatePanView(APIView):
+    permission_classes = []  # Same pattern as AddressView (JWT cookie auth)
 
+    def put(self, request):
+        token = request.COOKIES.get('jwt')
+        if not token:
+            return Response({'detail': 'Unauthenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALG])
+            user = User.objects.get(pk=payload['user_id'])
+        except (ExpiredSignatureError, InvalidTokenError, User.DoesNotExist):
+            return Response({'detail': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        pan_card = request.data.get('pan_card')
+        if not pan_card:
+            return Response({'detail': 'PAN card required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.pan_card = pan_card
+        user.save(update_fields=['pan_card'])
+        return Response({'success': True, 'pan_card': user.pan_card}, status=status.HTTP_200_OK)
+    
 
 def _jwt_user_id(request):
     # same secret/alg as elsewhere
@@ -322,6 +346,65 @@ def _jwt_user_id(request):
         return payload.get('user_id')
     except jwt.ExpiredSignatureError:
         return None
+
+
+def _unique_cart_count_from_api(cookies):
+    """
+    Returns count of unique items in cart (ignores quantity and duplicate rows).
+    Uniqueness is by product_id. If you have variants, include size/color in the key.
+    """
+    try:
+        data = requests.get(f'{cart_url}/api/cartitems/', cookies=cookies).json()
+        if not isinstance(data, list):
+            return 0
+
+        unique_keys = set()
+
+        for it in data:
+            # Try to get a stable product identifier from common shapes
+            pid = (
+                it.get('product_id')
+                or (it.get('product', {}) or {}).get('id')
+                or it.get('product')  # sometimes API returns just an id here
+            )
+
+            if pid is None:
+                continue
+
+            # If you have variants, uncomment the next two lines and use (pid, size, color)
+            # size  = (it.get('size') or '').strip()
+            # color = (it.get('color') or '').strip()
+            # key = (str(pid), size, color)
+
+            key = str(pid)  # unique by product only
+            unique_keys.add(key)
+
+        return len(unique_keys)
+    except Exception:
+        return 0
+
+
+def _wishlist_count_from_api(cookies):
+    """
+    Returns the number of distinct wishlist items for the user.
+    """
+    try:
+        data = requests.get(f'{cart_url}/api/wishlistitems/', cookies=cookies).json()
+        if not isinstance(data, list):
+            return 0
+        unique_ids = set()
+        for it in data:
+            pid = (
+                it.get('product_id')
+                or (it.get('product', {}) or {}).get('id')
+                or it.get('product')
+            )
+            if pid is not None:
+                unique_ids.add(str(pid))
+        return len(unique_ids)
+    except Exception:
+        return 0
+
 
 def useraddress(request):
     user_id = _jwt_user_id(request)
@@ -370,6 +453,21 @@ def order_address(request):
 
 # PRODUCTS CODE
 
+def _session_expired(request) -> bool:
+    # quick cookie check
+    if 'jwt' not in request.COOKIES:
+        return True
+    # validate with userview (same contract cart uses)
+    try:
+        r = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=6)
+        if r.status_code != 200:
+            return True
+        data = r.json() or {}
+        return not (data.get('user_id') or data.get('id'))
+    except Exception:
+        return True
+
+
 def products(request):
     response = requests.get(f'{product_url}/api/products/')
    # print(type(json.loads(response.content)))
@@ -408,6 +506,10 @@ def homepage(request, page = None,searchproduct=None):
     next_url = data['next']
     prev_url = data['previous']
     page = data['page']
+# Unique cart count for navbar badge
+    cart_count = _unique_cart_count_from_api(request.COOKIES)
+    wishlist_count = _wishlist_count_from_api(request.COOKIES)
+
 
     context = {
         'products': products,
@@ -415,8 +517,13 @@ def homepage(request, page = None,searchproduct=None):
         'next_page': int(page)+1,
         'prev_url': prev_url,
         'prev_page': int(page)-1,
+        'cart_count': cart_count,
+        'wishlist_count': wishlist_count,
+        'session_expired': 1 if _session_expired(request) else 0,
+        'read_only': 1 if _session_expired(request) else 0,
     }
     return render(request, 'allproducts.html', context)
+
 
 
 # View function for paginating products
@@ -450,15 +557,9 @@ def paginate(request, page=None, search=None):
     prev_url = data['previous']
     page = data['page']
 
-    #Get cart count
-    cart_count = 0
-    try:
-        cart_resp = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
-        if isinstance(cart_resp, list):
-            cart_count = sum(int(item.get('quantity', 0)) for item in cart_resp)
-    except Exception:
-        cart_count = 0
-
+    # Get cart count (unique products only)
+    cart_count = _unique_cart_count_from_api(request.COOKIES)
+    wishlist_count = _wishlist_count_from_api(request.COOKIES)
     context = {
         'products': products,
         'next_url': next_url,
@@ -466,7 +567,10 @@ def paginate(request, page=None, search=None):
         'prev_url': prev_url,
         'prev_page': int(page) - 1,
         'user': user,
-        'cart_count': cart_count,   
+        'cart_count': cart_count, 
+        'wishlist_count': wishlist_count, 
+        'session_expired': 1 if _session_expired(request) else 0,
+        'read_only': 1 if _session_expired(request) else 0, 
     }
     return render(request, 'products.html', context)
 
@@ -478,6 +582,38 @@ class GetUserIdAPIView(views.APIView): #Get the UserId
         user = User.objects.get(user_id=user_id)
         return Response( UserSerializer(user).data)
 
+
+
+def profile(request):
+    # Require auth like your other pages
+    if 'jwt' not in request.COOKIES:
+        return redirect(f'{user_url}/api/login/')
+
+    # user details
+    try:
+        user_data = requests.get(
+            f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=6
+        ).json()
+    except Exception:
+        user_data = {}
+
+    # addresses list
+    try:
+        addr_resp = requests.get(
+            f'{user_url}/api/getaddress/', cookies=request.COOKIES, timeout=6
+        )
+        addresses = (addr_resp.json() or {}).get('addresses', [])
+    except Exception:
+        addresses = []
+
+    ctx = {
+        'user_name':  user_data.get('username') or 'Customer',
+        'user_email': user_data.get('email') or '',
+        'user_phone': user_data.get('phone') or '',
+        'user_pan':   user_data.get('pan_card') or '',
+        'addresses':  addresses,  # we’ll also dump this as JSON for JS
+    }
+    return render(request, 'profile.html', ctx)
 
 
 # CART & WISHLIST SERVICE CODE
@@ -609,8 +745,10 @@ def cart(request):
         "wishlistitems": wishlistitems,
         "cart_total": cart_total,
         "session_expired": 1 if session_expired else 0,
-        "read_only": 1 if session_expired else 0,  
-    })
+        "read_only": 1 if session_expired else 0, 
+        "cart_count": len({item.get('product_id') for item in cartitems if item.get('product_id')}),
+        "wishlist_count": len({item.get('product_id') for item in wishlistitems if item.get('product_id')}),
+     })
     return _no_store(resp)
     
 
@@ -632,16 +770,16 @@ def add_to_cart_ajax(request):
     except Exception as e:
         return JsonResponse({'ok': False, 'error': 'cart service unreachable'}, status=502)
 
-    # compute updated count
     cart_count = 0
     try:
         cart_resp = requests.get(f'{cart_url}/api/cartitems/', cookies=request.COOKIES).json()
         if isinstance(cart_resp, list):
-            cart_count = sum(int(item.get('quantity', 0)) for item in cart_resp)
+            cart_count = len({item.get('product_id') for item in cart_resp if item.get('product_id')})
     except Exception:
         pass
 
     return JsonResponse({'ok': True, 'cart_count': cart_count})
+
 
 
 
@@ -747,11 +885,12 @@ def add_to_wishlist_ajax(request):
     try:
         w = requests.get(f'{cart_url}/api/wishlistitems/', cookies=request.COOKIES, timeout=8).json()
         if isinstance(w, list):
-            wl_count = sum(int(item.get('quantity', 1) or 1) for item in w)
+            wl_count = len({ int(i.get('product_id')) for i in w if i.get('product_id') })
     except Exception:
         pass
 
     return JsonResponse({'ok': True, 'wishlist_count': wl_count})
+
 
 
 
@@ -1088,6 +1227,17 @@ def delete_product_checkout(request):
 
 #PAYMENT PAGE CODE
 
+import time 
+
+def mark_session_expired(request):
+    """
+    Mark that the user session/token has expired so the frontend
+    can show the session-expired modal on next page load.
+    """
+    request.session["__session_expired__"] = True
+    request.session.modified = True
+
+
 def _get_current_user_id(request):
     try:
         data = requests.get(f'{user_url}/api/userview/', cookies=request.COOKIES, timeout=8).json()
@@ -1101,6 +1251,159 @@ def _clear_messages(request):
     for _ in get_messages(request):
         pass
 
+def _norm_method(m: dict) -> dict:
+    tp = m.get("method_type") or m.get("type")
+
+    brand = (m.get("card_brand") or "CARD").upper()
+    last4 = (m.get("last4") or "")
+
+    # raw UPI value if backend sends it
+    upi_vpa = m.get("upi_vpa") or m.get("vpa") or m.get("upi_id") or ""
+
+    # base masked text coming from backend
+    raw_masked = m.get("masked_display") or (
+        f"{brand} •••• {last4}" if tp == "card" else (upi_vpa or "UPI ••••")
+    )
+
+    # 🔹 strip any "Default"/"DEFAULT" that backend might have added
+    if raw_masked:
+        raw_masked = raw_masked.replace("Default", "").replace("DEFAULT", "").strip()
+
+    masked = raw_masked
+
+    # 🔹 special masking for UPI: 77803847483@paytm -> 778.....83@paytm
+    if tp == "upi" and upi_vpa and "@" in upi_vpa:
+        try:
+            name, domain = upi_vpa.split("@", 1)
+            if len(name) > 5:
+                masked = f"{name[:3]}.....{name[-2:]}@{domain}"
+            else:
+                masked = upi_vpa
+        except ValueError:
+            pass  # fall back to whatever masked already is
+
+    return {
+        "id": m.get("id") or m.get("_id") or m.get("pk"),
+        "method_type": tp,
+        "masked_display": masked,
+        "card_brand": brand,
+        "last4": last4,
+        "exp_month": m.get("exp_month"),
+        "exp_year": m.get("exp_year"),
+        "card_holder_name": m.get("card_holder_name"),
+        "is_default": bool(m.get("is_default") or m.get("default") or m.get("isDefault")),
+        "upi_provider_name": m.get("upi_provider_name") or m.get("provider_name"),
+        "upi_vpa": upi_vpa,
+    }
+
+
+def _back_to_pay(request):
+    # keep this for any non-AJAX usage
+    return reverse("pay_start")
+@require_POST
+def saved_method_default(request, mid: int):
+    # use the same helper you already use elsewhere
+    user_id = _get_current_user_id(request)
+    method_type = request.GET.get("type")  # 'upi' or 'card'
+
+    ok = False
+
+    try:
+        if not user_id or not method_type:
+            print("DEFAULT LOCAL ERR: missing user_id or type ->",
+                  "user_id:", user_id, "type:", method_type)
+        else:
+            # send user_id & type as QUERY PARAMS, not JSON
+            resp = requests.patch(
+                f"{payment_url.rstrip('/')}/payment-methods/{mid}/default/",
+                params={"user_id": user_id, "type": method_type},
+                cookies=request.COOKIES,
+                timeout=6,
+            )
+            ok = resp.ok
+            if not ok:
+                print("DEFAULT FAIL:", resp.status_code, resp.text[:300])
+    except Exception as e:
+        print("DEFAULT ERR:", e)
+
+    # AJAX case
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"ok": ok}, status=200 if ok else 400)
+
+    # non-AJAX fallback
+    return redirect(_back_to_pay(request))
+
+
+@require_POST
+def saved_method_delete(request, mid: int):
+    ok = False
+    try:
+        resp = requests.delete(
+            f"{payment_url.rstrip('/')}/payment-methods/{mid}/",
+            cookies=request.COOKIES,
+            headers={"X-CSRFToken": request.COOKIES.get("csrftoken", "")},
+            timeout=6,
+        )
+        ok = resp.ok
+        if not ok:
+            print("DELETE FAIL:", resp.status_code, resp.text[:300])
+    except Exception as e:
+        print("DELETE ERR:", e)
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"ok": ok}, status=200 if ok else 400)
+
+    return redirect(_back_to_pay(request))
+
+
+from django.views.decorators.cache import never_cache
+from django.shortcuts import render, redirect
+
+@never_cache
+def pay_start(request):
+
+
+    # 1) Check if session is expired using your helper
+    session_expired = _session_expired(request)   # you already have this function above
+
+    # 2) Get cart snapshot from session (set earlier by cart/checkout views)
+    cartitems     = request.session.get(SNAPSHOT_CART_KEY, []) or []
+    wishlistitems = request.session.get(SNAPSHOT_WISHLIST_KEY, []) or []
+    cart_total    = float(request.session.get(SNAPSHOT_TOTAL_KEY, 0.0) or 0.0)
+
+    # 3) Load addresses ONLY if session looks valid
+    addresses = []
+    if not session_expired:
+        try:
+            r = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES, timeout=6)
+            if r.status_code == 200:
+                data = r.json() or {}
+                addresses = data.get('addresses') or []
+            else:
+                # 401 / 403 / anything else → treat as expired, but STAY on this page
+                session_expired = True
+        except Exception:
+            # network error etc → treat as expired
+            session_expired = True
+
+    # 4) If user is logged in (session not expired) BUT has no addresses → go to HTML address page
+    if not session_expired and not addresses:
+        # ⚠️ NOTE: name='addingaddress' → /api/address/ (HTML form)
+        return redirect('addingaddress')
+
+    # 5) Prepare context for payments.html
+    ctx = {
+        "cartitems": cartitems,
+        "cart_total": cart_total,
+        "addresses": addresses,
+        "cart_count": len({item.get('product_id') for item in cartitems if item.get('product_id')}),
+        "wishlist_count": len({item.get('product_id') for item in wishlistitems if item.get('product_id')}),
+        "session_expired": 1 if session_expired else 0,
+        "read_only": 1 if session_expired else 0,
+    }
+
+    resp = render(request, "payments.html", ctx)
+    return _no_store(resp)   # you already use this in cart()
 
 
 @ensure_csrf_cookie
@@ -1141,14 +1444,33 @@ def start_payment_from_checkout(request):
 
     # Load user address book
     try:
-        addr_resp = requests.get(f'{user_url}/api/getaddress/', cookies=request.COOKIES, timeout=8).json()
-        addresses = addr_resp.get('addresses', []) or []
+        addr_res = requests.get(
+            f'{user_url}/api/getaddress/',
+            cookies=request.COOKIES,
+            timeout=8
+        )
+        status_code = addr_res.status_code
+        addr_json = addr_res.json() if addr_res.content else {}
     except Exception:
-        addresses = []
+        status_code = None
+        addr_json = {}
 
+    addresses = addr_json.get('addresses', []) or []
+
+    # 2) If token expired / unauthorised, go back to checkout
+    #    (checkout + payment templates now both have the session modal JS)
+        # 2) If token expired / unauthorised, go back to checkout and show session modal
+    if status_code in (401, 403):
+        request.session.pop('checkout_snapshot', None)
+        mark_session_expired(request)  
+        return redirect(reverse("checkout"))
+
+
+    # 3) Real "no addresses" case
     if not addresses:
         messages.error(request, "No address on file. Please add an address.")
         return redirect('/api/getaddress/')
+
 
     # Pick the selected one, or default to the first — but only if nothing valid was sent
     def _aid(a: dict) -> str:
@@ -1173,8 +1495,11 @@ def start_payment_from_checkout(request):
     # 2) Pull the frozen checkout snapshot (set in your checkout view)
     snap = request.session.get('checkout_snapshot')
     if not snap:
+        mark_session_expired(request)  
+        # optional: keep messages if you want
         messages.error(request, "Session expired. Please open checkout again.")
-        return redirect('/api/checkout/')
+        return redirect(reverse("checkout"))
+
 
     # 3) Normalize numbers (JSON-safe floats/ints only)
     items         = snap.get("items", [])
@@ -1250,19 +1575,55 @@ def start_payment_from_checkout(request):
     except Exception:
         pass
 
+     # 5.1) Load saved payment methods for this user (cards & UPI)
+    saved_methods = []
+    try:
+        if user_id:
+            rsm = requests.get(
+                f"{payment_url.rstrip('/')}/payment-methods/",
+                params={"user_id": user_id},
+                cookies=request.COOKIES,
+                timeout=6
+            )
+            print("FETCH SAVED ->", user_id, rsm.status_code, rsm.text[:500])
+            if rsm.ok:
+                raw = rsm.json() or []
+                if isinstance(raw, dict) and "results" in raw:
+                    raw = raw["results"]
+                saved_methods = [_norm_method(x) for x in raw if x]
+    except Exception as e:
+        print("FETCH SAVED ERR:", e)
+        saved_methods = []
+            # Split for template (Django template can't do selectattr like Jinja)
+        # Split + sort so default always comes first
+    saved_upis = sorted(
+        [m for m in saved_methods if m.get("method_type") == "upi"],
+        key=lambda m: (0 if m.get("is_default") else 1, m.get("id") or 0),
+    )
+    saved_cards = sorted(
+        [m for m in saved_methods if m.get("method_type") == "card"],
+        key=lambda m: (0 if m.get("is_default") else 1, m.get("id") or 0),
+    )
+
+
+
     # 6) Render the payment page (your modal/JS can post to /api/pay/timeout/)
     return render(request, "payment.html", {
         "amount": round(total_payable, 2),
         "currency": "INR",
         "payment": payment_payload,
         "order": orders_data,
-
         # right-side price card values used by your template
         "item_count": item_count,
         "cart_total": cart_total,
         "shipping_fee": shipping_fee,
         "platform_fee": platform_fee,
         "total_payable": total_payable,
+        "saved_methods": saved_methods,
+        "saved_upis": saved_upis,       
+        "saved_cards": saved_cards,
+        "user_id": user_id,
+        "payments_base": payment_url.rstrip('/'),
     })
 
 
@@ -1279,6 +1640,8 @@ def set_toast(request, text: str, kind: str = "success") -> None:
 @ensure_csrf_cookie
 @require_POST
 def payment_success(request):
+    if request.method != "POST":
+        return redirect("pay_start")
     """
     Called by the payment handler when a payment is successful.
     Consumes the '__pending_order__' snapshot, creates the order,
@@ -1312,6 +1675,131 @@ def payment_success(request):
     })
     orders_data["summary"] = summary
     orders_data["total_amount"] = final_total
+
+     # --- save user's UPI / Card (MOCK safe) ---
+    try:
+        user_id = _get_current_user_id(request)
+        if user_id:
+            # Saved method chosen? (radio)
+            picked_id = request.POST.get('saved_method_id')
+            picked_tp = request.POST.get('saved_method_type')
+            if picked_id and picked_tp:
+                # Nothing to save; user used an existing saved method
+                pass
+            else:
+                # UPI from manual entry
+                save_upi = (request.POST.get('save_upi') == '1')
+                upi_vpa  = (request.POST.get('upi_vpa') or '').strip()
+                if save_upi and upi_vpa:
+                    def _mask_upi(v):
+                        if '@' not in v: return 'UPI ••••'
+                        name, dom = v.split('@', 1)
+                        head = (name[:3] if len(name) >= 3 else name[:1]) + '****'
+                        return f"{head}@{dom}"
+                    masked = _mask_upi(upi_vpa)
+
+                    # Is it the first UPI for this user? (make default)
+                    try:
+                        have_upi = requests.get(
+                            f"{payment_url.rstrip('/')}/payment-methods/",
+                            params={"user_id": user_id},
+                            cookies=request.COOKIES, timeout=5
+                        )
+                        is_first_upi = True
+                        if have_upi.ok:
+                            for row in (have_upi.json() or []):
+                                if (row or {}).get("method_type") == "upi":
+                                    is_first_upi = False
+                                    break
+                    except Exception:
+                        is_first_upi = False
+
+                    resp = requests.post(
+                        f"{payment_url.rstrip('/')}/payment-methods/",
+                        json={
+                            "user_id": user_id,
+                            "provider": "mock",
+                            "method_type": "upi",
+                            "upi_vpa": upi_vpa,
+                            "upi_provider_name": None,
+                            "masked_display": masked,
+                            "consented": True,
+                            "is_default": is_first_upi,
+                        },
+                        cookies=request.COOKIES,
+                        headers={"X-CSRFToken": request.COOKIES.get("csrftoken", "")},
+                        timeout=6,
+                    )
+                    if not resp.ok:
+                        print("SAVE UPI FAILED:", resp.status_code, resp.text[:300])
+
+
+                # Card from manual entry (mock tokenization)
+                save_card = (request.POST.get('save_card') == '1')
+                last4     = (request.POST.get('card_last4') or '').strip()[:4]
+                brand     = (request.POST.get('card_brand') or 'CARD').strip().upper()
+                exp_month = request.POST.get('card_exp_month')
+                exp_year  = request.POST.get('card_exp_year')
+                masked_d  = request.POST.get('card_masked')
+                card_holder_name = (request.POST.get('card_holder_name') or '').strip()
+
+                if save_card and last4:
+                    try:
+                        exp_month = int(exp_month) if exp_month else None
+                    except:
+                        exp_month = None
+                    try:
+                        exp_year = int(exp_year) if exp_year else None
+                    except:
+                        exp_year = None
+
+                    if not masked_d:
+                        masked_d = f"{brand} •••• {last4}"
+
+                    mock_token = f"mock_{int(time.time() * 1000)}_{last4}"
+
+                    # Is it the first CARD for this user? (make default)
+                    try:
+                        have_card = requests.get(
+                            f"{payment_url.rstrip('/')}/payment-methods/",
+                            params={"user_id": user_id},
+                            cookies=request.COOKIES, timeout=5
+                        )
+                        is_first_card = True
+                        if have_card.ok:
+                            for row in (have_card.json() or []):
+                                if (row or {}).get("method_type") == "card":
+                                    is_first_card = False
+                                    break
+                    except Exception:
+                        is_first_card = False
+
+                    resp = requests.post(
+                        f"{payment_url.rstrip('/')}/payment-methods/",
+                        json={
+                            "user_id": user_id,
+                            "provider": "mock",
+                            "method_type": "card",
+                            "token": mock_token,
+                            "card_brand": brand,
+                            "last4": last4,
+                            "exp_month": exp_month or None,
+                            "exp_year":  exp_year or None,
+                            "card_holder_name": card_holder_name,
+                            "masked_display": masked_d,
+                            "consented": True,
+                            "is_default": is_first_card,
+                        },
+                        cookies=request.COOKIES,
+                        headers={"X-CSRFToken": request.COOKIES.get("csrftoken", "")},
+                        timeout=6,
+                    )
+                    if not resp.ok:
+                        print("SAVE CARD FAILED:", resp.status_code, resp.text[:300])
+
+    except Exception:
+        pass
+
 
     # --- mark statuses for the Orders service ---
     orders_data["status"] = "PAID"                # internal status
@@ -1347,6 +1835,14 @@ def payment_success(request):
 
     # --- success toast on /api/vieworders/ ---
     set_toast(request, "Payment successful! Order placed.", "success")
+    print("PAY POST KEYS:", list(request.POST.keys()))
+    print("Saved-method POST attempted for user:", user_id)
+    print("SAVE FLAGS -> save_upi:", request.POST.get('save_upi'),
+      "upi_vpa:", request.POST.get('upi_vpa'),
+      "save_card:", request.POST.get('save_card'),
+      "last4:", request.POST.get('card_last4'),
+      "brand:", request.POST.get('card_brand'),
+      "exp:", request.POST.get('card_exp_month'), request.POST.get('card_exp_year'))
     return redirect(reverse("vieworders"))
 
 
@@ -1454,6 +1950,7 @@ def pay_flash_success(request):
 def pay_flash_fail(request):
     messages.error(request, "Payment not successful. Please contact your bank for any money deducted.")
     return redirect(reverse("vieworders"))
+
 
 
 

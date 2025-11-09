@@ -2,63 +2,146 @@
 <html>
 {% load static %}
 <head>
-  <meta charset="utf-8" />
-  <title>{% block title %}Ecommerce Site{% endblock %}</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<meta charset="utf-8" />
+<title>{% block title %}Ecommerce Site{% endblock %}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <style>
-    body.light-mode { background:#fff; color:#222; }
-    body.dark-mode  { background:#222; color:#fff; }
-    header, nav, .card, .pagination a { transition: background .2s, color .2s; }
-    body.dark-mode header, body.dark-mode nav { background:#1a1a1a !important; color:#fff !important; }
-    body.light-mode header, body.light-mode nav { background:#333 !important; color:#fff !important; }
-    body.dark-mode .card { background:#1a1a1a; color:#fff; box-shadow:0 0 10px rgba(255,255,255,0.1); }
-    body.light-mode .card { background:#fff; color:#222; }
-    body.dark-mode .pagination a { background:#444; color:#fff; }
-    body.light-mode .pagination a { background:#333; color:#fff; }
+<style>
+  body.light-mode { background:#fff; color:#222; }
+  body.dark-mode  { background:#222; color:#fff; }
+  header, nav, .card, .pagination a { transition: background .2s, color .2s; }
 
-    .search-container input[type="text"]{ padding:10px; font-size:16px; border:none; border-radius:5px 0 0 5px; background:#f2f2f2; width:70%; }
-    .search-container button[type="submit"]{ padding:10px 20px; font-size:16px; border:none; border-radius:0 5px 5px 0; background:#333; color:#fff; cursor:pointer; transition:background-color .2s; }
+  body.dark-mode .card { background:#1a1a1a; color:#fff; box-shadow:0 0 10px rgba(255,255,255,0.1); }
+  body.light-mode .card { background:#fff; color:#222; }
+  body.dark-mode .pagination a { background:#444; color:#fff; }
+  body.light-mode .pagination a { background:#333; color:#fff; }
 
-    body{ margin:0; font-family:Arial, sans-serif; }
-    header{ background:#333; color:#fff; padding:20px; }
-    nav ul{ list-style:none; margin:0; padding:0; }
-    nav li{ display:inline-block; }
-    nav li a, nav a{ color:#fff; text-decoration:none; padding:10px; }
-    nav{ text-align:right; }
+  .search-container input[type="text"]{ padding:10px; font-size:16px; border:none; border-radius:5px 0 0 5px; background:#f2f2f2; width:70%; }
+  .search-container button[type="submit"]{ padding:10px 20px; font-size:16px; border:none; border-radius:0 5px 5px 0; background:#333; color:#fff; cursor:pointer; transition:background-color .2s; }
 
-    main{ max-width:800px; margin:auto; padding:20px; }
+  body{ margin:0; font-family:Arial, sans-serif; }
+  header.site-header{ background:#333; color:#fff; padding:20px; }
+  nav ul{ list-style:none; margin:0; padding:0; }
+  nav li{ display:inline-block; }
+  nav li a, nav a{ color:#fff; text-decoration:none; padding:10px; }
+  nav{ text-align:right; }
 
-    .card-container{ display:flex; flex-wrap:wrap; justify-content:space-between; }
-    .card{ width:300px; margin:20px; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.2); transition: transform .2s, background .2s, color .2s; }
-    .card:hover{ transform:scale(1.05); }
-    .card img{ max-width:100%; height:auto; margin-bottom:20px; }
-    .card h2{ font-size:24px; margin-bottom:10px; }
-    .card p{ font-size:18px; margin-bottom:10px; }
-    .card button{ background:#333; color:#fff; border:none; padding:10px 20px; border-radius:5px; font-size:18px; cursor:pointer; transition:background-color .2s; }
-    .card button:hover{ background:#555; }
+  main{ max-width:800px; margin:auto; padding:20px; }
 
-    .pagination{ display:flex; justify-content:space-between; align-items:center; margin-top:20px; }
-    .pagination a{ padding:10px; background:#333; color:#fff; text-decoration:none; border-radius:5px; }
-    .pagination a:hover{ background:#fff; color:#333; }
+  .card-container{ display:flex; flex-wrap:wrap; justify-content:space-between; }
+  .card{ width:300px; margin:20px; padding:20px; box-shadow:0 0 10px rgba(0,0,0,0.2); transition: transform .2s, background .2s, color .2s; }
+  .card:hover{ transform:scale(1.05); }
+  .card img{ max-width:100%; height:auto; margin-bottom:20px; }
+  .card h2{ font-size:24px; margin-bottom:10px; }
+  .card p{ font-size:18px; margin-bottom:10px; }
+  .card button{ background:#333; color:#fff; border:none; padding:10px 20px; border-radius:5px; font-size:18px; cursor:pointer; transition:background-color .2s; }
+  .card button:hover{ background:#555; }
 
-    #theme-toggle{ float:right; margin-left:15px; margin-top:-8px; font-size:20px; border:none; background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
-    .theme-tooltip{ display:none; position:absolute; left:10%; top:110%; transform:translateX(-50%); background:#232323; color:#fff; padding:7px 16px; border-radius:6px; font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,0.18); white-space:nowrap; margin-top:7px; z-index:99; pointer-events:none; opacity:0; transition:opacity .15s; }
-    #theme-toggle:hover .theme-tooltip{ display:block; opacity:1; }
-    .theme-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
+  .pagination{ display:flex; justify-content:space-between; align-items:center; margin-top:20px; }
+  .pagination a{ padding:10px; background:#333; color:#fff; text-decoration:none; border-radius:5px; }
+  .pagination a:hover{ background:#fff; color:#333; }
 
-    .icon-navbar{ display:flex; justify-content:flex-end; align-items:center; gap:24px; }
-    .nav-icon-link{ position:relative; display:inline-flex; align-items:center; justify-content:center; color:inherit; font-size:1.5rem; padding:8px; border-radius:50%; transition:background .18s; text-decoration:none; background:none; border:none; }
-    .nav-icon-link:hover, .nav-icon-link:focus{ background:rgba(60,60,60,.14); }
-    .icon-tooltip{ display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:#232323; color:#fff; padding:6px 12px; border-radius:6px; font-size:14px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.14); z-index:20; opacity:0; transition:opacity .13s; pointer-events:none; }
-    .nav-icon-link:hover .icon-tooltip, .nav-icon-link:focus .icon-tooltip{ display:block; opacity:1; }
-    .icon-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
+  #theme-toggle{ float:right; margin-left:15px; margin-top:-8px; font-size:20px; border:none; background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
+  .theme-tooltip{ display:none; position:absolute; left:10%; top:110%; transform:translateX(-50%); background:#232323; color:#fff; padding:7px 16px; border-radius:6px; font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,0.18); white-space:nowrap; margin-top:7px; z-index:99; pointer-events:none; opacity:0; transition:opacity .15s; }
+  #theme-toggle:hover .theme-tooltip{ display:block; opacity:1; }
+  .theme-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
 
-    .cart-badge{ position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; padding:0 6px; border-radius:9999px; background:#ff3b30; color:#fff; font-size:12px; font-weight:700; line-height:18px; text-align:center; box-shadow:0 0 0 2px #fff; }
-    body.dark-mode .cart-badge{ box-shadow:0 0 0 2px #222; }
+  .icon-navbar{ display:flex; justify-content:flex-end; align-items:center; gap:24px; }
+  .nav-icon-link{ position:relative; display:inline-flex; align-items:center; justify-content:center; color:inherit; font-size:1.5rem; padding:8px; border-radius:50%; transition:background .18s; text-decoration:none; background:none; border:none; }
+  .nav-icon-link:hover, .nav-icon-link:focus{ background:rgba(60,60,60,.14); }
+  .icon-tooltip{ display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:#232323; color:#fff; padding:6px 12px; border-radius:6px; font-size:14px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.14); z-index:20; opacity:0; transition:opacity .13s; pointer-events:none; }
+  .nav-icon-link:hover .icon-tooltip, .nav-icon-link:focus .icon-tooltip{ display:block; opacity:1; }
+  .icon-tooltip::before{ content:""; position:absolute; top:-7px; left:50%; transform:translateX(-50%); border-width:0 7px 7px 7px; border-style:solid; border-color:transparent transparent #232323 transparent; }
+  #rvDlg::backdrop{ background:rgba(0,0,0,.55); }
 
-    #rvDlg::backdrop{ background:rgba(0,0,0,.55); }
-  </style>
+  :root{--brand-blue:#2563eb;--brand-blue-dark:#1f3fa6;} /* brand color variables for light/dark header */
+  header.site-header{background:var(--brand-blue)!important;color:#fff;height:58px;display:flex;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.1);} /* top navbar layout and color */
+  body.dark-mode header.site-header{background:var(--brand-blue-dark)!important;} /* dark-mode header color */
+  .header-inner{max-width:1200px;width:100%;margin:0 auto;padding:0 18px;display:flex;align-items:center;gap:16px;} /* container for navbar content */
+  .brand{color:#fff;text-decoration:none;font-weight:900;font-size:22px;letter-spacing:.2px;white-space:nowrap;} /* site logo text styling */
+  .nav-search{flex:1;display:flex;align-items:center;gap:8px;min-width:240px;position:relative;} /* search bar container */
+  .nav-search .search-icon{position:absolute;left:10px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;pointer-events:none;} /* search icon inside input */
+  .nav-search .search-icon img{width:18px;height:18px;display:block;} /* search icon size */
+  .nav-search input[type="text"]{width:100%;height:36px;border:0;outline:none;border-radius:8px;padding:0 12px 0 36px;background:#f1f5f9;color:#0f172a;} /* search input style */
+  .nav-search button[type="submit"]{height:36px;padding:0 14px;border:0;border-radius:8px;background:#1f2937;color:#fff;font-weight:700;cursor:pointer;} /* search button styling */
+  body.dark-mode .nav-search input[type="text"]{background:#e5e7eb;color:#0f172a;} /* dark-mode input color */
+  body.dark-mode .nav-search button[type="submit"]{background:#0f172a;} /* dark-mode button */
+  .right-rail{display:flex;align-items:center;gap:14px;} /* right section layout (user, cart, seller) */
+  .user-trigger{display:inline-flex;align-items:center;gap:8px;background:transparent;border:0;color:#fff;font-weight:800;font-size:14px;padding:6px 10px;border-radius:8px;cursor:pointer;} /* username button */
+  .user-trigger:hover{background:rgba(255,255,255,.15);} /* hover background for user trigger */
+  .user-trigger .arrow{transition:transform .15s ease;} /* arrow rotation animation */
+  .user-menu.open .arrow{transform:rotate(180deg);} /* flip arrow when menu open */
+  .user-menu{position:relative;} /* needed for dropdown positioning */
+  .user-menu .menu{position:absolute;left:0;top:100%;transform:translateY(8px);min-width:220px;background:#fff;color:#0f172a;border-radius:10px;border:1px solid #e5e7eb;box-shadow:0 10px 25px rgba(0,0,0,.2);display:none;z-index:1000;padding:6px;} /* dropdown menu box */
+  .user-trigger:hover + .menu,.user-menu .menu:hover{display:block;} /* show menu on hover */
+  .user-menu::after{content:"";position:absolute;left:0;top:100%;width:100%;height:10px;} /* clickable gap fix below trigger */
+  body.dark-mode .user-menu .menu{background:#171717;color:#e5e7eb;border-color:#2b2b2b;} /* dark-mode dropdown */
+  .menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:inherit;text-decoration:none;font-weight:600;} /* each menu item layout */
+  .menu-item i{width:18px;text-align:center;} /* icon width */
+  .menu-item:hover{background:rgba(0,0,0,.05);} /* hover background */
+  body.dark-mode .menu-item:hover{background:rgba(255,255,255,.08);} /* dark-mode hover bg */
+  .cart-link{position:relative;display:inline-flex;align-items:center;gap:6px;color:#fff;text-decoration:none;font-weight:800;padding:6px 8px;border-radius:8px;} /* cart link styling */
+  .cart-link:hover,.seller-btn:hover{background:transparent;} /* disable hover bg */
+  .cart-link .fa-shopping-cart{position:relative;} /* ensure badge positions relative to icon */
+  .seller-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;color:#fff;border:0;font-weight:800;font-size:14px;padding:6px 10px;border-radius:8px;cursor:pointer;text-decoration:none;} /* become-seller button */
+  .nav-search{position:relative;flex:1;display:flex;align-items:center;min-width:240px;} /* duplicated search wrapper */
+  .nav-search .search-icon{position:absolute;left:10px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;pointer-events:none;} /* icon positioning again */
+  .nav-search .search-icon img{width:18px;height:18px;display:block;} /* icon dimensions */
+  .nav-search input[type="search"]{width:100%;height:36px;border:0;outline:none;border-radius:8px;padding:0 12px 0 36px;background:#f1f5f9;color:#0f172a;} /* search field look */
+  body.dark-mode .nav-search input[type="search"]{background:#e5e7eb;color:#0f172a;} /* dark-mode field */
+  .search-container,.search-container + button{display:none!important;} /* hide duplicate search area */
+  .theme-row{display:flex;align-items:center;justify-content:space-between;gap:12px;} /* theme toggle row */
+  .theme-left{display:flex;align-items:center;gap:10px;} /* theme icon + label grouping */
+  #themeIcon{width:18px;text-align:center;color:#6b7280;} /* theme icon color light */
+  body.dark-mode #themeIcon{color:#e5e7eb;} /* theme icon color dark */
+  .pill-switch{position:relative;display:inline-block;} /* wrapper for toggle switch */
+  .pill-switch input{display:none;} /* hide checkbox */
+  .pill{position:relative;width:56px;height:26px;background:#e5e7eb;border-radius:9999px;display:inline-flex;align-items:center;justify-content:space-between;padding:0 8px;box-sizing:border-box;font-size:14px;user-select:none;transition:background .2s ease;} /* pill background + layout */
+  .pill .moon{opacity:1;transition:opacity .2s ease;} /* moon icon visible default */
+  .pill .sun{opacity:0.35;transition:opacity .2s ease;} /* sun icon dimmed default */
+  .pill .knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:left .22s ease;} /* toggle knob */
+  .pill-switch input:checked + .pill{background:#0f172a;color:#fff;} /* dark mode active bg */
+  .pill-switch input:checked + .pill .knob{left:33px;} /* knob slides right */
+  .pill-switch input:checked + .pill .moon{opacity:0.35;} /* dim moon */
+  .pill-switch input:checked + .pill .sun{opacity:1;} /* highlight sun */
+  .pill-switch,.pill-switch input,.pill-switch .pill,.theme-row label{cursor:pointer;} /* cursor pointer on toggle */
+  body.dark-mode .menu{background:#171717;color:#e5e7eb;border-color:#2b2b2b;} /* dark-mode menu */
+  body.dark-mode .menu-item:hover{background:rgba(255,255,255,.08);} /* dark-mode hover */
+  .user-menu::after{content:"";position:absolute;top:100%;left:0;width:100%;height:8px;} /* transparent hover buffer */
+  .cart-link .fa-shopping-cart .cart-badge{position:absolute;top:-12px;right:-5px;width:16px!important;height:16px!important;min-width:unset!important;padding:0!important;border-radius:50%!important;background:#ef2b2b;color:#fff;font-size:10px;font-weight:900;line-height:16px;text-align:center;display:inline-block;box-shadow:#fff!important;transform:scale(1);transition:transform .15s ease;} /* red numeric badge on cart icon */
+  .cart-link .fa-shopping-cart .cart-badge:hover{transform:scale(1.1);} /* badge zoom on hover */
+  .user-menu .menu{display:none;} /* hide menu by default */
+  .user-menu.open .menu{display:block;} /* show when open */
+  .user-menu::after{content:"";position:absolute;left:0;top:100%;width:100%;height:8px;pointer-events:none;} /* invisible hover bridge */
+  .menu-item{color:inherit!important;text-decoration:none;} /* force inherit color */
+  .menu-item:hover{background:rgba(0,0,0,0.05);} /* hover bg for items */
+  .wishlist-count{font-size:13px;font-weight:600;color:#333;margin-left:4px;} /* wishlist number beside label */
+  .menu-item .wl-label{display:flex;align-items:center;gap:4px;} /* align wishlist label and number */
+  .wishlist-count{margin-left:-4px!important;font-weight:800;font-size:.95em;color:#333;} /* adjust spacing and emphasize count */
+  body.dark-mode .wishlist-count{color:#e5e7eb;} /* wishlist count in dark mode */
+
+  /* Session modal (shared) */
+  .session-actions{display:flex;gap:10px;margin-top:12px;} .btn-login{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none;} .btn-login:hover{filter:brightness(1.05);} .btn-why{background:transparent;color:var(--ink-soft);border:0;padding:0;cursor:pointer;}
+  #session-expired-modal .btn-login{display:block;width:100%;text-align:center;justify-content:center;padding:14px 16px;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none;border:1px solid transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);} #session-expired-modal .btn-login:hover{filter:brightness(1.04);}
+  .session-actions{display:flex;justify-content:center;} #session-modal .why a{text-decoration:none;color:inherit;} #session-modal .why a:hover{text-decoration:none;}
+  #session-close-outside{font-size:28px;z-index:5002;} #session-modal .why a:hover{color:#2563eb;} #session-modal .why a.clicked{color:#ef4444;}
+  #session-why-text{display:none;margin:8px 0 10px;padding:12px 14px;border-radius:10px;background:#fef9c3;border:1px solid #fde68a;color:#0c0c0c;position:relative;z-index:1;} body.dark-mode #session-why-text{background:#3b2f13;border-color:#a16207;color:#fde68a;}
+  #session-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:100000!important;} #session-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,92vw);background:var(--paper,#fff);color:var(--ink,#0f172a);border:1px solid var(--line,#e5e7eb);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);padding:18px 18px 20px;z-index:100001!important;overflow:visible;}
+  #session-modal header{position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;} #session-modal header h1,#session-modal header h2,#session-modal header h3,#session-modal header h4{margin:0;font-size:18px!important;line-height:1.25!important;font-weight:800!important;letter-spacing:.2px;color:var(--ink,#0f172a)!important;}
+  #session-close-outside{position:absolute;top:-18px;right:-70px;width:30px;height:35px;display:grid;place-items:center;border-radius:10px;font-size:26px;line-height:1;background:var(--paper,#fff);color:var(--ink-soft,#64748b);border:1px solid var(--line,#e5e7eb);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;}
+  .session-hero{display:block;margin:8px auto 12px;} .session-hero img{width:100%;height:auto;display:block;object-fit:contain;border-radius:8px;filter:none;}
+  body.dark-mode #session-modal{background:#161616;color:#fff;border-color:#2a2a2a;} body.dark-mode #session-close-outside{background:#161616;color:#cbd5e1;border-color:#2a2a2a;box-shadow:0 6px 18px rgba(0,0,0,.6);} body.dark-mode #session-modal header h1,body.dark-mode #session-modal header h2,body.dark-mode #session-modal header h3,body.dark-mode #session-modal header h4{color:#fff!important;}
+  .btn-login,.btn-login:link,.btn-login:visited,.btn-login:hover,.btn-login:active,.btn-login:focus{text-decoration:none!important;}
+  #session-close-outside{position:absolute;top:-18px;right:-70px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:10px;font-size:30px;line-height:1;background:var(--paper,#fff);color:var(--ink-soft,#64748b);border:1px solid var(--line,#e5e7eb);box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;z-index:5002;} /* close button above modal, centered “×” icon */
+  #session-close-outside:hover{background:#2563eb;color:#fff;border-color:#2563eb;} /* hover color change for close button */
+  #voSpinnerBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(1.5px);z-index:2147483000;display:none;} /* dark overlay background for spinner */
+  body.lock-scroll{overflow:hidden!important;} /* lock background scrolling when overlay active */
+  .vo-spinner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;border:6px solid rgba(124,58,237,.2);border-top-color:#7c3aed;border-right-color:rgba(124,58,237,.6);animation:voSpin .8s linear infinite;} /* violet spinning ring centered on screen */
+  .vo-spinner-text{position:absolute;left:50%;top:calc(50% + 40px);transform:translateX(-50%);color:#fff;font:700 14px/1.1 Inter,system-ui,Arial,sans-serif;letter-spacing:.2px;opacity:.95;text-shadow:0 1px 0 rgba(0,0,0,.25);text-align:center;} /* white loading text below spinner */
+  @keyframes voSpin{to{transform:translate(-50%,-50%) rotate(360deg);}} /* continuous spin animation for ring */
+
+
+</style>
 
   {% block extra_style %}{% endblock %}
   {% block gallery_assets %}
@@ -68,54 +151,162 @@
 </head>
 
 <body>
-  <header>
-    <button id="theme-toggle">
-      <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M21 15.3A9 9 0 1 1 12.7 3a7 7 0 1 0 8.3 12.3z"/></svg>
-      <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" style="display:none;" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/>
-        <g stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </g>
-      </svg>
-      <span class="theme-tooltip" id="theme-tooltip">Switch to dark mode</span>
-    </button>
+ <header class="site-header">
+  <div class="header-inner">
 
-    <p>Hi {{ user.username }}, Welcome to</p>
-    <h1>Novacart</h1>
+    <!-- Left: Brand -->
+    <a href="/api/paginate/?page=1" class="brand">Novacart</a>
 
-    <nav class="icon-navbar">
-      <a href="/api/paginate/?page=1" class="nav-icon-link"><i class="fa fa-home"></i><span class="icon-tooltip">Home</span></a>
-      <a href="/api/cart/" class="nav-icon-link">
-        <i class="fa fa-shopping-cart"></i>
-        {% if cart_count and cart_count > 0 %}<span class="cart-badge">{{ cart_count }}</span>{% endif %}
-        <span class="icon-tooltip">Cart</span>
+        <!-- Center: Search in navbar -->
+    <form class="nav-search" action="/api/paginate/" method="get" role="search">
+      <span class="search-icon">
+        <img src="{% static 'images/magnifier.png' %}" alt="">
+      </span>
+
+      <!-- main query -->
+      <input type="search" name="q" placeholder="Search for Products, Brands and More..." value="{{ request.GET.q|default:'' }}" aria-label="Search products" id="navSearchInput">
+      <!-- IMPORTANT: some views expect page; set it to 1 -->
+      <input type="hidden" name="page" value="1">
+
+      <!-- keep a hidden submit so Enter works -->
+      <button type="submit" hidden aria-hidden="true"></button>
+
+      <!-- (compat) if your view uses 'search' instead of 'q', this gets filled via JS below -->
+      <input type="hidden" name="search" id="navSearchMirror">
+    </form>
+
+
+
+    <!-- Right: Profile → Cart → Seller -->
+    <div class="right-rail">
+
+      <!-- Profile -->
+      <div class="user-menu" id="userMenu">
+        <button class="user-trigger" id="userTrigger" aria-expanded="false" aria-haspopup="true">
+          <i class="fa fa-user-circle"></i>
+          <span class="user-name">{{ user.username|default:"Guest" }}</span>
+          <i class="fa fa-chevron-down arrow" aria-hidden="true"></i>
+        </button>
+       <div class="menu" role="menu" aria-label="User menu">
+      <a role="menuitem" href="{% url 'profile' %}" class="menu-item js-wait" data-wait="Opening profile…">
+      <i class="fa fa-user"></i> My Profile
+    </a>
+      <a role="menuitem" href="/api/vieworders/" class="menu-item js-wait" data-wait="Loading orders…">
+          <i class="fa fa-box"></i> Orders
+        </a>
+
+      <a role="menuitem" href="/api/cart/?open=wishlist" class="menu-item js-wait" data-wait="Loading wishlist…">
+        <i class="fa fa-heart"></i>
+        <span>Wishlist</span>
+        {% if wishlist_count and wishlist_count > 0 %}
+          <span class="wishlist-count">({{ wishlist_count }})</span>
+        {% endif %}
       </a>
-      <a href="/api/vieworders/" class="nav-icon-link"><i class="fa fa-box"></i><span class="icon-tooltip">Orders</span></a>
-      <a href="{% url 'loginuser' %}" class="nav-icon-link"><i class="fa fa-sign-out-alt"></i><span class="icon-tooltip">Logout</span></a>
-    </nav>
-  </header>
-
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- reusable dialog for gallery -->
-  <dialog id="rvDlg" style="padding:0;border:0;width:min(1100px,96vw);max-height:90vh;">
-    <div id="rvDlgBody" style="background:#fff;color:#111;max-height:90vh;overflow:auto"></div>
-  </dialog>
-
-  <!-- replace your existing floating close button -->
-<button id="rvDlgCloseFloat" aria-label="Close gallery" type="button"
-  style="display:none;position:fixed;width:42px;height:42px;border-radius:9999px;
-         background:#fff;border:1px solid rgba(0,0,0,.15);box-shadow:0 6px 18px rgba(0,0,0,.22);
-         color:#111;font-size:22px;line-height:1;align-items:center;justify-content:center;
-         z-index:2147483647;cursor:pointer; top:12px; right:12px;">×</button>
 
 
-  <script>
+        <!-- 🌓 Dark Mode toggle item -->
+      <div class="menu-item theme-row" id="darkModeItem">
+        <div class="theme-left">
+          <i class="fa fa-moon" id="themeIcon" aria-hidden="true"></i>
+          <span id="themeLabel">Dark Mode</span>
+        </div>
+
+        <label class="pill-switch" aria-label="Toggle theme">
+          <input type="checkbox" id="themeSwitch">
+          <span class="pill">
+            <span class="moon">🌙</span>
+            <span class="sun">☀️</span>
+            <span class="knob"></span>
+          </span>
+        </label>
+      </div>
+
+
+        <a role="menuitem" href="{% url 'loginuser' %}" class="menu-item">
+          <i class="fa fa-right-from-bracket"></i> Logout
+        </a>
+      </div>
+
+
+            <!-- Cart -->
+        <a href="/api/cart/" class="cart-link js-wait" data-wait="Loading cart…" aria-label="Cart">
+              <i class="fa fa-shopping-cart">
+                {% if cart_count and cart_count > 0 %}
+                  <span class="cart-badge">{{ cart_count }}</span>
+                {% endif %}
+              </i>
+              <span>Cart</span>
+        </a>
+
+            <!-- Seller -->
+        <a href="/seller/" class="seller-btn js-wait" data-wait="Opening seller page…">
+              <i class="fa fa-store"></i>
+              <span>Become a Seller</span>
+            </a>
+          </div>
+        </div>
+      </header>
+
+
+        <main>
+          {% block content %}{% endblock %}
+        </main>
+
+        <!-- reusable dialog for gallery -->
+        <dialog id="rvDlg" style="padding:0;border:0;width:min(1100px,96vw);max-height:90vh;">
+          <div id="rvDlgBody" style="background:#fff;color:#111;max-height:90vh;overflow:auto"></div>
+        </dialog>
+
+        <!-- floating close button -->
+      <button id="rvDlgCloseFloat" aria-label="Close gallery" type="button"
+        style="display:none;position:fixed;width:42px;height:42px;border-radius:9999px;
+              background:#fff;border:1px solid rgba(0,0,0,.15);box-shadow:0 6px 18px rgba(0,0,0,.22);
+              color:#111;font-size:22px;line-height:1;align-items:center;justify-content:center;
+              z-index:2147483647;cursor:pointer; top:12px; right:12px;">×</button>
+
+      <!-- Session sentinel used by modal JS -->
+      <div id="session-sentinel"
+          data-session-expired="{% if session_expired %}1{% else %}0{% endif %}"
+          data-read-only="{{ read_only|default:0 }}"
+          style="display:none;"></div>
+
+
+      <!-- Session expired modal (shared across site) -->
+      <div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+      <div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+        <header>
+          <h4 id="session-title">Your session expired</h4>
+          <button id="session-close-outside" aria-label="Close">×</button>
+        </header>
+
+        <div class="session-hero" aria-hidden="true">
+          <img src="{% static 'images/sessionend.png' %}" alt="">
+        </div>
+
+        <div class="why" id="why-link-wrap">
+          <a href="#" id="why-link">Why did this happen?</a>
+        </div>
+        <div id="session-why-text">For security, we auto-sign out after inactivity or when your session token expires.</div>
+
+        <div class="session-actions">
+          <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+        </div>
+      </div>
+
+
+      <!-- Page-load spinner (violet) with dynamic text -->
+      <div id="voSpinnerBackdrop" style="display:none;">
+        <div class="vo-spinner"></div>
+        <div class="vo-spinner-text" id="voSpinnerText">Loading…</div>
+      </div>
+
+
+<script>
+
+  /* ================== THEME TOGGLE (Top Right Icon) ==================
+Handles light/dark theme switching via the small moon/sun icon near header.
+Saves preference to localStorage and applies theme instantly on load.
+==================================================================== */
     (function(){
       function setTheme(mode){
         const moon=document.getElementById('moon-icon');
@@ -123,20 +314,29 @@
         const tip=document.getElementById('theme-tooltip');
         if(mode==='dark'){
           document.body.classList.add('dark-mode'); document.body.classList.remove('light-mode');
-          sun.style.display=''; moon.style.display='none'; if(tip) tip.textContent='Switch to Light Mode';
+          if(sun) sun.style.display=''; if(moon) moon.style.display='none'; if(tip) tip.textContent='Switch to Light Mode';
         }else{
           document.body.classList.add('light-mode'); document.body.classList.remove('dark-mode');
-          moon.style.display=''; sun.style.display='none'; if(tip) tip.textContent='Switch to Dark Mode';
+          if(moon) moon.style.display=''; if(sun) sun.style.display='none'; if(tip) tip.textContent='Switch to Dark Mode';
         }
       }
       const saved=localStorage.getItem('theme'); setTheme(saved==='dark'?'dark':'light');
-      document.getElementById('theme-toggle').onclick=function(){
-        const next = document.body.classList.contains('dark-mode') ? 'light':'dark';
-        setTheme(next); localStorage.setItem('theme', next);
-      };
+      const toggle=document.getElementById('theme-toggle');
+      if(toggle){
+        toggle.onclick=function(){
+          const next = document.body.classList.contains('dark-mode') ? 'light':'dark';
+          setTheme(next); localStorage.setItem('theme', next);
+        };
+      }
     })();
 
-    (function () {
+  
+    /* ================== REVIEW IMAGE GALLERY MODAL ==================
+Controls opening of review-image popup modal (rvDlg).
+Fetches gallery HTML via AJAX, injects scripts, and locks body scroll.
+Positions the floating close button and restores scroll on close.
+==================================================================== */
+  (function () {
   const dlg  = document.getElementById('rvDlg');
   const body = document.getElementById('rvDlgBody');
   const closeFloat = document.getElementById('rvDlgCloseFloat');
@@ -156,7 +356,7 @@
     if (left + btnW > window.innerWidth - 6) left = r.right - btnW - 12;
     if (top < 12) top = 12;
 
-    closeFloat.style.right = '';           
+    closeFloat.style.right = '';
     closeFloat.style.left  = left + 'px';
     closeFloat.style.top   = top  + 'px';
     closeFloat.style.display = 'flex';
@@ -187,7 +387,6 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       body.innerHTML = html;
-      // re-run any real scripts in the fragment
       body.querySelectorAll('script').forEach(old => {
         const type = (old.getAttribute('type') || '').toLowerCase();
         const isJs = !type || type === 'text/javascript' || type === 'application/javascript' || type === 'module';
@@ -213,6 +412,303 @@
       alert('Could not open gallery');
     }
   });
+})();
+
+/* ================== USER MENU (Username Dropdown) ==================
+Handles hover and click behavior for username dropdown in navbar.
+Prevents flicker using delay timers and toggles open/close on hover or tap.
+==================================================================== */
+(function(){
+  const menuWrap = document.getElementById('userMenu');           // the .user-menu div
+  const trigger  = document.getElementById('userTrigger');         // the button
+  const panel    = menuWrap ? menuWrap.querySelector('.menu') : null;
+  if(!menuWrap || !trigger || !panel) return;
+
+  let timer;
+
+  const open  = () => { menuWrap.classList.add('open');  trigger.setAttribute('aria-expanded','true');  };
+  const close = () => { menuWrap.classList.remove('open'); trigger.setAttribute('aria-expanded','false'); };
+
+  // Hover ONLY on the username button opens the panel
+  trigger.addEventListener('mouseenter', () => { clearTimeout(timer); open(); });
+  trigger.addEventListener('mouseleave', () => { timer = setTimeout(close, 150); });
+
+  // Keep open while moving inside the dropdown
+  panel.addEventListener('mouseenter', () => { clearTimeout(timer); open(); });
+  panel.addEventListener('mouseleave', () => { timer = setTimeout(close, 150); });
+
+    // Click toggle — allow toggle only when not already controlled by hover
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // If user is hovering, ignore click toggle (prevents flicker)
+    const isHovering = trigger.matches(':hover') || panel.matches(':hover');
+    if (isHovering) return;
+
+    // Otherwise toggle manually (for mobile or keyboard)
+    if (menuWrap.classList.contains('open')) {
+      close();
+    } else {
+      open();
+    }
+  });
+
+})();
+
+/* ================== SEARCH FIELD SYNC ==================
+Keeps navbar search input mirrored with hidden input (for mobile compatibility).
+Ensures search query text stays consistent across components.
+==================================================================== */
+(function(){
+    const q = document.getElementById('navSearchInput');
+    const mirror = document.getElementById('navSearchMirror');
+    if (q && mirror) {
+      const sync = () => mirror.value = q.value;
+      q.addEventListener('input', sync);
+      q.addEventListener('change', sync);
+      sync(); // set initial value
+    }
+  })();
+
+
+  /* ================== SEARCH PAGE RELOAD CLEANUP ==================
+Detects page reload on search result pages (?q=...).
+If reloaded, automatically clears query params and resets to page=1.
+Also clears search input field text for a fresh start.
+==================================================================== */
+   (function () {
+    // If the user hits browser Refresh on a search result page (?q=...),
+    // redirect to the base listing (no q) and start at page=1.
+    var navEntries = (performance.getEntriesByType && performance.getEntriesByType('navigation')) || [];
+    var isReload = navEntries.length ? navEntries[0].type === 'reload'
+                                     : (performance.navigation && performance.navigation.type === 1);
+
+    if (isReload) {
+      var url = new URL(window.location.href);
+      if (url.searchParams.has('q') || url.searchParams.has('search')) {
+        url.searchParams.delete('q');
+        url.searchParams.delete('search');
+        url.searchParams.set('page', '1');
+        window.location.replace(url.pathname + '?' + url.searchParams.toString());
+        return; // stop here; page will reload to clean listing
+      }
+    }
+
+    // Optional: also clear the navbar input’s visible text on any reload
+    var input = document.getElementById('navSearchInput');
+    if (isReload && input) input.value = '';
+  })();
+
+
+  /* ================== THEME SWITCH (Settings Menu Toggle) ==================
+Handles toggle switch inside profile menu for switching between Light/Dark mode.
+Updates icons, label text, and persists setting in localStorage.
+==================================================================== */
+(function(){
+    const sw   = document.getElementById('themeSwitch');
+    const text = document.getElementById('themeLabel');
+    const icon = document.getElementById('themeIcon');
+
+    function apply(mode){
+      if(mode === 'dark'){
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+        localStorage.setItem('theme','dark');
+        if(sw) sw.checked = true;
+        if(text) text.textContent = 'Light Mode';
+        if(icon){ icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); }
+      }else{
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('theme','light');
+        if(sw) sw.checked = false;
+        if(text) text.textContent = 'Dark Mode';
+        if(icon){ icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); }
+      }
+    }
+
+    // Initial
+    apply(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
+
+    // Toggle
+    if(sw){
+      sw.addEventListener('change', ()=>{
+        apply(sw.checked ? 'dark' : 'light');
+      });
+    }
+  })();
+
+/* ================== SESSION EXPIRY MODAL ==================
+Monitors session validity using /api/userview/ endpoint.
+Shows “Session Expired” modal and locks background scroll when session ends.
+Handles “Why did this happen?” info toggle and close button.
+==================================================================== */
+
+(function(){
+  const modal=document.getElementById('session-modal'),
+        back =document.getElementById('session-backdrop'),
+        closeBtn=document.getElementById('session-close-outside'),
+        whyLink=document.getElementById('why-link'),
+        whyBlock=document.getElementById('session-why-text'),
+        sentinel=document.getElementById('session-sentinel');
+
+  function lockScroll(){
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.dataset.lockY = y;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${y}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    document.documentElement.classList.add('vo-lock');
+  }
+  function unlockScroll(){
+    const y = parseInt(document.body.dataset.lockY || '0', 10);
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    document.documentElement.classList.remove('vo-lock');
+    window.scrollTo(0, y);
+    delete document.body.dataset.lockY;
+  }
+  function open(){ if(!modal||!back) return; modal.style.display='block'; back.style.display='block'; lockScroll(); }
+  function shut(){ if(!modal||!back) return; modal.style.display='none';  back.style.display='none';  unlockScroll(); }
+  function toggleWhy(e){ e.preventDefault(); const openState = whyBlock.style.display!=='block'; whyBlock.style.display=openState?'block':'none'; whyLink.classList.toggle('clicked',openState); whyLink.textContent=openState?'Hide details':'Why did this happen?'; }
+
+  closeBtn?.addEventListener('click',shut);
+  back?.addEventListener('click',shut);
+  whyLink?.addEventListener('click',toggleWhy);
+
+  // 1) If server already knows we're expired, show immediately
+  const initialExpired = sentinel?.dataset.sessionExpired === '1';
+  if (initialExpired) { open(); return; }
+
+  // 2) Otherwise, ping the same endpoint cart/checkout use
+  fetch('/api/userview/', { credentials:'same-origin', cache:'no-store' })
+    .then(r => { if (r.status !== 200) open(); })
+    .catch(open);
+})();
+
+
+/* ================== WISHLIST COUNT UPDATER ==================
+Fetches wishlist items via /api/wishlistitems/.
+Updates count beside “Wishlist” link dynamically after add/remove actions.
+Hooks into fetch() and XMLHttpRequest() to auto-refresh after changes.
+==================================================================== */
+(function(){
+  async function updateWishlistCount(){
+    try{
+      const res = await fetch('/api/wishlistitems/', {
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+      if(!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      if(!Array.isArray(data)) return;
+
+      const ids = new Set(
+        data.map(it => it.product_id ?? (it.product && it.product.id)).filter(Boolean)
+      );
+      const n = ids.size;
+
+      const link = document.querySelector('.menu-item[href="/api/cart/?open=wishlist"]');
+      if(!link) return;
+      let count = link.querySelector('.wishlist-count');
+      if(!count){
+        count = document.createElement('span');
+        count.className = 'wishlist-count';
+        link.appendChild(count);
+      }
+      if(n > 0){
+        count.textContent = `(${n})`;
+        count.style.display = 'inline';
+      }else{
+        count.style.display = 'none';
+      }
+    }catch(e){}
+  }
+
+  // Run once on load
+  updateWishlistCount();
+
+  // Refresh when items are added/removed
+  const ADD = '/api/addtowishlist-ajax/';
+  const REMOVE = '/api/removewishlist-ajax/';
+  const _fetch = window.fetch;
+  window.fetch = async function(input, init){
+    const res = await _fetch.apply(this, arguments);
+    try{
+      const url = (typeof input === 'string') ? input : (input && input.url) || '';
+      if(res && res.ok && (url.includes(ADD) || url.includes(REMOVE))){
+        updateWishlistCount();
+      }
+    }catch(_e){}
+    return res;
+  };
+
+  const X = window.XMLHttpRequest;
+  if(X && X.prototype){
+    const _open = X.prototype.open;
+    const _send = X.prototype.send;
+    X.prototype.open = function(method, url){
+      this.__url = url || '';
+      return _open.apply(this, arguments);
+    };
+    X.prototype.send = function(){
+      this.addEventListener('load', ()=>{
+        const ok = this.status >= 200 && this.status < 300;
+        if(ok && this.__url && (this.__url.includes(ADD) || this.__url.includes(REMOVE))){
+          updateWishlistCount();
+        }
+      });
+      return _send.apply(this, arguments);
+    };
+  }
+
+  window.updateWishlistCount = updateWishlistCount;
+})();
+
+/* ================== PAGE-LOAD SPINNER (Global Loading Overlay) ==================
+Displays violet spinner + white “Loading...” text on navigation clicks.
+Locks background scrolling until new page loads completely.
+Automatically detects which page (cart/orders/profile) and shows proper message.
+==================================================================== */
+(function(){
+  const backdrop=document.getElementById('voSpinnerBackdrop');
+  const textEl=document.getElementById('voSpinnerText');
+  if(!backdrop||!textEl)return;
+
+  function showSpinner(msg){
+    textEl.textContent=msg||'Loading...';
+    backdrop.style.display='block';
+    document.body.classList.add('lock-scroll');
+  }
+  function hideSpinner(){
+    backdrop.style.display='none';
+    document.body.classList.remove('lock-scroll');
+  }
+
+  window.addEventListener('load',hideSpinner);
+  window.addEventListener('pageshow',hideSpinner);
+
+  document.addEventListener('click',(e)=>{
+    const a=e.target.closest('a.js-wait');
+    if(!a)return;
+    if(e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+
+    const href=a.getAttribute('href')||'';
+    let msg='Loading...';
+    if(href.includes('/api/vieworders/'))msg='Loading orders...';
+    else if(href.includes('/api/cart/?open=wishlist'))msg='Loading wishlist...';
+    else if(href.includes('/api/cart/'))msg='Loading cart...';
+    else if(href.includes('/seller/'))msg='Opening seller page...';
+    else if(href.includes('/profile/'))msg='Opening profile...';
+    showSpinner(msg);
+  });
+
+  window.addEventListener('beforeunload',()=>showSpinner(textEl.textContent||'Loading...'));
 })();
   </script>
 </body>

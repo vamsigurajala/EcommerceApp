@@ -3,6 +3,7 @@
 {% block title %}Novacart Payments Page{% endblock %}
 
 {% block extra_style %}
+{% load static %}
 
 <style>
 /* ---------------------------------------------
@@ -22,7 +23,7 @@
   --success-200:#cfe9cf;
   --radius:14px;
   --shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.06);
-  --max:1360px;
+  --max:1180px;
   --ease:cubic-bezier(.22,.61,.36,1);
   --header-h: 64px;
   --stepbar-h: 56px;
@@ -90,6 +91,9 @@ h1,h2,h3,h4,.brand{font-weight:800}
 #theme-toggle{position:static;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.14);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position: relative; }
 html.dark #theme-toggle{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.10);color:#fff}
 .icon-btn svg,#theme-toggle svg{width:20px;height:20px}
+
+:root { --ink-main:#111827; --ink-muted:#4b5563; --ink-soft:#6b7280; --chip-bg:#e0e7ff; --chip-fg:#4338ca; }
+@media (prefers-color-scheme:dark){ :root { --ink-main:#e5e7eb; --ink-muted:#cbd5f5; --ink-soft:#9ca3af; --chip-bg:rgba(129,140,248,.18); --chip-fg:#c7d2fe; } }
 
 /* ---------------------------------------------
    Main page container (card-like canvas)
@@ -728,82 +732,236 @@ body.dark-mode #session-modal header h3,
 body.dark-mode #session-modal header h4{color:#fff!important;}
 
 .page{overflow: hidden}
+.page { max-width: var(--max); margin: 16px auto 48px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 16px 16px; overflow: hidden; }
+@media (min-width: 1360px) { .payments-mast { position: sticky; top: var(--stickTop, 84px); z-index: 10; padding: 0 16px 12px; margin: 0; background: transparent; } .payments-mast .mast-inner { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 16px; } }
+.pay-col { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+@media (min-width: 1600px) { .pay-col { background: transparent; border: 0; box-shadow: none; } }
+#payTimeoutModal .btn-primary:hover { background: #dc2626; transform: translateY(-1px); }
+html.modal-open, body.modal-open { overflow: hidden !important; height: 100%; overscroll-behavior: contain; }
 
-/* The page is a rounded card; clip its children */
-.page{
-  max-width: var(--max);
-  margin: 16px auto 48px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 12px 16px 16px;
-  overflow: hidden;                 /* <-- important */
-}
 
-/* Remove the rule that made it visible on desktop:
-   @media (min-width:1360px){ .page, .page > .container { overflow: visible; } }
-*/
+.stack{display:flex;flex-direction:column;gap:12px}
+.tile-row{border:1px solid #e5e7eb;border-radius:12px;padding:12px 12px 12px;position:relative;background:#fff}
+.tile-row.selected{outline:2px solid #2563eb}
+.radio-line{display:flex;align-items:center;gap:12px;cursor:pointer}
+.radio-line input{display:none}
+.radio-ui{width:22px;height:22px;border-radius:50%;border:2px solid #9ca3af;display:inline-block;position:relative; top: 3px;}
+.tile-row.selected .radio-ui{border-color:#2563eb}
+.tile-row.selected .radio-ui::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#2563eb}
+.radio-text{display:flex;align-items:center;gap:10px;font-size:15px}
+.badge{margin-left:6px;background:#eef2ff;color:#4338ca;border-radius:9999px;padding:2px 8px;font-size:12px}
+.sub{color:#6b7280;margin-left:6px}
+.tile-actions{position:absolute;right:12px;top:12px;display:flex;gap:10px}
+.tile-actions .link{background:none;border:none;color:#2563eb;cursor:pointer;padding:0;font-size:13px}
+.tile-actions .danger{color:#dc2626}
+.pay-for-tile{width:100%;margin-top:12px}
+.hidden{display:none}
+.add-pill{margin-top:12px;border:1px dashed #a78bfa;color:#6d28d9;background:#faf5ff;padding:8px 12px;border-radius:10px}
+.row-ck{display:flex;gap:8px;align-items:center;margin:8px 0 4px}
+.brand{height:18px;width:auto}
 
-/* Mast should respect the page padding, not touch viewport edges */
-@media (min-width: 1360px){
-  .payments-mast{
-    position: sticky;
-    top: var(--stickTop, 84px);
-    z-index: 10;
-    padding: 0 16px 12px;          /* line up with .page padding */
-    margin: 0;
-    background: transparent;
-  }
-  .payments-mast .mast-inner{
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 12px 16px;
-  }
-}
-/* keep – boxed look */
-.pay-col{
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-}
+details.dots { position: relative; margin-left: 8px; }
+details.dots > summary { list-style: none; cursor: pointer; width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; }
+details.dots > summary::marker { content: ''; }
+details.dots > summary::after { content: '⋯'; font-size: 18px; line-height: 1; opacity: .8; }
+details.dots[open] > summary { background: var(--surface-2, #f3f4f6); }
+details.dots .menu { position: absolute; right: 0; top: 34px; background: var(--bg, #fff); border: 1px solid rgba(0,0,0,.08); box-shadow: 0 6px 24px rgba(0,0,0,.12); border-radius: 12px; padding: 6px; min-width: 160px; z-index: 10; }
+details.dots .menu .menu-item { display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; background: none; cursor: pointer; }
+details.dots .menu .menu-item:hover { background: rgba(0,0,0,.04); }
+details.dots .menu .menu-item.danger { color: #d11; }
+.tile-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border, #e5e7eb); border-radius: 12px; }
+.tile-row .radio-line { flex: 1 1 auto; min-width: 0; }
+.tile-actions { margin-left: auto; position: relative; flex: 0 0 auto; }
+.tile-row .pay-for-tile { width: 260px; margin-left: 16px; }
+@media (max-width:640px) { .tile-row { flex-wrap: wrap; } .tile-row .pay-for-tile { width: 100%; margin: 10px 0 0 0; } }
+.row-ck { display: flex; align-items: center; gap: 10px; user-select: none; cursor: pointer; }
+.row-ck input[type="checkbox"] { width: 18px; height: 18px; accent-color: #2563eb; cursor: pointer; }
+.row-ck span { cursor: pointer; }
+.link.action, .link.danger, .tile-actions button, .add-pill, .btn, .btn-pay, .radio-line, .saved-radio, .tile-row { cursor: pointer; }
+.tile-row { display: flex; align-items: center; }
+.tile-row .radio-line { flex: 1 1 auto; min-width: 0; }
+.tile-actions { margin-left: auto; position: relative; flex: 0 0 auto; }
+.add-pill { cursor: pointer; }
+.hidden { display: none !important; }
+.btn-pay { width: 100% !important; display: block !important; }
+#upiSection .pay-hint { color: #16a34a; font-weight: 700; margin-bottom: 15px; }
+#upiSection .btn-pay { width: 100%; display: block; margin-top: 16px; }
+#upiSection .muted { margin-top: 10px; }
+#upi-id-error { color: #dc2626; font-size: 13px; margin-top: 4px; }
 
-/* DELETE this later override (it was removing the box globally)
-.pay-col{
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-}
-*/
 
-/* If you want “flat” only on very wide screens, scope it: */
-@media (min-width: 1600px){
-  .pay-col{ background:transparent; border:0; box-shadow:none; }
-}
-/* Offers/discount greens work in both themes already (use tokens) */
+/* === final layout for saved tiles: left text, right dots === */
+.stack{display:flex;flex-direction:column;gap:12px;}
+.tile-row{display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;}
+.tile-row .tile-head{display:flex;align-items:center;justify-content:space-between;width:100%;}
+.tile-row .radio-line{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;justify-content:flex-start;}
+.tile-row .radio-text{display:flex;align-items:center;gap:8px;}
+.tile-row .dots{margin-left:auto;flex:0 0 auto;}
+.tile-row .btn-pay,.tile-row .pay-for-tile{width:100%;margin-top:8px;align-self:stretch;}
+/* === align Proceed button edges with radio + 3 dots === */
+.tile-row{padding:0 12px;}
+.tile-row .tile-head{padding:0 4px;}
+.tile-row .pay-for-tile{width:auto;margin:8px 4px 0 4px;align-self:stretch;}
+.tile-row .btn-pay,.tile-row .pay-for-tile{border-radius:8px;}
 
-/* Timeout modal buttons, unchanged */
-#payTimeoutModal .btn-primary:hover{ background:#dc2626; transform:translateY(-1px); }
+/* === final polish: spacing & vertical dots === */
+.tile-row{padding:10px 12px 12px 12px;} /* top/bottom space */
+.tile-row .tile-head{padding:4px 4px 6px 4px;}
+.tile-row .pay-for-tile{width:auto;margin:10px 6px 0 6px;align-self:stretch;}
+.tile-row .dots summary { font-size:0; line-height:1; display:inline-grid; place-items:center; }
+.tile-row .dots summary::-webkit-details-marker{display:none;} /* hide default arrow */
 
-/* Modal: lock background (your existing rule is fine) */
-html.modal-open, body.modal-open{
-  overflow:hidden !important;
-  height:100%;
-  overscroll-behavior:contain;
+details.dots { position:relative; margin-left:8px; }
+details.dots > summary { list-style:none; cursor:pointer; width:28px; height:28px; padding:0; margin:0; border-radius:999px; display:grid; place-items:center; background:transparent !important; border:none; user-select:none; outline:none; }
+details.dots > summary::-webkit-details-marker { display:none; }
+details.dots[open] > summary { background:transparent !important; }
+details.dots > summary::after { content:''; display:inline-block; width:4px; height:4px; border-radius:50%; background:currentColor; box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor; }
+details.dots > summary:focus, details.dots > summary:active { outline:none; background:transparent !important; }
+details.dots > summary:focus-visible { outline:2px solid rgba(37,99,235,.6); outline-offset:2px; }
+
+.pay-hint + .list-head { margin-top:4px; } /* reduces space between offer and Saved UPI IDs */
+.upi-subtitle { font-size:12px; font-weight:600; color:#4b5563; margin:12px 0 10px 0; user-select:none; cursor:default; } /* small title non-selectable */
+#upi-manual input.input { margin-top:8px; } /* adds gap between Add new UPI ID text and input box */
+#card-manual .row-ck { margin-bottom:18px; }
+#card-manual.no-saved .muted { margin-bottom:6px; } /* gap between RBI line and green offer */
+#card-manual.no-saved .pay-hint { margin-bottom:18px; }
+
+/* kill the big outer container card on the left */
+.pay-col { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding: 0; }
+
+/* make each payment section its own free card */
+.pay-col .section.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 14px rgba(15,23,42,.04); margin-bottom: 12px; overflow: hidden; }
+
+/* optional: give the step header its own card look so it still feels nice */
+.pay-col .step-head { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 4px 14px rgba(15,23,42,.04); padding: 16px 20px; margin-bottom: 12px; }
+.hidden { display: none !important; }
+
+.radio-text { display:flex; flex-direction:column; gap:4px; }
+.card-top { display:flex; align-items:center; justify-content:space-between; }
+.card-main { font-weight:600; font-size:14px; color:#111827; }
+.card-badge { margin-left:8px; }
+.card-line { display:flex; align-items:center; gap:8px; font-size:13px; color:#4b5563; }
+.card-num { letter-spacing:0.06em; }
+.card-holder { max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card-logo img.brand { width:28px; height:18px; object-fit:contain; display:block; margin-left:4px; }
+.card-exp { font-size:13px; color:#6b7280; }
+
+#cardSection .radio-line { display:flex; align-items:flex-start; gap:10px; }
+#cardSection .card-header { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:4px 0; }
+#cardSection .card-top { display:flex; align-items:center; justify-content:flex-start; gap:8px; font-weight:600; font-size:14px; color:#111827; }
+#cardSection .card-main { margin-left:0; }
+#cardSection .card-bottom { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:13px; color:#4b5563; margin-top:2px; }
+#cardSection .card-num { letter-spacing:0.06em; }
+#cardSection .card-holder { max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#cardSection .card-logo img.brand { width:28px; height:18px; object-fit:contain; display:block; }
+#cardSection .card-exp { font-size:13px; color:#6b7280; }
+#cardSection .sep { opacity:.6; }
+
+#upiSection .radio-line { display:flex; align-items:center; gap:10px; }
+#upiSection .radio-ui { position:relative; top:1px; }
+#upiSection .upi-line { display:flex; align-items:center; gap:8px; font-size:14px; color:#111827; font-weight:500; }
+#upiSection .upi-id { font-weight:600; color:#111827; }
+#upiSection .badge { background:#e0e7ff; color:#4338ca; font-weight:600; font-size:12px; border-radius:6px; padding:2px 6px; }
+#cardSection .badge { background:#e0e7ff; color:#4338ca; font-weight:600; font-size:12px; border-radius:6px; padding:2px 6px; }
+
+
+
+#sm-confirm-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 2000; display: none; overflow: hidden; }
+#sm-confirm-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; color: #111827; padding: 36px 30px 30px; border-radius: 14px; box-shadow: 0 10px 45px rgba(0,0,0,0.25); z-index: 2001; width: 440px; max-width: 90%; text-align: center; display: none; transition: all 0.25s ease; overflow: visible; }
+#sm-confirm-modal h4 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 14px; letter-spacing: 0.3px; line-height: 1.4; }
+#sm-confirm-modal p { font-size: 15px; color: #4b5563; margin-bottom: 26px; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sm-confirm-modal .session-actions { display: flex; justify-content: center; gap: 18px; }
+#sm-confirm-modal .btn-primary { background: linear-gradient(90deg,#ef4444,#dc2626); color: #fff; border: none; border-radius: 8px; padding: 10px 26px; font-weight: 600; cursor: pointer; transition: 0.25s; box-shadow: 0 3px 10px rgba(239,68,68,0.35); }
+#sm-confirm-modal .btn-primary:hover { background: linear-gradient(90deg,#dc2626,#b91c1c); transform: translateY(-1px); }
+#sm-confirm-modal .btn-secondary { background: #f9fafb; color: #111827; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 26px; font-weight: 500; cursor: pointer; transition: 0.25s; }
+#sm-confirm-modal .btn-secondary:hover { background: #f3f4f6; }
+#sm-confirm-close { position: absolute; top: -28px; right: -70px; width: 30px; height: 30px; border: none; background: #fff; color: #9ca3af; font-size: 22px; font-weight: 700; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.18); cursor: pointer; transition: 0.25s; display: flex; align-items: center; justify-content: center; line-height: 1; }
+#sm-confirm-close:hover { color: #111827; transform: scale(1.12); }
+#sm-confirm-close { top: -36px !important; right: -70px !important; }
+/* 🌙 Dark Mode Support (One-Liners) */
+body.dark-mode #sm-confirm-modal { background:#1f2937; color:#f3f4f6; box-shadow:0 10px 45px rgba(0,0,0,0.7); border:1px solid #374151; }
+body.dark-mode #sm-confirm-modal h4 { color:#f9fafb; }
+body.dark-mode #sm-confirm-modal p { color:#d1d5db; }
+body.dark-mode #sm-confirm-modal .btn-primary { background:linear-gradient(90deg,#dc2626,#b91c1c); box-shadow:0 3px 10px rgba(239,68,68,0.25); }
+body.dark-mode #sm-confirm-modal .btn-secondary { background:#374151; color:#f3f4f6; border:1px solid #4b5563; }
+body.dark-mode #sm-confirm-modal .btn-secondary:hover { background:#4b5563; }
+body.dark-mode #sm-confirm-close { background:#1f2937; color:#d1d5db; box-shadow:0 4px 12px rgba(255,255,255,0.08); }
+body.dark-mode #sm-confirm-close:hover { color:#fff; }
+body.dark-mode #sm-confirm-close { background:#f9fafb; color:#111827; border:1px solid #4b5563; box-shadow:0 4px 14px rgba(0,0,0,0.45); }
+body.dark-mode #sm-confirm-close:hover { background:#e5e7eb; color:#000; transform:scale(1.12); }
+
+
+
+#upiSection .upi-line { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #111827; font-weight: 500; }
+#upiSection .upi-id { font-weight: 600; color: #111827; }
+#upiSection .badge { background: #e0e7ff; color: #4338ca; font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 6px; line-height: 1; }
+body.dark-mode #upiSection .badge { background: #4338ca; color: #fff; }
+#upiSection .radio-text{display:flex;flex-direction:row;align-items:center;gap:8px;}
+#upiSection .upi-id{white-space:nowrap;}
+#upiSection .badge{flex-shrink:0;margin-left:6px;}
+
+/* ================================
+   PAYMENTS – SESSION EXPIRED MODAL (one-liner format)
+   ================================ */
+#payTimeoutModal {position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:saturate(120%) blur(2px);z-index:3000;}
+#payTimeoutModal.show {display:flex;}
+#payTimeoutModal .modal {position:relative;width:min(720px,94vw);background:radial-gradient(120% 120% at 0% 0%,color-mix(in oklab,var(--paper,#fff),#fff 6%),transparent 60%),var(--paper,#fff);color:var(--ink,#0f172a);border-radius:20px;border:1px solid color-mix(in oklab,var(--ink-soft,#64748b),#fff 65%);box-shadow:0 24px 80px rgba(2,8,23,.45),0 0 0 1px rgba(2,8,23,.08) inset;padding:0;overflow:hidden;}
+#payTimeoutModal header {border:0;padding:22px 24px 0;background:transparent;}
+#payTimeoutTitle.t-title {margin:0;font-size:20px;font-weight:800;letter-spacing:.2px;}
+#payTimeoutModal .t-wrap {padding:10px 24px 20px;display:grid;grid-template-columns:64px 1fr;column-gap:16px;align-items:flex-start;}
+#payTimeoutModal .t-icon {width:64px;height:64px;border-radius:16px;display:grid;place-items:center;background:radial-gradient(55% 55% at 50% 45%,#fde68a 0%,#fbbf24 70%,#f59e0b 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);color:#1f2937;}
+#payTimeoutModal .t-desc {margin:0;color:var(--ink-soft,#64748b);}
+#payTimeoutModal .t-note {margin:10px 0 0;font-size:13px;color:var(--ink-soft,#64748b);}
+#payTimeoutModal .t-bar {height:10px;border-radius:999px;background:#f3f4f6;margin-top:14px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);}
+#payTimeoutModal .t-fill {height:100%;width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444);transition:width .25s linear;}
+#payTimeoutModal .m-actions {display:grid;grid-template-rows:auto auto;gap:12px;border-top:1px solid var(--line,#e5e7eb);padding:14px 16px 16px;}
+#payTimeoutModal .m-actions .help {color:var(--ink-soft,#64748b);font-size:12.5px;line-height:1.35;padding:0 4px;}
+#payTimeoutModal .m-actions .buttons {display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap;}
+#payTimeoutModal .m-actions a {text-decoration:none!important;}
+#payTimeoutModal .btn-secondary,#payTimeoutModal .btn-primary {border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04);transition:transform .06s ease,box-shadow .15s ease,background .15s ease,opacity .15s ease;padding:10px 18px;font-weight:800;}
+#payTimeoutModal .btn-secondary {background:#0f172a;color:#fff;border:1px solid rgba(255,255,255,.06);}
+#payTimeoutModal .btn-secondary:hover {transform:translateY(-1px);}
+#payTimeoutModal .btn-primary {background:#ef4444;border:1px solid #ef4444;color:#fff;}
+#payTimeoutModal .btn-primary:hover {background:#dc2626;border-color:#dc2626;transform:translateY(-1px);}
+#payTimeoutModal .btn-secondary:focus-visible,#payTimeoutModal .btn-primary:focus-visible {outline:2px solid color-mix(in oklab,var(--brand,#4f46e5),#fff 40%);outline-offset:2px;}
+@media(max-width:520px){#payTimeoutModal .m-actions .buttons{flex-direction:column;align-items:stretch;}#payTimeoutModal .m-actions .buttons a{width:100%;text-align:center;}}
+:root[data-theme="dark"] #payTimeoutModal .modal,body.dark-mode #payTimeoutModal .modal {background:#020617;color:#e5e7eb;border-color:#1f2937;box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 0 1px rgba(15,23,42,.85) inset;}
+:root[data-theme="dark"] #payTimeoutModal .t-bar,body.dark-mode #payTimeoutModal .t-bar {background:#0f172a;}
+:root[data-theme="dark"] #payTimeoutModal .t-icon,body.dark-mode #payTimeoutModal .t-icon {color:#0b1220;}
+:root[data-theme="dark"] #payTimeoutModal .m-actions .help,body.dark-mode #payTimeoutModal .m-actions .help {color:#94a3b8;}
+:root[data-theme="dark"] #payTimeoutModal .btn-secondary,body.dark-mode #payTimeoutModal .btn-secondary {background:#111827;border-color:#1f2937;}
+:root[data-theme="dark"] #payTimeoutModal .btn-secondary:hover,body.dark-mode #payTimeoutModal .btn-secondary:hover {background:#1f2937;}
+:root[data-theme="dark"] #payTimeoutModal .btn-primary,body.dark-mode #payTimeoutModal .btn-primary {background:#ef4444;border-color:#ef4444;}
+
+[data-theme="dark"] .pay-shell {
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  padding: 24px 16px 40px !important;
 }
 
 </style>
 {% endblock %}
 
 {% block content %}
-
+<main class="payment-page">
 <form id="payForm" action="/api/pay/success/" method="post"> 
   {% csrf_token %}
+  <input type="hidden" name="save_upi" id="save_upi" value="0">
+  <input type="hidden" name="upi_vpa"  id="upi_vpa"  value="">
+
+  <input type="hidden" name="save_card"      id="save_card"      value="0">
+  <input type="hidden" name="card_last4"     id="card_last4"     value="">
+  <input type="hidden" name="card_brand"     id="card_brand"     value="">
+  <input type="hidden" name="card_exp_month" id="card_exp_month" value="">
+  <input type="hidden" name="card_exp_year"  id="card_exp_year"  value="">
+  <input type="hidden" name="card_masked"    id="card_masked"    value="">
+  <input type="hidden" name="card_holder_name" id="card-holder-hidden" value="">
+
+  <!-- when picking a saved method -->
+  <input type="hidden" name="saved_method_id"   id="saved_method_id"   value="">
+  <input type="hidden" name="saved_method_type" id="saved_method_type" value="">
 </form>
+
 
 <div id="order-root" data-session-expired="1" hidden></div>
 
@@ -826,46 +984,342 @@ html.modal-open, body.modal-open{
       </div>
     </div>
 
-    
 
-    <!-- keep the rest of your payments markup here (accordion, totals, etc.) -->
-
-
-
-  <div class="grid">
+<div class="grid">
     <!-- LEFT: PAYMENT METHODS -->
-    <section id="paymentsTop" class="pay-col">
-      <!-- UPI -->
-      <div class="section card" id="upiSection" data-accordion data-icon="upi">
-        <div class="head"><h3>UPI</h3><span class="chev" aria-hidden="true"></span></div>
-        <div class="collapsible">
-          <div class="body">
-            <div class="upi-head"><div class="upi-title">Pay by any UPI app</div><a href="#" class="upi-help" id="upiHelpLink">How to find?</a></div>
-            <div class="upi-hint">Save upto ₹30 • 4 offers available</div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:12px"><input id="upi-id" class="input" placeholder="ENTER UPI ID"/><button class="btn btn-verify" id="upi-verify" type="button" disabled>Verify</button></div>
-            <p class="error-text" id="upi-id-error" role="alert" aria-live="polite"></p>
-            <button class="btn btn-pay" id="upi-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post" disabled>Proceed to Pay</button>
-            <div class="muted" style="font-size:13px">Use any UPI app. We’ll request a collect to your UPI handle.</div>
-          </div>
-        </div>
+<section id="paymentsTop" class="pay-col">
+    
+ {# =================== U P I  =================== #}
+<div class="section card" id="upiSection" data-accordion data-icon="upi">
+  <div class="head">
+    <h3>UPI</h3>
+    <span class="chev" aria-hidden="true"></span>
+  </div>
+
+  <div class="collapsible">
+    <div class="body">
+
+      <div class="upi-head">
+        <div class="upi-title">Pay by any UPI app</div>
+        <a href="#" class="upi-help" id="upiHelpLink">How to find?</a>
       </div>
 
-      <!-- CARD -->
-      <div class="section card" id="cardSection" data-accordion data-icon="card">
-        <div class="head"><h3>Credit / Debit / ATM Card</h3><span class="chev" aria-hidden="true"></span></div>
-        <div class="collapsible">
-          <div class="body">
-            <div class="muted">Add and secure cards as per RBI guidelines</div>
-            <div class="pay-hint" style="color:#16a34a;font-weight:700">Get upto 5% cashback* • 2 offers available</div>
-            <div class="field"><label for="card-number" class="field-label">Card Number</label><div class="has-icon"><input id="card-number" class="input" inputmode="numeric" autocomplete="cc-number" placeholder="Card Number" maxlength="19"/><img id="cardBrand" src="/static/images/fakecard.png" alt="card brand"></div><p class="error-text" id="card-number-error" role="alert" aria-live="polite"></p></div>
-            <div class="fields-row card-2col">
-              <div class="field"><label for="expiry" class="field-label">Valid Thru</label><input id="expiry" class="input" inputmode="numeric" placeholder="MM/YY" maxlength="5"/><p class="error-text" id="expiry-error" role="alert" aria-live="polite"></p></div>
-              <div class="field"><label for="cvv" class="field-label">CVV</label><input id="cvv" class="input" inputmode="numeric" autocomplete="cc-csc" placeholder="CVV"><p class="error-text" id="cvv-error" role="alert" aria-live="polite"></p></div>
+      {# when we HAVE saved UPIs, show the offer line above that list #}
+      <div class="pay-hint">Save upto ₹30 • 4 offers available</div>
+
+      {# ---------------- SAVED UPI IDs (only if present) ---------------- #}
+      {% if saved_upis|length > 0 %}
+        <div class="list-head">
+          <span class="list-title">Saved UPI IDs</span>
+        </div>
+
+        {# ⬇️ only change: added saved-list class #}
+        <div class="stack saved-list">
+          {% for m in saved_upis %}
+          {# ⬇️ only change: added saved-token class #}
+          <div class="tile-row saved-token" data-method-type="upi" data-method-id="{{ m.id }}">
+            <div class="tile-head">
+              <label class="radio-line">
+                <input class="saved-radio"
+                       type="radio"
+                       name="saved_upi"
+                       value="{{ m.id }}"
+                       data-type="upi"
+                       {% if m.is_default %}checked{% endif %}>
+                <span class="radio-ui"></span>
+                <span class="radio-text">
+                  <span class="upi-line">
+                    <span class="upi-id"><strong>{{ m.masked_display }}</strong></span>
+                    {# ⬇️ only change: added pill-default class #}
+                    {% if m.is_default %}<span class="badge pill-default">Default</span>{% endif %}
+                  </span>
+                </span>
+              </label>
+
+              <details class="dots">
+                {# ⬇️ only change: added token-menu class #}
+                <summary class="token-menu" aria-label="More"></summary>
+                <div class="menu">
+                  <form method="post"
+                        action="{% url 'saved_method_default' m.id %}?type=upi"
+                        onsubmit="return false;">
+                    {% csrf_token %}
+                    <button type="button"
+                            class="menu-item"
+                            onclick="setDefault(event, this.form)">Make default</button>
+                  </form>
+                   <form method="post"
+                        action="{% url 'saved_method_delete' m.id %}"
+                        onsubmit="return false;">
+                    {% csrf_token %}
+                    <button type="button"
+                              class="menu-item danger"
+                              onclick="openSavedMethodConfirm(this.form)">Delete</button>
+                  </form>
+                </div>
+              </details>
             </div>
-            <button class="btn btn-pay" id="card-pay" type="submit" form="payForm" formaction="/api/pay/success/" formmethod="post">Proceed to Pay</button>
+
+            <button class="btn btn-pay pay-for-tile hidden"
+                    form="payForm"
+                    formaction="{% url 'payment_success' %}"
+                    formmethod="post">
+              Proceed to Pay
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+
+        {# ⬇️ only change: added add-token-row class #}
+        <button id="link-add-upi"
+                type="button"
+                class="add-pill add-token-row"
+                style="cursor:pointer;">
+          + Add new UPI ID
+        </button>
+      {% endif %}
+
+      {# ---------------- SINGLE MANUAL UPI FORM ---------------- #}
+      <div id="upi-manual" {% if saved_upis|length > 0 %}class="hidden"{% endif %}>
+
+        {% if saved_upis|length > 0 %}
+        <div id="upi-subtitle" class="upi-subtitle" style="display:none;">Add new UPI ID</div>
+        {% endif %}
+
+        <div style="display:grid;grid-template-columns:1fr auto;gap:12px;">
+          <input id="upi-id" class="input" placeholder="ENTER UPI ID">
+          <button class="btn btn-verify" id="upi-verify" type="button" disabled>Verify</button>
+        </div>
+
+        <p class="error-text" id="upi-id-error" role="alert" aria-live="polite"></p>
+
+        <label class="row-ck">
+          <input type="checkbox" id="save-upi-checkbox">
+          <span>Save this UPI ID for faster checkout next time</span>
+        </label>
+
+        <button class="btn btn-pay" id="upi-pay"
+                type="submit"
+                form="payForm"
+                formaction="{% url 'payment_success' %}"
+                formmethod="post"
+                disabled>
+          Proceed to Pay
+        </button>
+
+        <div class="muted" style="font-size:13px;">Use any UPI app. We’ll request a collect to your UPI handle.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+    {# =================== C A R D S =================== #}
+<div class="section card" id="cardSection" data-accordion data-icon="card">
+  <div class="head">
+    <h3>Credit / Debit / ATM Card</h3>
+    <span class="chev" aria-hidden="true"></span>
+  </div>
+
+  <div class="collapsible">
+    <div class="body">
+
+      {% if saved_cards|length > 0 %}
+        <div class="muted">Add and secure cards as per RBI guidelines</div>
+        <div class="pay-hint" style="color:#16a34a;font-weight:700">
+          Get upto 5% cashback* • 2 offers available
+        </div>
+      {% endif %}
+
+      {# --------- SAVED CARDS (only if present) --------- #}
+      {% if saved_cards|length > 0 %}
+        <div class="list-head">
+          <span class="list-title">Saved Cards</span>
+        </div>
+
+        {# ⬇️ only change: added saved-list #}
+        <div class="stack saved-list">
+          {% for m in saved_cards %}
+            {% with brand=m.card_brand|default_if_none:"CARD"|upper %}
+            {# ⬇️ only change: added saved-token #}
+            <div class="tile-row saved-token" data-method-type="card" data-method-id="{{ m.id }}">
+              <div class="tile-head">
+                <label class="radio-line">
+                  <input class="saved-radio"
+                         type="radio"
+                         name="saved_card"
+                         value="{{ m.id }}"
+                         data-type="card"
+                         {% if m.is_default %}checked{% endif %}>
+                  <span class="radio-ui"></span>
+
+                  <span class="card-header">
+                    {# ---- LINE 1: title + Default ---- #}
+                    <span class="card-top">
+                      <span class="card-main">{{ brand|title }} Credit Card</span>
+                      {% if m.is_default %}
+                        {# ⬇️ only change: add pill-default #}
+                        <span class="badge pill-default">Default</span>
+                      {% endif %}
+                    </span>
+
+                    {# ---- LINE 2: masked number | name | logo | (MM/YY) ---- #}
+                    <span class="card-bottom">
+                      <span class="card-num">•••• {{ m.last4 }}</span>
+
+                      {% if m.card_holder_name %}
+                        <span class="sep">|</span>
+                        <span class="card-holder">{{ m.card_holder_name }}</span>
+                      {% endif %}
+
+                      <span class="sep">|</span>
+
+                      <span class="card-logo">
+                        {% with b=m.card_brand|default_if_none:"CARD" %}
+                          {% with fn=b|lower %}
+                            {% with brand_path="images/"|add:fn|add:".png" %}
+                              {% static brand_path as BRAND_SRC %}
+                              {% static "images/card.png" as FALLBACK_CARD %}
+                              <img class="brand"
+                                   src="{{ BRAND_SRC }}"
+                                   alt="{{ b }}"
+                                   loading="lazy"
+                                   onerror="this.onerror=null;this.src='{{ FALLBACK_CARD }}';">
+                            {% endwith %}
+                          {% endwith %}
+                        {% endwith %}
+                      </span>
+
+                      {% if m.exp_month and m.exp_year %}
+                        {% with ey=m.exp_year|stringformat:"s" %}
+                          {% with ey2=ey|slice:"-2:" %}
+                            <span class="sep">|</span>
+                            <span class="card-exp">({{ m.exp_month }}/{{ ey2 }})</span>
+                          {% endwith %}
+                        {% endwith %}
+                      {% endif %}
+                    </span>
+                  </span>
+                </label>
+
+                <details class="dots">
+                  {# ⬇️ only change: add token-menu #}
+                  <summary class="token-menu" aria-label="More"></summary>
+                  <div class="menu">
+                    <form method="post"
+                          action="{% url 'saved_method_default' m.id %}?type=card"
+                          onsubmit="return false;">
+                      {% csrf_token %}
+                      <button type="button"
+                              class="menu-item"
+                              onclick="setDefault(event, this.form)">Make default</button>
+                    </form>
+                    <form method="post"
+                          action="{% url 'saved_method_delete' m.id %}"
+                          onsubmit="return false;">
+                      {% csrf_token %}
+                      <button type="button"
+                            class="menu-item danger"
+                            onclick="openSavedMethodConfirm(this.form)">Delete</button>
+                    </form>
+                  </div>
+                </details>
+              </div>
+
+              <button class="btn btn-pay pay-for-tile hidden"
+                      form="payForm"
+                      formaction="{% url 'payment_success' %}"
+                      formmethod="post">
+                Proceed to Pay
+              </button>
+            </div>
+            {% endwith %}
+          {% endfor %}
+        </div>
+
+        {# only change: add add-token-row #}
+        <button id="link-add-card"
+                type="button"
+                class="add-pill add-token-row"
+                style="cursor:pointer;">
+          + Add new card
+        </button>
+      {% endif %}
+
+      {# --------- SINGLE MANUAL CARD FORM (OLD ONE) --------- #}
+      <div id="card-manual" class="{% if saved_cards|length == 0 %}no-saved{% else %}hidden{% endif %}">
+
+        {% if saved_cards|length == 0 %}
+          <div class="muted">Add and secure cards as per RBI guidelines</div>
+          <div class="pay-hint" style="color:#16a34a;font-weight:700">
+            Get upto 5% cashback* • 2 offers available
+          </div>
+        {% endif %}
+
+        <div class="field">
+          <label class="field-label" for="card-holder-name">Name on card</label>
+          <input id="card-holder-name"
+                 name="card_holder_name"
+                 class="input"
+                 autocomplete="cc-name"
+                 placeholder="Name on card">
+          <p class="error-text" id="card-holder-error" role="alert" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="card-number">Card Number</label>
+          <div class="has-icon">
+            <input id="card-number"
+                   class="input"
+                   inputmode="numeric"
+                   autocomplete="cc-number"
+                   placeholder="Card Number"
+                   maxlength="19">
+            <img id="cardBrand" src="/static/images/fakecard.png" alt="card brand">
+          </div>
+          <p class="error-text" id="card-number-error" role="alert" aria-live="polite"></p>
+        </div>
+
+        <div class="fields-row card-2col">
+          <div class="field">
+            <label class="field-label" for="expiry">Valid Thru</label>
+            <input id="expiry"
+                   class="input"
+                   inputmode="numeric"
+                   placeholder="MM/YY"
+                   maxlength="5">
+            <p class="error-text" id="expiry-error" role="alert" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="cvv">CVV</label>
+            <input id="cvv"
+                   class="input"
+                   inputmode="numeric"
+                   autocomplete="cc-csc"
+                   placeholder="CVV">
+            <p class="error-text" id="cvv-error" role="alert" aria-live="polite"></p>
           </div>
         </div>
+
+        <label class="row-ck">
+          <input type="checkbox" id="save-card-checkbox">
+          <span>Save this card for faster checkout</span>
+        </label>
+
+        <button class="btn btn-pay" id="card-pay"
+                type="submit"
+                form="payForm"
+                formaction="{% url 'payment_success' %}"
+                formmethod="post">
+          Proceed to Pay
+        </button>
       </div>
+
+    </div>
+  </div>
+</div>
+
 
       <!-- NET BANKING -->
       <div class="section card" data-accordion data-icon="bank">
@@ -1005,7 +1459,6 @@ html.modal-open, body.modal-open{
     </div>
   </div>
 </div>
-
 <div id="nav-loading" aria-hidden="true">
   <div class="nav-card" role="status" aria-live="polite">
     <div class="nav-spin" aria-hidden="true"></div>
@@ -1013,7 +1466,32 @@ html.modal-open, body.modal-open{
   </div>
 </div>
 
-<!-- SESSION ENDED MODAL -->
+<!-- LOGIN / SESSION EXPIRED MODAL (same as checkout.html) -->
+<div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
+<div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+  <header>
+    <h4 id="session-title">Your session expired</h4>
+    <button id="session-close-outside" aria-label="Close">×</button>
+  </header>
+
+  <div class="session-hero" aria-hidden="true">
+    <img src="{% static 'images/sessionend.png' %}" alt="">
+  </div>
+
+  <div class="why" id="why-link-wrap">
+    <a href="#" id="why-link">Why did this happen?</a>
+  </div>
+  <div id="session-why-text" style="display:none;">
+  For security, we auto-sign out after inactivity or when your session token expires.
+</div>
+
+  <div class="session-actions">
+    <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+  </div>
+</div>
+
+
+<!-- SESSION/TIMEOUT ENDED MODAL -->
 <div class="modal-backdrop" id="payTimeoutModal" aria-modal="true" role="dialog" aria-labelledby="payTimeoutTitle">
   <div class="modal" role="document">
     <header>
@@ -1043,55 +1521,49 @@ html.modal-open, body.modal-open{
       </div>
     </div>
 
-   <div class="m-actions">
-  <!-- help text ABOVE the buttons -->
-  <div class="help">Need help? Contact support from your orders page.</div>
+    <div class="m-actions">
+      <!-- help text ABOVE the buttons -->
+      <div class="help">Need help? Contact support from your orders page.</div>
 
-  <!-- buttons (no underline) -->
-  <div class="buttons">
-    <a class="btn-secondary" id="payTimeoutStay" href="#">Continue here</a>
-    <a class="btn-primary" id="payTimeoutOrders" href="/api/vieworders/">Go to My Orders</a>
+      <!-- buttons (no underline) -->
+      <div class="buttons">
+        <a class="btn-secondary" id="payTimeoutStay" href="#">Continue here</a>
+        <a class="btn-primary" id="payTimeoutOrders" href="/api/vieworders/">Go to My Orders</a>
+      </div>
+    </div>
   </div>
-</div>
-  </div>
+</div> 
 
+<!--ONLY use this pair for delete confirm -->
+<div id="sm-confirm-backdrop" class="modal-backdrop" style="display:none;"></div>
 
-  
-{% load static %}
-
-<!-- Backdrop -->
-<div class="modal-backdrop" id="session-backdrop" style="display:none;"></div>
-
-<!-- Modal -->
-<div class="modal" id="session-modal" role="dialog" aria-modal="true" aria-labelledby="session-title" style="display:none;">
+<div id="sm-confirm-modal"
+     class="modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="sm-confirm-title"
+     style="display:none;">
   <header style="position:relative;display:flex;justify-content:center;align-items:center;margin-bottom:10px;">
-    <h4 id="session-title" style="margin:0;text-align:center;">Your session expired</h4>
- <button id="session-close-outside" aria-label="Close">×</button>
+    <h4 id="sm-confirm-title" style="margin:0;">Remove payment method</h4>
+    <button id="sm-confirm-close" aria-label="Close"
+            style="position:absolute;top:-2px;right:-44px;width:30px;height:30px;
+                   display:grid;place-items:center;border-radius:10px;font-size:26px;
+                   line-height:1;background:#fff;border:1px solid #e5e7eb;cursor:pointer;">
+      ×
+    </button>
   </header>
 
-  <!-- hero image -->
-  <div class="session-hero" aria-hidden="true">
-    <img src="{% static 'images/sessionend.png' %}" alt="" />
-  </div>
+  <p id="sm-confirm-text" style="text-align:center;">
+    Are you sure you want to delete this saved payment method?
+  </p>
 
-  <!-- optional “why” link -->
-  <div class="why" id="why-link-wrap">
-    <a href="#" id="why-link">Why did this happen?</a>
-  </div>
-  <div id="session-why-text" class="msg" style="display:none;">
-    For security, we auto-sign out after inactivity or when your session token expires.
-  </div>
-
-  <!-- actions -->
-  <div class="session-actions">
-    <a class="btn-login" href="{% url 'loginuser' %}?next={{ request.get_full_path|urlencode }}">Log in again</a>
+  <div class="session-actions" style="justify-content:center;gap:10px;">
+    <button id="sm-confirm-yes" class="btn-primary" type="button">Delete</button>
+    <button id="sm-confirm-no"  class="btn-secondary" type="button">Cancel</button>
   </div>
 </div>
 
-
-</div>
-
-
+</main>
 <script>
 
 /* =========================================================
@@ -1308,278 +1780,421 @@ document.addEventListener('DOMContentLoaded', ()=>{
 /* =========================================================
    UPI VALIDATION (live + on blur; clears on accordion change)
    ========================================================= */
-function isValidUpiId(v){ const x=(v||'').trim(); return /^[a-zA-Z0-9._-]{2,}@[a-zA-Z][a-zA-Z0-9._-]{2,}$/.test(x); }
+
+function isValidUpiId(v){
+  const x = (v || '').trim();
+  // basic pattern: name@bank
+  return /^[a-zA-Z0-9._-]{2,}@[a-zA-Z][a-zA-Z0-9._-]{2,}$/.test(x);
+}
+
 (function(){
   const section = document.getElementById('upiSection');
   const input   = document.getElementById('upi-id');
   const verify  = document.getElementById('upi-verify');
   const pay     = document.getElementById('upi-pay');
   const err     = document.getElementById('upi-id-error');
-  if(!section || !input || !verify || !pay || !err) return;
-  let touched=false;
+  const saveCk  = document.getElementById('save-upi-checkbox');
 
-  function setBtns(ok){ verify.disabled = !ok; pay.disabled = !ok; }
-  function showError(msg){ err.textContent = msg || ''; input.classList.toggle('is-invalid', !!msg); }
-  function render(){
-    const val=(input.value||'').trim(), ok=isValidUpiId(val);
-    setBtns(ok);
-    if(!touched){ showError(''); return; }
-    if(!val) showError('UPI ID is required');
-    else if(!ok) showError('Enter a valid UPI ID (e.g., name@bank)');
-    else showError('');
+  if (!section || !input || !verify || !pay || !err) return;
+
+  let touched = false;
+
+  function setButtons(ok){
+    verify.disabled = !ok;
+    pay.disabled    = !ok;
   }
-  function reset(){ touched=false; showError(''); setBtns(false); }
 
-  reset();
-  input.addEventListener('input', render);
-  input.addEventListener('blur', ()=>{ touched=true; render(); });
+  function showError(msg){
+    err.textContent = msg || '';
+    input.classList.toggle('is-invalid', !!msg);
+  }
+
+  // main validator
+  function validate(){
+    const val = (input.value || '').trim();
+    const ok  = isValidUpiId(val);
+
+    setButtons(ok);   // enable/disable Verify + Proceed
+
+    if (!touched){
+      showError('');
+      return ok;
+    }
+
+    if (!val){
+      showError('UPI ID is required');
+    } else if (!ok){
+      showError('Enter a valid UPI ID (e.g., name@bank)');
+    } else {
+      showError('');
+    }
+    return ok;
+  }
+
+  function reset(){
+    touched = false;
+    showError('');
+    setButtons(false);
+  }
+
+  // -------- events ----------
+
+  // typing: validate live, and turn on buttons as soon as pattern ok
+  input.addEventListener('input', () => {
+    touched = true;
+    validate();
+  });
+
+  // leaving the box: show red error if wrong
+  input.addEventListener('blur', () => {
+    touched = true;
+    validate();
+  });
+
+  // optional Verify click – just reuses same validation
+  verify.addEventListener('click', (e) => {
+    if (!validate()){
+      e.preventDefault();
+      input.focus();
+    }
+  });
+
+  // Proceed to Pay: block if invalid, and move values into hidden inputs
+  pay.addEventListener('click', (e) => {
+    if (!validate()){
+      e.preventDefault();
+      input.focus();
+      return;
+    }
+    const v     = (input.value || '').trim();
+    const hSave = document.getElementById('save_upi');
+    const hVpa  = document.getElementById('upi_vpa');
+    if (hSave) hSave.value = (saveCk && saveCk.checked) ? '1' : '0';
+    if (hVpa)  hVpa.value  = v;
+  });
 
   // clear when accordion is closed
-  document.querySelectorAll('[data-accordion] .head').forEach(h=>{
-    h.addEventListener('click', ()=> setTimeout(()=>{ if(!section.classList.contains('open')) reset(); },0));
+  document.querySelectorAll('[data-accordion] .head').forEach(h => {
+    h.addEventListener('click', () => {
+      setTimeout(() => {
+        if (!section.classList.contains('open')) reset();
+      }, 0);
+    });
   });
+
+  reset();
 })();
+
+
 
 /* =========================================================
    CARD INPUT: brand detect, formatting, validation
    ========================================================= */
 (function(){
-  const num  = document.getElementById('card-number');
-  const exp  = document.getElementById('expiry');
-  const cvv  = document.getElementById('cvv');
-  const pay  = document.getElementById('card-pay');
-  const brandImg = document.getElementById('cardBrand');
+  const holder       = document.getElementById('card-holder-name');   // Name on card (visible)
+  const holderHidden = document.getElementById('card-holder-hidden'); // Hidden field sent to backend
+  const num          = document.getElementById('card-number');
+  const exp          = document.getElementById('expiry');
+  const cvv          = document.getElementById('cvv');
+  const pay          = document.getElementById('card-pay');
+  const brandImg     = document.getElementById('cardBrand');
+
+  const errH = document.getElementById('card-holder-error');
   const errN = document.getElementById('card-number-error');
   const errE = document.getElementById('expiry-error');
   const errC = document.getElementById('cvv-error');
-  if(!num || !exp || !cvv || !pay || !brandImg || !errN || !errE || !errC) return;
+
+  // if any of the important elements are missing, abort this block
+  if (!holder || !num || !exp || !cvv || !pay || !brandImg || !errH || !errN || !errE || !errC) return;
 
   const PATHS = {
-    default: '/static/images/fakecard.png',
-    visa: '/static/images/visa.png',
-    mastercard: '/static/images/mastercard.png',
-    amex: '/static/images/amex.png',
-    discover: '/static/images/discover.png',
+    default:   '/static/images/fakecard.png',
+    visa:      '/static/images/visa.png',
+    mastercard:'/static/images/mastercard.png',
+    amex:      '/static/images/amex.png',
+    discover:  '/static/images/discover.png',
   };
-  const detectBrand = d=>{
-    if(/^4/.test(d)) return 'visa';
-    if(/^5[1-5]/.test(d)) return 'mastercard';
-    if(/^3[47]/.test(d)) return 'amex';
-    if(/^(6011|65|64[4-9])/.test(d)) return 'discover';
+
+  /* ========= Name on card: only letters + space + '.' allowed ========= */
+
+  const holderNavKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End','Enter'];
+
+  // Block digits & symbols while typing
+  holder.addEventListener('keydown', (e) => {
+    // allow navigation / control keys and shortcuts
+    if (holderNavKeys.includes(e.key) || e.ctrlKey || e.metaKey) return;
+
+    // allow A–Z / a–z / '.' and space
+    if (/^[a-zA-Z.]$/.test(e.key) || e.key === ' ') return;
+
+    // everything else blocked (digits, symbols, etc.)
+    e.preventDefault();
+  });
+
+  // Clean up any pasted / IME text + sync hidden field
+  function sanitizeHolder(){
+    // keep only letters, space, and '.'
+    const cleaned = (holder.value || '').replace(/[^a-zA-Z. ]/g, '');
+    if (holder.value !== cleaned) holder.value = cleaned;
+    if (holderHidden) holderHidden.value = cleaned.trim();
+    return cleaned;
+  }
+
+  /* ========= Card brand / formatting helpers ========= */
+
+  const detectBrand = d => {
+    if (/^4/.test(d))               return 'visa';
+    if (/^5[1-5]/.test(d))          return 'mastercard';
+    if (/^3[47]/.test(d))           return 'amex';
+    if (/^(6011|65|64[4-9])/.test(d)) return 'discover';
     return 'default';
   };
-  const setBrandUI = b=>{
+
+  const setBrandUI = b => {
     brandImg.src = PATHS[b] || PATHS.default;
-    const len = b==='amex' ? 4 : 3;
+    const len = b === 'amex' ? 4 : 3;
     cvv.maxLength = len;
-    cvv.value = numOnly(cvv.value).slice(0,len);
-    cvv.placeholder = b==='amex' ? 'CVV (4)' : 'CVV';
+    cvv.value = (cvv.value || '').replace(/\D+/g,'').slice(0, len);
+    cvv.placeholder = b === 'amex' ? 'CVV (4)' : 'CVV';
   };
-  const luhnOk = d=>{
-    let sum=0, alt=false;
-    for(let i=d.length-1;i>=0;i--){ let n=d.charCodeAt(i)-48; if(alt){ n*=2; if(n>9) n-=9; } sum+=n; alt=!alt; }
-    return sum%10===0;
+
+  const luhnOk = d => {
+    let sum = 0, alt = false;
+    for (let i = d.length - 1; i >= 0; i--){
+      let n = d.charCodeAt(i) - 48;
+      if (alt){
+        n *= 2;
+        if (n > 9) n -= 9;
+      }
+      sum += n;
+      alt = !alt;
+    }
+    return sum % 10 === 0;
   };
-  const fmtCard = (d,b)=> b==='amex'
-    ? [d.slice(0,4), d.slice(4,10), d.slice(10,15)].filter(Boolean).join(' ')
-    : d.replace(/(\d{4})(?=\d)/g,'$1 ').trim();
+
+  const fmtCard = (d, b) =>
+    b === 'amex'
+      ? [d.slice(0,4), d.slice(4,10), d.slice(10,15)].filter(Boolean).join(' ')
+      : d.replace(/(\d{4})(?=\d)/g,'$1 ').trim();
 
   function sanitizeAndFormatCard(){
-    const d = numOnly(num.value);
-    const brand = detectBrand(d);
-    const cap = brand==='amex' ? 15 : 16;
-    const trimmed = d.slice(0,cap);
+    const raw   = (num.value || '').replace(/\D+/g,'');
+    const brand = detectBrand(raw);
+    const cap   = brand === 'amex' ? 15 : 16;
+    const trimmed = raw.slice(0, cap);
     num.value = fmtCard(trimmed, brand);
     setBrandUI(brand);
     return trimmed;
   }
+
   function sanitizeAndFormatExpiry(){
-    let d = numOnly(exp.value).slice(0,4);
-    if(d.length>=3) d = d.slice(0,2)+'/'+d.slice(2);
+    let d = (exp.value || '').replace(/\D+/g,'').slice(0,4);
+    if (d.length >= 3) d = d.slice(0,2) + '/' + d.slice(2);
     exp.value = d;
   }
+
   function sanitizeCvv(){
-    const brand = detectBrand(numOnly(num.value));
-    const len = brand==='amex' ? 4 : 3;
-    cvv.value = numOnly(cvv.value).slice(0,len);
+    const brand = detectBrand((num.value || '').replace(/\D+/g,''));
+    const len   = brand === 'amex' ? 4 : 3;
+    cvv.value   = (cvv.value || '').replace(/\D+/g,'').slice(0,len);
   }
 
-  // Field-level validation (error lines show only after first blur)
-  let tN=false,tE=false,tC=false;
+  /* ========= Field-level validation ========= */
+
+  let tH = false, tN = false, tE = false, tC = false; // "touched" flags
+
+  function vHolder(){
+    const v = sanitizeHolder();
+    let msg = '';
+    if (!v) msg = 'Name on card is required';
+    else if (v.length < 2) msg = 'Enter full name';
+    errH.textContent = tH ? msg : '';
+    holder.classList.toggle('is-invalid', tH && !!msg);
+    return !msg;
+  }
+
   function vNumber(){
-    const d = numOnly(num.value);
-    let msg='';
-    if(!d) msg='Card number is required';
-    else{
+    const d = (num.value || '').replace(/\D+/g,'');
+    let msg = '';
+    if (!d) msg = 'Card number is required';
+    else {
       const brand = detectBrand(d);
-      const lenOk = brand==='amex' ? d.length===15 : d.length===16;
-      if(!lenOk || !luhnOk(d)) msg='Enter a valid card number';
+      const lenOk = brand === 'amex' ? d.length === 15 : d.length === 16;
+      if (!lenOk || !luhnOk(d)) msg = 'Enter a valid card number';
     }
     errN.textContent = tN ? msg : '';
     num.classList.toggle('is-invalid', tN && !!msg);
+    return !msg;
   }
+
   function vExpiry(){
-    const v = (exp.value||'').trim(); let msg='';
+    const v = (exp.value || '').trim();
+    let msg = '';
     const m = v.match(/^(\d{1,2})\s*\/\s*(\d{2})$/);
-    if(!v) msg='Expiry is required';
-    else if(!m) msg='Use MM/YY format';
+    if (!v) msg = 'Expiry is required';
+    else if (!m) msg = 'Use MM/YY format';
     else{
-      const mm=+m[1], yy=+('20'+m[2]);
-      if(mm<1||mm>12) msg='Invalid month';
+      const mm = +m[1];
+      const yy = +('20' + m[2]);
+      if (mm < 1 || mm > 12) msg = 'Invalid month';
       else{
-        const now=new Date();
-        const end=new Date(yy,mm,0,23,59,59);
-        if(end < now) msg='Card expired';
+        const now = new Date();
+        const end = new Date(yy, mm, 0, 23, 59, 59);
+        if (end < now) msg = 'Card expired';
       }
     }
     errE.textContent = tE ? msg : '';
     exp.classList.toggle('is-invalid', tE && !!msg);
+    return !msg;
   }
+
   function vCvv(){
-    const brand = detectBrand(numOnly(num.value));
-    const need  = brand==='amex' ? 4 : 3;
-    const ok = new RegExp(`^\\d{${need}}$`).test(cvv.value);
-    const msg = ok ? '' : `Enter ${need} digit CVV`;
+    const d     = (num.value || '').replace(/\D+/g,'');
+    const brand = detectBrand(d);
+    const need  = brand === 'amex' ? 4 : 3;
+    const ok    = new RegExp(`^\\d{${need}}$`).test((cvv.value || '').trim());
+    const msg   = ok ? '' : `Enter ${need} digit CVV`;
     errC.textContent = tC ? msg : '';
     cvv.classList.toggle('is-invalid', tC && !!msg);
+    return !msg;
   }
+
+  /* ========= Global refresh (keeps button state in sync) ========= */
 
   function refresh(){
-  // 1) keep inputs tidy while the user types
-  sanitizeAndFormatCard();
-  sanitizeAndFormatExpiry();
-  sanitizeCvv();
+    // tidy all fields
+    sanitizeHolder();
+    const d = sanitizeAndFormatCard();
+    sanitizeAndFormatExpiry();
+    sanitizeCvv();
 
-  // 2) compute validity
-  const d = numOnly(num.value);
-  const brand   = detectBrand(d);
-  const needCvv = (brand === 'amex') ? 4 : 3;
+    const brand   = detectBrand(d);
+    const needCvv = brand === 'amex' ? 4 : 3;
 
-  // card number
-  const lenOk   = (brand === 'amex') ? (d.length === 15) : (d.length === 16);
-  const cardOk  = lenOk && luhnOk(d);
+    // card number
+    const lenOk   = brand === 'amex' ? d.length === 15 : d.length === 16;
+    const cardOk  = lenOk && luhnOk(d);
 
-  // expiry: MM/YY and not in the past
-  const m = (exp.value || '').match(/^(\d{2})\/(\d{2})$/);
-  let expiryOk = false;
-  if (m){
-    const mm = +m[1];
-    const yy = +('20' + m[2]);              // 24 -> 2024
-    if (mm >= 1 && mm <= 12){
-      const endOfMonth = new Date(yy, mm, 0, 23, 59, 59);
-      expiryOk = endOfMonth >= new Date();
+    // expiry
+    const m = (exp.value || '').match(/^(\d{2})\/(\d{2})$/);
+    let expiryOk = false;
+    if (m){
+      const mm = +m[1];
+      const yy = +('20' + m[2]);
+      if (mm >= 1 && mm <= 12){
+        const endOfMonth = new Date(yy, mm, 0, 23, 59, 59);
+        expiryOk = endOfMonth >= new Date();
+      }
     }
-  }
 
-  // cvv
-  const cvvOk = new RegExp(`^\\d{${needCvv}}$`).test(cvv.value);
+    // cvv
+    const cvvOk = new RegExp(`^\\d{${needCvv}}$`).test((cvv.value || '').trim());
 
-  // 3) enable/disable pay button
-  const ok = cardOk && expiryOk && cvvOk;
-  pay.disabled = !ok;
+    // holder
+    const nameVal  = sanitizeHolder();
+    const holderOk = !!nameVal && nameVal.length >= 2;
 
-  // 4) NEW — optimistic clear: once a field becomes valid while typing,
-  //    remove its red error text + red border. (We still *show* errors on blur.)
-  if (tN){
-    // if valid, clear error & invalid styling
-    if (d && cardOk){
+    // overall
+    const ok = holderOk && cardOk && expiryOk && cvvOk;
+    pay.disabled = !ok;
+
+    // Optimistic clear: once field is valid, clear its error
+    if (tH && holderOk){
+      errH.textContent = '';
+      holder.classList.remove('is-invalid');
+    }
+    if (tN && cardOk){
       errN.textContent = '';
       num.classList.remove('is-invalid');
     }
-  }
-  if (tE){
-    if (expiryOk){
+    if (tE && expiryOk){
       errE.textContent = '';
       exp.classList.remove('is-invalid');
     }
-  }
-  if (tC){
-    if (cvvOk){
+    if (tC && cvvOk){
       errC.textContent = '';
       cvv.classList.remove('is-invalid');
     }
   }
-}
 
-// keep refresh wired
-['input','blur'].forEach(ev=>{
-  num.addEventListener(ev, refresh);
-  exp.addEventListener(ev, refresh);
-  cvv.addEventListener(ev, refresh);
-});
-num.addEventListener('paste', ()=>requestAnimationFrame(refresh));
-exp.addEventListener('paste', ()=>requestAnimationFrame(refresh));
-cvv.addEventListener('paste', ()=>requestAnimationFrame(refresh));
+  /* ========= Event wiring ========= */
 
-// show errors only after first blur
-num.addEventListener('blur', ()=>{ tN = true; vNumber(); });
-exp.addEventListener('blur', ()=>{ tE = true; vExpiry(); });
-cvv.addEventListener('blur', ()=>{ tC = true; vCvv(); });
+  // name
+  holder.addEventListener('input', () => {
+    sanitizeHolder();
+    tH = false;
+    errH.textContent = '';
+    holder.classList.remove('is-invalid');
+    refresh();
+  });
+  holder.addEventListener('blur', () => {
+    tH = true;
+    vHolder();
+    refresh();
+  });
 
-/* IMPORTANT: while typing, hide error + unset "touched",
-   so refresh() won't re-show the message during editing. */
-num.addEventListener('input', ()=>{ tN = false; errN.textContent=''; num.classList.remove('is-invalid'); });
-exp.addEventListener('input', ()=>{ tE = false; errE.textContent=''; exp.classList.remove('is-invalid'); });
-cvv.addEventListener('input', ()=>{ tC = false; errC.textContent=''; cvv.classList.remove('is-invalid'); });
+  // number / expiry / cvv – keep existing behaviour
+  ['input','blur'].forEach(ev => {
+    num.addEventListener(ev, refresh);
+    exp.addEventListener(ev, refresh);
+    cvv.addEventListener(ev, refresh);
+  });
+  num.addEventListener('paste', () => requestAnimationFrame(refresh));
+  exp.addEventListener('paste', () => requestAnimationFrame(refresh));
+  cvv.addEventListener('paste', () => requestAnimationFrame(refresh));
 
-/* NEW: optimistic clear-on-type so the red text disappears while editing */
-function clearOnType(field, touchedFlagRef, errEl){
-  field.addEventListener('input', ()=>{
-    if (touchedFlagRef && errEl.textContent) {
+  num.addEventListener('blur', () => { tN = true; vNumber(); });
+  exp.addEventListener('blur', () => { tE = true; vExpiry(); });
+  cvv.addEventListener('blur', () => { tC = true; vCvv(); });
+
+  // clear errors while typing
+  function clearOnType(field, errEl){
+    field.addEventListener('input', () => {
       errEl.textContent = '';
       field.classList.remove('is-invalid');
-    }
-  });
-}
-clearOnType(num,  tN, errN);
-clearOnType(exp,  tE, errE);
-clearOnType(cvv,  tC, errC);
-
-/* ===============================
-   ADD: clear errors when Card section is re-opened
-   Inserted just before the final refresh();
-   =============================== */
-(function setupCardAccordionClear(){
-  const sec  = document.getElementById('cardSection');
-  if (!sec) return;
-
-  const head = sec.querySelector('.head');
-  const clearCardErrors = () => {
-    // reset touched flags
-    tN = tE = tC = false;
-    // remove error text + red borders
-    [errN, errE, errC].forEach(el => el && (el.textContent = ''));
-    [num, exp, cvv].forEach(el => el && el.classList.remove('is-invalid'));
-    // recompute state
-    if (typeof refresh === 'function') refresh();
-  };
-
-  // Watch for .open class changes on #cardSection
-  const mo = new MutationObserver(() => {
-    if (sec.classList.contains('open')) clearCardErrors();
-  });
-  mo.observe(sec, { attributes: true, attributeFilter: ['class'] });
-
-  // If your accordion uses aria-expanded on the header
-  if (head) {
-    const mo2 = new MutationObserver(() => {
-      if (head.getAttribute('aria-expanded') === 'true') clearCardErrors();
-    });
-    mo2.observe(head, { attributes: true, attributeFilter: ['aria-expanded'] });
-
-    // Click safety-net (in case state changes without attributes first)
-    head.addEventListener('click', () => {
-      setTimeout(() => {
-        if (sec.classList.contains('open') || head.getAttribute('aria-expanded') === 'true') {
-          clearCardErrors();
-        }
-      }, 0);
     });
   }
-})();
+  clearOnType(holder, errH);
+  clearOnType(num,    errN);
+  clearOnType(exp,    errE);
+  clearOnType(cvv,    errC);
 
-/* (existing) final initial compute */
-refresh();
+  /* ===== Clear errors when Card accordion re-opens ===== */
+  (function setupCardAccordionClear(){
+    const sec  = document.getElementById('cardSection');
+    if (!sec) return;
+    const head = sec.querySelector('.head');
+
+    function clearCardErrors(){
+      tH = tN = tE = tC = false;
+      [errH, errN, errE, errC].forEach(el => el && (el.textContent = ''));
+      [holder, num, exp, cvv].forEach(el => el && el.classList.remove('is-invalid'));
+      refresh();
+    }
+
+    const mo = new MutationObserver(() => {
+      if (sec.classList.contains('open')) clearCardErrors();
+    });
+    mo.observe(sec, { attributes:true, attributeFilter:['class'] });
+
+    if (head){
+      const mo2 = new MutationObserver(() => {
+        if (head.getAttribute('aria-expanded') === 'true') clearCardErrors();
+      });
+      mo2.observe(head, { attributes:true, attributeFilter:['aria-expanded'] });
+
+      head.addEventListener('click', () => {
+        setTimeout(() => {
+          if (sec.classList.contains('open') || head.getAttribute('aria-expanded') === 'true'){
+            clearCardErrors();
+          }
+        }, 0);
+      });
+    }
+  })();
+
+  // initial compute
+  refresh();
 })();
 
 
@@ -1595,27 +2210,6 @@ refresh();
   });
 })();
 
-/* =========================================================
-   Minimal required-field helper (used by UPI verify)
-   ========================================================= */
-function wireRequired(inputId,errorId,message="This field is required"){
-  const input=document.getElementById(inputId);
-  const error=document.getElementById(errorId);
-  if(!input||!error) return;
-  const show=()=>{
-    if(!input.value.trim()){ input.classList.add('is-invalid'); error.textContent=message; return false; }
-    input.classList.remove('is-invalid'); error.textContent=''; return true;
-  };
-  input.addEventListener('blur', show);
-  input.addEventListener('input', ()=>{
-  if (error.textContent || input.classList.contains('is-invalid')) {input.classList.remove('is-invalid');
-  error.textContent = '';
-  }
-});
-  return show;
-}
-const validateUpi = wireRequired('upi-id','upi-id-error','UPI ID is required');
-document.getElementById('upi-verify')?.addEventListener('click', e=>{ if(validateUpi && !validateUpi()){ e.preventDefault(); document.getElementById('upi-id')?.focus(); }});
 
 /* =========================================================
    NET BANKING – Popular + “All other banks” inline + unified search + inline CTA
@@ -1998,29 +2592,153 @@ function applySearch(){
   });
 })();
 
-
+/* ===== Universal submit wiring: fills hidden inputs for UPI/Card/Saved ===== */
 
 (function(){
   const form = document.getElementById('payForm');
-  if(!form) return;
+  if (!form) return;
 
-  function fastSubmit(btn){
-    form.action = btn.getAttribute('formaction') || form.action || '/api/pay/success/';
-    form.method = btn.getAttribute('formmethod') || form.method || 'post';
-    btn.disabled = true;
-    requestAnimationFrame(()=> form.submit());
+  const hidSavedId   = document.getElementById('saved_method_id');
+  const hidSavedType = document.getElementById('saved_method_type');
+
+    function fillHidden(submitter){
+    // clear saved-method fields
+    if (hidSavedId)   hidSavedId.value   = '';
+    if (hidSavedType) hidSavedType.value = '';
+
+    const submitId = submitter && submitter.id;
+
+    // 1) If this click is for a SAVED tile button, look only in that tile
+    let saved = null;
+    const tile = submitter && submitter.closest('.tile-row');
+    if (tile) {
+      saved = tile.querySelector('.saved-radio:checked');
+    }
+
+    // 2) Otherwise, if this is the UPI button, look only at saved_upi radios
+    if (!saved && submitId === 'upi-pay') {
+      saved = document.querySelector('input.saved-radio[name="saved_upi"]:checked');
+    }
+
+    // 3) Or if this is the CARD button, look only at saved_card radios
+    if (!saved && submitId === 'card-pay') {
+      saved = document.querySelector('input.saved-radio[name="saved_card"]:checked');
+    }
+
+    // 4) If we found a saved method in the relevant section, use it
+    if (saved){
+      if (hidSavedId)   hidSavedId.value   = saved.value;
+      if (hidSavedType) hidSavedType.value = saved.dataset.type || '';
+
+      // force "not saving a new one" when using an existing saved method
+      const hSaveUpi  = document.getElementById('save_upi');
+      const hSaveCard = document.getElementById('save_card');
+      if (hSaveUpi)  hSaveUpi.value  = '0';
+      if (hSaveCard) hSaveCard.value = '0';
+      return;
+    }
+
+    // 5) No relevant saved method selected -> treat as NEW UPI / NEW CARD
+    const id = submitter && submitter.id;
+
+    // 2) NEW UPI entry
+    if (id === 'upi-pay'){
+      const upiInput  = document.getElementById('upi-id');
+      const upiSaveCk = document.getElementById('save-upi-checkbox');
+      const hSaveUpi  = document.getElementById('save_upi');
+      const hVpa      = document.getElementById('upi_vpa');
+
+      const v = (upiInput && upiInput.value || '').trim();
+
+      const wantSave = !!(upiSaveCk && upiSaveCk.checked && v);
+      if (hSaveUpi) hSaveUpi.value = wantSave ? '1' : '0';
+      if (hVpa)     hVpa.value     = wantSave ? v   : '';   // only send VPA when saving
+    }
+
+    // 3) NEW Card entry
+    if (id === 'card-pay'){
+      const numEl  = document.getElementById('card-number');
+      const expEl  = document.getElementById('expiry');
+      const saveCk = document.getElementById('save-card-checkbox');
+
+      const hSave   = document.getElementById('save_card');
+      const hLast4  = document.getElementById('card_last4');
+      const hBrand  = document.getElementById('card_brand');
+      const hMM     = document.getElementById('card_exp_month');
+      const hYY     = document.getElementById('card_exp_year');
+      const hMasked = document.getElementById('card_masked');
+      const hName   = document.getElementById('card_holder_hidden'); // if you add one later
+
+      const raw   = (numEl && numEl.value || '').replace(/\D+/g,'');
+      const last4 = raw.slice(-4);
+
+      function detectBrand(d){
+        if (/^4/.test(d))        return 'VISA';
+        if (/^5[1-5]/.test(d))   return 'MASTERCARD';
+        if (/^3[47]/.test(d))    return 'AMEX';
+        if (/^6(?:011|5)/.test(d)) return 'DISCOVER';
+        return 'CARD';
+      }
+      const brand = detectBrand(raw);
+
+      let mm = null, yy = null;
+      const m = (expEl && expEl.value || '').match(/^(\d{2})\s*\/\s*(\d{2})$/);
+      if (m){
+        mm = parseInt(m[1],10);
+        yy = parseInt('20' + m[2],10);
+      }
+
+      const wantSave = !!(saveCk && saveCk.checked && raw.length >= 12);
+
+      if (wantSave){
+        if (hSave)   hSave.value   = '1';
+        if (hLast4)  hLast4.value  = last4;
+        if (hBrand)  hBrand.value  = brand;
+        if (hMM)     hMM.value     = mm || '';
+        if (hYY)     hYY.value     = yy || '';
+        if (hMasked) hMasked.value = `${brand} •••• ${last4}`;
+      } else {
+        if (hSave)   hSave.value   = '0';
+        if (hLast4)  hLast4.value  = '';
+        if (hBrand)  hBrand.value  = '';
+        if (hMM)     hMM.value     = '';
+        if (hYY)     hYY.value     = '';
+        if (hMasked) hMasked.value = '';
+      }
+    }
   }
 
+  // Intercept clicks on any payment button that posts payForm
   document.addEventListener('click', (e)=>{
     const btn = e.target.closest('.btn-pay[form="payForm"]');
-    if(!btn) return;
+    if (!btn) return;
+
+    const targetForm = document.getElementById(btn.getAttribute('form'));
+    if (!targetForm) return;
+
     e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    fastSubmit(btn);
+
+    // copy button's formaction / formmethod onto the form
+    if (btn.hasAttribute('formaction')){
+      targetForm.action = btn.getAttribute('formaction');
+    }
+    if (btn.hasAttribute('formmethod')){
+      targetForm.method = btn.getAttribute('formmethod');
+    }
+
+    fillHidden(btn);          //  fill save_upi / save_card etc.
+    btn.disabled = true;
+    targetForm.requestSubmit(btn);   // fires normal submit flow
   }, true);
+
+  // Safety: if something submits form without our click handler
+  form.addEventListener('submit', function(e){
+    const submitter = e.submitter || null;
+    fillHidden(submitter);
+  });
 })();
 
+   
 
 /* =========================================================
 Spinner 
@@ -2269,78 +2987,858 @@ function hideModal(){
 })();
 
 
+// --- CSRF helper ---------------------------------------------------
+function getCsrfToken(form){
+  // try hidden input inside the form first
+  const input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+  if (input && input.value) return input.value;
+
+  // fallback: read from cookie
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
+
+// Helper actions for Saved Methods (Default/Delete)
+async function setDefault(e, form){
+  e.preventDefault();
+  const details = form.closest('details');   // 3-dot menu
+
+  try{
+    const csrf = getCsrfToken(form);
+    const res = await fetch(form.action, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrf,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      credentials: "same-origin",
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.ok){
+      if (details) details.open = false;    // close dropdown
+      location.reload();                    // refresh to show new Default badge
+    } else {
+      console.error("setDefault failed", res.status, data);
+      alert("Failed to set default.");
+    }
+  } catch (err){
+    console.error(err);
+    alert("Network error while setting default.");
+  }
+}
+// ===== Delete saved method with custom confirm modal =====
+let pmPendingForm = null;
+let pmPendingDetails = null;
+
+function openDeleteModal(form){
+  pmPendingForm    = form;
+  pmPendingDetails = form.closest('details');
+
+  const modal    = document.getElementById('pm-confirm-modal');
+  const backdrop = document.getElementById('pm-confirm-backdrop');
+  const text     = document.getElementById('pm-confirm-text');
+
+  if (text) {
+    // You can customize this later to show card/UPI name
+    text.textContent = 'Delete this saved payment method?';
+  }
+
+  if (modal && backdrop){
+    modal.style.display = 'block';
+    backdrop.style.display = 'block';
+    document.documentElement.classList.add('vo-lock');
+  }
+}
+
+function closeDeleteModal(){
+  const modal    = document.getElementById('pm-confirm-modal');
+  const backdrop = document.getElementById('pm-confirm-backdrop');
+
+  if (modal && backdrop){
+    modal.style.display = 'none';
+    backdrop.style.display = 'none';
+    document.documentElement.classList.remove('vo-lock');
+  }
+  pmPendingForm = null;
+  pmPendingDetails = null;
+}
+
+// this is what your Delete button calls
+function deleteMethod(e, form){
+  e.preventDefault();
+  openDeleteModal(form);
+}
+
+// wire up the modal buttons once
+(function(){
+  const btnRemove = document.getElementById('pm-confirm-remove');
+  const btnCancel = document.getElementById('pm-confirm-cancel');
+  const btnX      = document.getElementById('pm-confirm-close');
+  const backdrop  = document.getElementById('pm-confirm-backdrop');
+
+  async function reallyDelete(){
+    if (!pmPendingForm) return closeDeleteModal();
+
+    try{
+      const csrf = pmPendingForm.querySelector('[name=csrfmiddlewaretoken"]').value;
+      const res = await fetch(pmPendingForm.action, {
+        method: "POST",               // hits saved_method_delete (home service)
+        headers: {
+          "X-CSRFToken": csrf,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        credentials: "same-origin",
+      });
+
+      if (res.ok){
+        // remove tile from the DOM without full reload
+        const tile = pmPendingForm.closest('.tile-row');
+        if (tile) tile.remove();
+
+        if (pmPendingDetails) pmPendingDetails.open = false;
+        closeDeleteModal();
+      } else {
+        const txt = await res.text().catch(()=> '');
+        console.error('delete failed', res.status, txt);
+        closeDeleteModal();
+        alert("Delete failed.");
+      }
+    } catch (err){
+      console.error(err);
+      closeDeleteModal();
+      alert("Network error while deleting.");
+    }
+  }
+
+  btnRemove && btnRemove.addEventListener('click', reallyDelete);
+  btnCancel && btnCancel.addEventListener('click', closeDeleteModal);
+  btnX      && btnX.addEventListener('click', closeDeleteModal);
+  backdrop  && backdrop.addEventListener('click', closeDeleteModal);
+})();
+
+/* Close any open 3-dot menus when clicking outside or pressing Esc */
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('details.dots[open]').forEach(d => {
+    if (!d.contains(e.target)) d.removeAttribute('open');
+  });
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape'){
+    document.querySelectorAll('details.dots[open]').forEach(d => {
+      d.removeAttribute('open');
+    });
+  }
+});
+
+
+
+// When the shopper picks a saved UPI/Card, push id & type into the hidden form fields
+(function(){
+  const hidId  = document.getElementById('saved_method_id');
+  const hidTyp = document.getElementById('saved_method_type');
+  if (!hidId || !hidTyp) return;
+
+  function onChange(e){
+    const r = e.target;
+    if (!r || !r.classList || !r.classList.contains('saved-radio')) return;
+    hidId.value  = r.value;              // numeric id of SavedPaymentMethod
+    hidTyp.value = r.dataset.type || ''; // 'upi' or 'card'
+  }
+
+  document.addEventListener('change', onChange);
+})();
+
 
 (function(){
-  const modal = document.getElementById('session-modal');
-  const back  = document.getElementById('session-backdrop');
-  const closeOutside = document.getElementById('session-close-outside');
-  const whyLink  = document.getElementById('why-link');
-  const whyBlock = document.getElementById('session-why-text');
+  // show Proceed button under the chosen tile + set hidden inputs
+  function activateTile(tile){
+    document.querySelectorAll('.tile .pay-for-tile').forEach(b=>b.classList.add('hidden'));
+    if(!tile) return;
+    const btn = tile.querySelector('.pay-for-tile');
+    if(btn) btn.classList.remove('hidden');
+
+    const id   = tile.getAttribute('data-method-id');
+    const type = tile.getAttribute('data-method-type');
+    const hidId   = document.getElementById('saved_method_id');
+    const hidType = document.getElementById('saved_method_type');
+    if(hidId)   hidId.value = id || '';
+    if(hidType) hidType.value = type || '';
+  }
+
+  // when a saved radio is clicked
+  document.addEventListener('change', function(e){
+    const r = e.target.closest('.saved-radio');
+    if(!r) return;
+    const tile = r.closest('.tile');
+    activateTile(tile);
+  });
+
+  // on load, show button under the default-checked tile (if any)
+  const initiallyChecked = document.querySelector('.saved-radio:checked');
+  if(initiallyChecked) activateTile(initiallyChecked.closest('.tile'));
+
+  // Add new links -> reveal manual entry forms
+  const linkAddUpi  = document.getElementById('link-add-upi');
+  const linkAddCard = document.getElementById('link-add-card');
+  if(linkAddUpi){
+    linkAddUpi.addEventListener('click', function(e){
+      e.preventDefault();
+      document.getElementById('new-upi-wrap')?.classList.remove('hidden');
+      // unselect any radio so we save new value
+      document.querySelectorAll('input[name="saved_upi"]').forEach(x=>x.checked=false);
+      activateTile(null);
+      document.getElementById('upi-id')?.focus();
+    });
+  }
+  if(linkAddCard){
+    linkAddCard.addEventListener('click', function(e){
+      e.preventDefault();
+      document.getElementById('new-card-wrap')?.classList.remove('hidden');
+      document.querySelectorAll('input[name="saved_card"]').forEach(x=>x.checked=false);
+      activateTile(null);
+      document.getElementById('card-holder-name')?.focus();
+    });
+  }
+})();
+
+(function(){
+  // Show Proceed button only for selected tile + highlight tile
+  function refreshTileUI(scope){
+    const root = scope || document;
+    root.querySelectorAll('.tile-row').forEach(row=>{
+      const r = row.querySelector('.saved-radio');
+      const btn = row.querySelector('.pay-for-tile');
+      const on = r && r.checked;
+      row.classList.toggle('selected', !!on);
+      if(btn) btn.classList.toggle('hidden', !on);
+    });
+  }
+  document.addEventListener('change', (e)=>{
+    if(e.target.classList.contains('saved-radio')){
+      // unselect all other tiles in that section
+      const section = e.target.closest('.collapsible') || document;
+      section.querySelectorAll('.saved-radio').forEach(r=>{
+        if(r!==e.target) r.closest('.tile-row')?.classList.remove('selected');
+      });
+      refreshTileUI(section);
+    }
+  });
+
+  // “Add new …” toggles
+  const addUpi  = document.getElementById('link-add-upi');
+  const newUpi  = document.getElementById('new-upi-wrap');
+  if(addUpi && newUpi){ addUpi.addEventListener('click', ()=>{ newUpi.classList.toggle('hidden'); }); }
+
+  const addCard = document.getElementById('link-add-card');
+  const newCard = document.getElementById('new-card-wrap');
+  if(addCard && newCard){ addCard.addEventListener('click', ()=>{ newCard.classList.toggle('hidden'); }); }
+
+  // initial pass
+  refreshTileUI();
+})();
+
+
+
+// Show existing validated forms when "+ Add new ..." is clicked
+(function(){
+  // UPI
+  const addUpiBtn  = document.getElementById('link-add-upi');
+  const upiWrap    = document.getElementById('upi-manual-wrap');
+  if (addUpiBtn && upiWrap){
+    addUpiBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      upiWrap.style.display = 'block';
+      upiWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // unselect saved so backend understands this is a new ID
+      document.querySelectorAll('input[name="saved_upi"]')
+              .forEach(r => r.checked = false);
+    });
+  }
+
+  // CARD
+  const addCardBtn = document.getElementById('link-add-card');
+  const cardWrap   = document.getElementById('card-manual-wrap');
+  if (addCardBtn && cardWrap){
+    addCardBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      cardWrap.style.display = 'block';
+      cardWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.querySelectorAll('input[name="saved_card"]')
+              .forEach(r => r.checked = false);
+    });
+  }
+})();
+
+(function(){
+  /* Show the full manual form when "+ Add new ..." is clicked */
+
+  // ----- UPI -----
+    // ----- UPI -----
+  const addUpiBtn   = document.getElementById('link-add-upi');
+  const upiManual   = document.getElementById('upi-manual');
+  const upiSubtitle = document.getElementById('upi-subtitle');
+
+  if (addUpiBtn && upiManual){
+    addUpiBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      upiManual.classList.remove('hidden');
+      addUpiBtn.classList.add('hidden');
+      if (upiSubtitle) upiSubtitle.style.display = 'block';
+
+      document.querySelectorAll('input[name="saved_upi"]').forEach(r => r.checked = false);
+
+      const upiInput = document.getElementById('upi-id');
+      const err      = document.getElementById('upi-id-error');
+      const verify   = document.getElementById('upi-verify');
+      const pay      = document.getElementById('upi-pay');
+
+      if (upiInput) upiInput.value = '';
+      if (err)      err.textContent = '';
+      if (verify)   verify.disabled = true;
+      if (pay)      pay.disabled    = true;
+
+      upiInput?.focus();
+    });
+  }
+
+
+  // ----- CARD -----
+  const addCardBtn = document.getElementById('link-add-card');
+  const cardManual = document.getElementById('card-manual');
+
+  if (addCardBtn && cardManual){
+    addCardBtn.addEventListener('click', function (e){
+      e.preventDefault();
+      cardManual.classList.remove('hidden');
+      addCardBtn.classList.add('hidden');
+
+      // clear any selected saved card
+      document.querySelectorAll('input[name="saved_card"]').forEach(r => r.checked = false);
+
+      // reset card fields & errors
+      ['card-name','card-number','expiry','cvv'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.value = '';
+          el.classList.remove('is-invalid');
+        }
+      });
+      ['card-name-error','card-number-error','expiry-error','cvv-error'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+      });
+
+      const payBtn = document.getElementById('card-pay');
+      if (payBtn) payBtn.disabled = true;  // validation JS will re-enable when valid
+
+      const cardNameInput = document.querySelector('#cardSection input#card-holder-name');
+      if (cardNameInput){
+        cardNameInput.scrollIntoView({ behavior:'smooth', block:'center' });
+        cardNameInput.focus();
+      }
+    });
+  }
+})();
+
+
+(function(){
+  function refreshTiles(){
+    document.querySelectorAll('.tile-row').forEach(row => {
+      const r   = row.querySelector('.saved-radio');
+      const btn = row.querySelector('.pay-for-tile');
+      const on  = r && r.checked;
+      row.classList.toggle('selected', !!on);
+      if (btn) btn.classList.toggle('hidden', !on);
+    });
+  }
+
+  document.addEventListener('change', e => {
+    if (!e.target.classList || !e.target.classList.contains('saved-radio')) return;
+    const scope = e.target.closest('.collapsible') || document;
+    scope.querySelectorAll('.saved-radio').forEach(r => {
+      if (r !== e.target) r.checked = false;
+    });
+    refreshTiles();
+  });
+
+  // initial state (default card/upi)
+  refreshTiles();
+})();
+
+
+
+// ------------ Pretty confirm modal for saved-method delete ------------
+(function(){
+  const modal    = document.getElementById("sm-confirm-modal");
+  const back     = document.getElementById("sm-confirm-backdrop");
+  const btnYes   = document.getElementById("sm-confirm-yes");
+  const btnNo    = document.getElementById("sm-confirm-no");
+  const btnClose = document.getElementById("sm-confirm-close");
+  const textEl   = document.getElementById("sm-confirm-text");
 
   if (!modal || !back) return;
 
-  let opened = false;
-
   function lockScroll(){
     const y = window.scrollY || document.documentElement.scrollTop || 0;
-    document.body.dataset.lockY = y;
-    document.body.style.position = 'fixed';
+    document.body.dataset.smLockY = y;
+    document.body.style.position = "fixed";
     document.body.style.top = `-${y}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.width = '100%';
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
   }
   function unlockScroll(){
-    const y = parseInt(document.body.dataset.lockY || '0', 10);
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    document.body.style.width = '';
+    const y = parseInt(document.body.dataset.smLockY || "0", 10);
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
     window.scrollTo(0, y);
-    delete document.body.dataset.lockY;
+    delete document.body.dataset.smLockY;
   }
-  function open(){
+
+  window.openSavedMethodConfirm = function(form){
+    __pendingDeleteForm = form;  // global from above
+
+    // attempt to put the masked value / card brand in the text
+    let label = "this payment method";
+    const row = form.closest(".tile-row");
+    const txt = row?.querySelector(".radio-text strong");
+    if (txt && txt.textContent.trim()) {
+      label = txt.textContent.trim();
+    }
+    textEl.textContent = `Are you sure you want to delete '${label}'?`;
+
+    modal.style.display = "block";
+    back.style.display  = "block";
+    lockScroll();
+  };
+
+  function close(){
+    modal.style.display = "none";
+    back.style.display  = "none";
+    unlockScroll();
+    __pendingDeleteForm = null;
+  }
+
+  btnNo   ?.addEventListener("click", close);
+  btnClose?.addEventListener("click", close);
+  back    ?.addEventListener("click", close);
+
+  btnYes?.addEventListener("click", function(){
+    if (!__pendingDeleteForm) {
+      close();
+      return;
+    }
+    // actually perform the delete (AJAX)
+    doDeleteSavedMethod(__pendingDeleteForm);
+    close();
+  });
+})();
+
+
+(function(){
+  /* Show / hide manual forms + sync with saved tiles */
+
+  const addUpiBtn   = document.getElementById('link-add-upi');
+  const upiManual   = document.getElementById('upi-manual');
+  const addCardBtn  = document.getElementById('link-add-card');
+  const cardManual  = document.getElementById('card-manual');
+
+  function clearSavedTiles(type){
+    const name = (type === 'upi') ? 'saved_upi' : 'saved_card';
+    document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+      r.checked = false;
+      const row = r.closest('.tile-row');
+      if (row){
+        row.classList.remove('selected');
+        const btn = row.querySelector('.pay-for-tile');
+        if (btn) btn.classList.add('hidden');
+      }
+    });
+  }
+
+  /* ----- UPI: "+ Add new UPI ID" ----- */
+  if (addUpiBtn && upiManual){
+    addUpiBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      upiManual.classList.remove('hidden');
+      addUpiBtn.classList.add('hidden');
+      clearSavedTiles('upi');                            // hide saved CTA + deselect
+
+      const upiInput = document.getElementById('upi-id');
+      const err      = document.getElementById('upi-id-error');
+      const verify   = document.getElementById('upi-verify');
+      const pay      = document.getElementById('upi-pay');
+
+      if (upiInput) upiInput.value = '';
+      if (err)      err.textContent = '';
+      if (verify)   verify.disabled = true;
+      if (pay)      pay.disabled    = true;
+
+      upiInput?.focus();
+    });
+  }
+
+  /* ----- CARD: "+ Add new card" ----- */
+  if (addCardBtn && cardManual){
+    addCardBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      cardManual.classList.remove('hidden');
+      addCardBtn.classList.add('hidden');
+      clearSavedTiles('card');                           // hide saved CTA + deselect
+
+        ['card-name','card-number','expiry','cvv'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el){
+          el.value = '';
+          el.classList.remove('is-invalid');
+        }
+      });
+      ['card-name-error','card-number-error','expiry-error','cvv-error'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '';
+      });
+
+
+      const payBtn = document.getElementById('card-pay');
+      if (payBtn) payBtn.disabled = true;
+
+      const cardNameInput = document.querySelector('#cardSection input#card-holder-name');
+      if (cardNameInput){
+        cardNameInput.scrollIntoView({ behavior:'smooth', block:'center' });
+        cardNameInput.focus();
+      }
+    });
+  }
+
+  /* ----- When user picks a saved method again ----- */
+  document.addEventListener('change', function(e){
+    const r = e.target;
+    if (!r.classList || !r.classList.contains('saved-radio')) return;
+
+    const type = r.dataset.type;
+
+    if (type === 'upi'){
+      if (upiManual) upiManual.classList.add('hidden');
+      if (addUpiBtn) addUpiBtn.classList.remove('hidden');
+    }
+
+    if (type === 'card'){
+      if (cardManual) cardManual.classList.add('hidden');
+      if (addCardBtn) addCardBtn.classList.remove('hidden');
+    }
+  });
+})();
+
+
+// --- MAKE DEFAULT -------------------------------------------------
+async function setDefault(ev, form) {
+  ev.preventDefault();
+
+  const tile  = form.closest(".tile-row");      // this card/UPI row
+  if (!tile) return;
+
+  const stack = tile.parentElement;            // container with all tiles of that section
+  // detect type from data attributes or the radio
+  const radio = tile.querySelector(".saved-radio");
+  const methodType =
+    tile.dataset.methodType ||
+    (radio ? radio.dataset.type : "");
+
+  const url      = form.action;
+  const formData = new FormData(form);
+  const menu     = form.closest("details");    // <-- 3-dots dropdown
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      body: formData,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "same-origin",
+    });
+
+    if (!resp.ok) {
+      console.error("Default failed", resp.status);
+      alert("Could not set default. Please try again.");
+      return;
+    }
+
+    const data = await resp.json().catch(() => ({}));
+    if (!data.ok) {
+      console.error("Default API returned false", data);
+      alert("Could not set default. Please try again.");
+      return;
+    }
+
+    //  SUCCESS – update UI without reloading
+
+    // 1) Remove "Default" badge from other tiles of the same type
+    if (stack) {
+      stack.querySelectorAll(".tile-row").forEach(row => {
+        const r = row.querySelector(".saved-radio");
+        const t = row.dataset.methodType || (r ? r.dataset.type : "");
+        if (t !== methodType) return;
+
+        row.classList.remove("is-default");
+
+        row.querySelectorAll(".badge").forEach(b => {
+          if (b.textContent.trim() === "Default") b.remove();
+        });
+      });
+    }
+
+    // 2) Add "Default" badge to this tile
+    tile.classList.add("is-default");
+
+    // where to put the badge (card vs upi)
+    let label = tile.querySelector(".radio-text");
+    if (!label) {
+      // fallbacks if your markup uses different wrappers
+      label =
+        tile.querySelector(".card-top") ||
+        tile.querySelector(".upi-line") ||
+        tile;
+    }
+
+    if (label) {
+      // remove any existing "Default" badge inside this label
+      label.querySelectorAll(".badge").forEach(b => {
+        if (b.textContent.trim() === "Default") b.remove();
+      });
+
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "Default";
+      label.appendChild(badge);
+    }
+
+    // 3) Move this tile to top of its stack
+    if (stack && stack.firstElementChild !== tile) {
+      stack.insertBefore(tile, stack.firstElementChild);
+    }
+
+    // 4) Select its radio and fire change so your existing code updates
+    if (radio) {
+      radio.checked = true;
+      radio.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    // 5) Close the 3-dots menu after action
+    if (menu) {
+      menu.removeAttribute("open");   // or: menu.open = false;
+    }
+
+    // No reload → the Card accordion stays open & UPI doesn’t steal focus ✨
+
+  } catch (err) {
+    console.error("Default error", err);
+    alert("Could not set default. Please try again.");
+  }
+}
+// ---------- DELETE: open pretty confirm modal + AJAX delete ----------
+
+let smPendingDeleteForm = null;
+
+// helper in case you don't already have it
+function getCookie(name) {
+  const match = document.cookie.split("; ").find(row => row.startsWith(name + "="));
+  return match ? decodeURIComponent(match.split("=")[1]) : "";
+}
+
+// open modal when user clicks "Delete" in 3-dots menu
+function openSavedMethodConfirm(form) {
+  const modal = document.getElementById("sm-confirm-modal");
+  const back  = document.getElementById("sm-confirm-backdrop");
+  const text  = document.getElementById("sm-confirm-text");
+
+  if (!modal || !back) return;
+
+  smPendingDeleteForm = form;
+
+  // fill label in confirm text
+  if (text) {
+    let label = "this payment method";
+    const row = form.closest(".tile-row");
+    const nameNode =
+      row && (
+        row.querySelector(".upi-id strong") ||
+        row.querySelector(".card-main") ||
+        row.querySelector(".radio-text strong")
+      );
+    if (nameNode && nameNode.textContent.trim()) {
+      label = nameNode.textContent.trim();
+    }
+    text.textContent = `Are you sure you want to delete '${label}'?`;
+  }
+
+  modal.style.display = "block";
+  back.style.display  = "block";
+}
+
+// real delete call (used by the modal's "Delete" button)
+async function doDeleteSavedMethod(form) {
+  if (!form) return;
+
+  const url       = form.action;
+  const csrfInput = form.querySelector('[name="csrfmiddlewaretoken"]');
+  const csrf      = csrfInput ? csrfInput.value : getCookie("csrftoken");
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",  // hits saved_method_delete in Home service
+      headers: {
+        "X-CSRFToken": csrf,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      credentials: "same-origin",
+    });
+
+    const data = await resp.json().catch(() => ({}));
+
+    if (!resp.ok || !data.ok) {
+      console.error("Delete failed", resp.status, data);
+      alert("Could not delete. Please try again.");
+      return;
+    }
+
+    // remove the tile from UI (no full reload)
+    const tile = form.closest(".tile-row");
+    if (tile) tile.remove();
+  } catch (err) {
+    console.error("Delete error", err);
+    alert("Could not delete. Please try again.");
+  }
+}
+
+// wire up the confirm modal once
+(function(){
+  const modal  = document.getElementById("sm-confirm-modal");
+  const back   = document.getElementById("sm-confirm-backdrop");
+  const btnYes = document.getElementById("sm-confirm-yes");
+  const btnNo  = document.getElementById("sm-confirm-no");
+  const btnX   = document.getElementById("sm-confirm-close");
+
+  if (!modal || !back) return;
+
+  function closeConfirm() {
+    modal.style.display = "none";
+    back.style.display  = "none";
+    smPendingDeleteForm = null;
+  }
+
+  btnNo  && btnNo.addEventListener("click", closeConfirm);
+  btnX   && btnX.addEventListener("click", closeConfirm);
+  back   && back.addEventListener("click", closeConfirm);
+
+  btnYes && btnYes.addEventListener("click", function () {
+    if (smPendingDeleteForm) {
+      doDeleteSavedMethod(smPendingDeleteForm);
+    }
+    closeConfirm();
+  });
+})();
+
+
+
+// ---------- SESSION EXPIRED MODAL (payments page) ----------
+(function(){
+  const modal     = document.getElementById('session-modal');
+  const backdrop  = document.getElementById('session-backdrop');
+  const closeBtn  = document.getElementById('session-close-outside');
+  const whyLink   = document.getElementById('why-link');
+  const whyBlock  = document.getElementById('session-why-text');
+
+  if (!modal || !backdrop) return;
+
+  let opened = false;
+
+  function openSessionModal(){
     if (opened) return;
     opened = true;
-    modal.style.display = 'block';
-    back.style.display  = 'block';
-    lockScroll();
-  }
-  function shut(){
-    modal.style.display = 'none';
-    back.style.display  = 'none';
-    unlockScroll();
+
+    backdrop.style.display = 'block';
+    modal.style.display    = 'block';
+    backdrop.removeAttribute('hidden');
+    modal.removeAttribute('hidden');
+
+    // lock background scroll (same idea as your other modals)
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
   }
 
-  // UI wiring
-  closeOutside?.addEventListener('click', shut);
-  back?.addEventListener('click', shut);
-  whyLink?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    const on = whyBlock.style.display !== 'block';
-    whyBlock.style.display = on ? 'block' : 'none';
-    whyLink.classList.toggle('clicked', on);
-    whyLink.textContent = on ? 'Hide details' : 'Why did this happen?';
+  function closeSessionModal(){
+    opened = false;
+
+    backdrop.style.display = 'none';
+    modal.style.display    = 'none';
+    backdrop.setAttribute('hidden','hidden');
+    modal.setAttribute('hidden','hidden');
+
+    // unlock scroll
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }
+
+  // close with X
+  if (closeBtn){
+    closeBtn.addEventListener('click', closeSessionModal);
+  }
+
+  // close when clicking on dark backdrop
+  backdrop.addEventListener('click', function(e){
+    if (e.target === backdrop) closeSessionModal();
   });
 
-  // Always check the session; open on 401/403
-  fetch('/api/userview/', { credentials:'same-origin' })
-    .then(r => {
-      if (r.status === 401 || r.status === 403) open();
-    })
-    .catch(open);
+  // close on Esc key
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && opened){
+      closeSessionModal();
+    }
+  });
 
-  // Optional: catch any later API calls that 401/403
+  // "Why did this happen?" toggle
+  if (whyLink && whyBlock){
+    // make sure it starts hidden (also enforced in HTML)
+    whyBlock.style.display = 'none';
+
+    whyLink.addEventListener('click', function(e){
+      e.preventDefault();
+      const on = (whyBlock.style.display !== 'block');
+      whyBlock.style.display = on ? 'block' : 'none';
+      whyLink.classList.toggle('clicked', on);
+      whyLink.textContent = on ? 'Hide details' : 'Why did this happen?';
+    });
+  }
+
+  // Initial check: is the session already dead?
+  fetch('/api/userview/', { credentials:'same-origin' })
+    .then(function(r){
+      if (r.status === 401 || r.status === 403) openSessionModal();
+    })
+    .catch(function(){
+      // If the check itself fails (network/etc.), be safe and show modal
+      openSessionModal();
+    });
+
+  // Wrap window.fetch so any later 401/403 also opens the modal
   const _fetch = window.fetch.bind(window);
-  window.fetch = async (...args) => {
+  window.fetch = async function(...args){
     const res = await _fetch(...args);
-    if ((res.status === 401 || res.status === 403) && !opened) open();
+    if ((res.status === 401 || res.status === 403) && !opened){
+      openSessionModal();
+    }
     return res;
   };
 })();
 
-
 </script>
-
 {% endblock %}

@@ -1,7 +1,7 @@
 from django.urls import path
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from .views import PaymentAPIView, PaymentDetailAPIView, PaymentIntentAPIView, PaymentWebhookAPIView
+from .views import PaymentAPIView, PaymentDetailAPIView, PaymentIntentAPIView, PaymentWebhookAPIView,SavedPaymentMethodListCreate, SavedPaymentMethodDelete, SavedPaymentMethodSetDefault
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -20,4 +20,7 @@ urlpatterns = [
     path("payments/webhook/", PaymentWebhookAPIView.as_view()),        
     path("payments/", PaymentAPIView.as_view()),                        
     path("payments/<int:payment_id>/", PaymentDetailAPIView.as_view()), 
+    path("payment-methods/", SavedPaymentMethodListCreate.as_view()),
+    path("payment-methods/<int:pk>/", SavedPaymentMethodDelete.as_view()),
+    path("payment-methods/<int:pk>/default/", SavedPaymentMethodSetDefault.as_view()),
 ]
